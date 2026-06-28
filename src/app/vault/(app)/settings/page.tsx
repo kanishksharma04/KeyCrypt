@@ -1,14 +1,11 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getSessionsAction } from "@/server/settings-actions";
+import { SignOutButton } from "@/features/vault/sign-out-button";
 import { ChangeMasterPasswordForm } from "@/features/vault/change-master-password-form";
-import { SessionList } from "@/features/vault/session-list";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session) redirect("/auth/signin");
-
-  const sessions = await getSessionsAction();
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
@@ -44,15 +41,18 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {/* Sessions */}
-      <section aria-labelledby="sessions-heading">
-        <h2 id="sessions-heading" className="mb-1 text-base font-semibold">
-          Active sessions
+      {/* Sign out */}
+      <section aria-labelledby="signout-heading">
+        <h2 id="signout-heading" className="mb-1 text-base font-semibold">
+          Sign out
         </h2>
         <p className="text-muted-foreground mb-4 text-sm">
-          These are all devices currently signed into your account.
+          Signs you out of this device. To invalidate all sessions, change your master password
+          after signing back in.
         </p>
-        <SessionList sessions={sessions} />
+        <div className="bg-card rounded-xl border p-4">
+          <SignOutButton />
+        </div>
       </section>
     </div>
   );

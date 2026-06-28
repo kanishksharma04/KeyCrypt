@@ -1,16 +1,15 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
-// Uncomment after adding credentials to .env:
-// import Google from "next-auth/providers/google"
-// import GitHub from "next-auth/providers/github"
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { signInSchema } from "@/schemas/auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
-  session: { strategy: "database" },
+  // Auth.js v5 requires JWT strategy when using the Credentials provider.
+  // Database sessions are not supported with credentials-based auth.
+  session: { strategy: "jwt" },
 
   pages: {
     signIn: "/auth/signin",
@@ -41,31 +40,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await verifyPassword(parsed.data.password, user.passwordHash);
         if (!valid) return null;
 
-        // Require email verification before granting access
         if (!user.emailVerified) {
-          // Signal to the client that email is unverified (not a credential error)
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
         return { id: user.id, email: user.email, name: user.name };
       },
     }),
-
-    // OAuth — scaffolded. Uncomment when credentials are in .env:
-    // Google({
-    //   clientId: process.env.GOOGLE_CLIENT_ID!,
-    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    // }),
-    // GitHub({
-    //   clientId: process.env.GITHUB_CLIENT_ID!,
-    //   clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    // }),
   ],
 
   callbacks: {
-    session({ session, user }) {
-      // Expose user.id in the session (not in JWT; this is database sessions)
-      if (session.user) session.user.id = user.id;
+    async jwt({ token, user }) {
+      // On initial sign-in, user is present — persist id into the token
+      if (user?.id) token.sub = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      // Expose user.id from the JWT so server components can read it
+      if (session.user && token.sub) session.user.id = token.sub;
       return session;
     },
   },

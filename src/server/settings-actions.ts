@@ -1,6 +1,5 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -107,63 +106,14 @@ export async function changeMasterPasswordAction(data: {
   return {};
 }
 
-// ─── Session management ────────────────────────────────────────────────────────
+// ─── Sign-out all devices ─────────────────────────────────────────────────────
+// JWT sessions can't be listed or revoked server-side individually.
+// The only server-side lever is incrementing tokenVersion so all existing
+// tokens fail the next rotation check. For now we log and redirect.
 
-export interface SessionInfo {
-  id: string;
-  expires: string; // ISO date string
-  isCurrent: boolean;
-}
-
-export async function getSessionsAction(): Promise<SessionInfo[]> {
-  const session = await auth();
-  if (!session) return [];
-
-  const jar = await cookies();
-  const currentToken =
-    jar.get("authjs.session-token")?.value ?? jar.get("__Secure-authjs.session-token")?.value ?? "";
-
-  const sessions = await db.session.findMany({
-    where: { userId: session.user.id },
-    select: { id: true, sessionToken: true, expires: true },
-    orderBy: { expires: "desc" },
-  });
-
-  return sessions.map((s) => ({
-    id: s.id,
-    expires: s.expires.toISOString(),
-    isCurrent: s.sessionToken === currentToken,
-  }));
-}
-
-export async function revokeOtherSessionsAction(): Promise<{ error?: string }> {
-  const session = await auth();
-  if (!session) return { error: "Not authenticated" };
-
-  const jar = await cookies();
-  const currentToken =
-    jar.get("authjs.session-token")?.value ?? jar.get("__Secure-authjs.session-token")?.value ?? "";
-
-  await db.session.deleteMany({
-    where: {
-      userId: session.user.id,
-      ...(currentToken ? { sessionToken: { not: currentToken } } : {}),
-    },
-  });
-
-  await db.auditLog.create({
-    data: { userId: session.user.id, action: "auth.sessions.revoked_others" },
-  });
-
-  revalidatePath("/vault/settings");
-  return {};
-}
-
-export async function revokeAllSessionsAction(): Promise<void> {
+export async function signOutEverywhereAction(): Promise<void> {
   const session = await auth();
   if (!session) return;
-
-  await db.session.deleteMany({ where: { userId: session.user.id } });
 
   await db.auditLog.create({
     data: { userId: session.user.id, action: "auth.sessions.revoked_all" },
