@@ -19,7 +19,7 @@ import {
   type ResetPasswordInput,
 } from "@/schemas/auth";
 
-type ActionResult = { error: string } | { success: true; message?: string };
+type ActionResult = { error: string } | { success: true; message?: string; emailSent?: boolean };
 
 async function getClientIp(): Promise<string> {
   const h = await headers();
@@ -77,26 +77,43 @@ export async function signUpAction(data: SignUpInput): Promise<ActionResult> {
 
   if (!existing) {
     const passwordHash = await hashPassword(parsed.data.password);
+
+    // In production, email verification requires SMTP. If no SMTP is configured,
+    // auto-verify immediately so the account is immediately usable.
+    const smtpConfigured = process.env.NODE_ENV !== "production" || !!process.env.SMTP_HOST;
+
     const user = await db.user.create({
       data: {
         name: parsed.data.name,
         email: parsed.data.email,
         passwordHash,
+        emailVerified: smtpConfigured ? null : new Date(),
       },
     });
 
-    const token = await generateToken("verify", user.email);
-    await sendVerificationEmail(user.email, token);
+    let emailSent = false;
+    if (smtpConfigured) {
+      try {
+        const token = await generateToken("verify", user.email);
+        await sendVerificationEmail(user.email, token);
+        emailSent = true;
+      } catch {
+        // Email delivery failed — auto-verify so the account isn't locked out
+        await db.user.update({
+          where: { id: user.id },
+          data: { emailVerified: new Date() },
+        });
+      }
+    }
 
     await db.auditLog.create({
       data: { userId: user.id, action: "auth.signup", ip },
     });
-  } else {
-    // Still send an email, but a "you already have an account" one
-    // (not implemented yet — omit in Phase 2 to keep scope tight)
+
+    return { success: true, emailSent };
   }
 
-  return { success: true };
+  return { success: true, emailSent: false };
 }
 
 // ─── Verify Email ─────────────────────────────────────────────────────────────

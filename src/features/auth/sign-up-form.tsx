@@ -16,6 +16,7 @@ export function SignUpForm() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string>();
   const [success, setSuccess] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -31,10 +32,16 @@ export function SignUpForm() {
       if ("error" in result) {
         setServerError(result.error);
       } else {
+        const sent = result.emailSent ?? false;
+        setEmailSent(sent);
         setSuccess(true);
         setTimeout(
           () =>
-            router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}&pending=true`),
+            sent
+              ? router.push(
+                  `/auth/verify-email?email=${encodeURIComponent(data.email)}&pending=true`
+                )
+              : router.push("/auth/signin"),
           1200
         );
       }
@@ -45,9 +52,11 @@ export function SignUpForm() {
     return (
       <div className="flex flex-col items-center gap-4 py-4 text-center">
         <CheckCircle className="text-success size-10" aria-hidden="true" />
-        <p className="font-medium">Check your inbox</p>
+        <p className="font-medium">{emailSent ? "Check your inbox" : "Account created!"}</p>
         <p className="text-muted-foreground text-sm">
-          We sent a verification link to your email. Redirecting…
+          {emailSent
+            ? "We sent a verification link to your email. Redirecting…"
+            : "Your account is ready. Redirecting to sign in…"}
         </p>
       </div>
     );
