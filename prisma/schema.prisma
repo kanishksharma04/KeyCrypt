@@ -1,0 +1,163 @@
+// KeyCrypt Prisma Schema (Prisma 6 / Auth.js v5)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth.js v5 required models ──────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  // Null for OAuth-only users. Auth password hash (Argon2id) — never the master password.
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  // WebAuthn passkey authenticators (scaffolded for Phase 2, UI in v2)
+  authenticators Authenticator[]
+  vaultMeta     VaultMeta?
+  vaultItems    VaultItem[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Used for email verification and password reset tokens.
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// WebAuthn passkey authenticators — login factor only, never touches vault key.
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
+
+// ─── Vault models ─────────────────────────────────────────────────────────────
+
+// Stores per-user salt and encrypted verification blob.
+// The server never has enough info here to decrypt the vault.
+model VaultMeta {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  // Base64-encoded random salt for PBKDF2-SHA-256 key derivation
+  salt             String
+  // AES-256-GCM encrypted known-plaintext blob; used to verify the master
+  // password without comparing anything server-side. Populated in Phase 3.
+  verificationBlob String?  @db.Text
+  // IV for the verification blob encryption
+  verificationIv   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// All secret content is opaque ciphertext — the DB schema has zero plaintext fields.
+model VaultItem {
+  id         String        @id @default(cuid())
+  userId     String
+  type       VaultItemType
+  // Item name/label (e.g. "GitHub") stored in plaintext for display & search.
+  // Sensitive field names (username, password, url) live inside ciphertext.
+  name       String
+  // AES-256-GCM ciphertext (base64). Decrypted only in the browser.
+  ciphertext String        @db.Text
+  // Base64-encoded random 96-bit IV. Unique per encryption operation.
+  iv         String
+  favorite   Boolean       @default(false)
+  // Extension point for folder grouping (v2)
+  folderId   String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([userId, favorite])
+  @@index([userId, updatedAt])
+}
+
+enum VaultItemType {
+  LOGIN
+  SECURE_NOTE
+  API_KEY
+  WIFI_PASSWORD
+  // v2: SSH_KEY CRYPTO_WALLET OTP_SECRET BANK_DETAILS LICENSE
+}
+
+// ─── Audit log ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  // e.g. "auth.signin", "vault.item.create", "vault.item.delete"
+  action    String
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+}

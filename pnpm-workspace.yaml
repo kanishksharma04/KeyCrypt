@@ -1,0 +1,7 @@
+onlyBuiltDependencies:
+  - "@node-rs/argon2"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - prisma
+  - sharp
+  - unrs-resolver

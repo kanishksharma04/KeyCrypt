@@ -1,0 +1,511 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import {
+  Code2,
+  Copy,
+  ExternalLink,
+  FileText,
+  KeyRound,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Star,
+  Trash2,
+  Wifi,
+} from "lucide-react";
+import { toast } from "sonner";
+import { getVaultKey, decryptItem } from "@/lib/crypto";
+import { deleteVaultItemAction, toggleFavoriteAction } from "@/server/vault-item-actions";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { LoginItemDialog } from "./login-item-dialog";
+import { SecureNoteDialog } from "./secure-note-dialog";
+import { ApiKeyDialog } from "./api-key-dialog";
+import { WifiPasswordDialog } from "./wifi-password-dialog";
+import type {
+  DecryptedVaultItem,
+  LoginSecret,
+  SecureNoteSecret,
+  ApiKeySecret,
+  WifiPasswordSecret,
+  VaultItemRow,
+  VaultItemType,
+} from "@/types/vault";
+import { cn } from "@/lib/utils";
+
+// ─── Clipboard helper ─────────────────────────────────────────────────────────
+
+async function copyToClipboard(text: string, label: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+    // Clear clipboard after 30 s to limit accidental exposure
+    setTimeout(() => void navigator.clipboard.writeText(""), 30_000);
+  } catch {
+    toast.error("Failed to copy to clipboard");
+  }
+}
+
+// ─── Type metadata ─────────────────────────────────────────────────────────────
+
+const TYPE_META = {
+  LOGIN: {
+    Icon: KeyRound,
+    label: "Login",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+  },
+  SECURE_NOTE: {
+    Icon: FileText,
+    label: "Secure Note",
+    iconBg: "bg-green-500/10",
+    iconColor: "text-green-500",
+  },
+  API_KEY: {
+    Icon: Code2,
+    label: "API Key",
+    iconBg: "bg-purple-500/10",
+    iconColor: "text-purple-500",
+  },
+  WIFI_PASSWORD: {
+    Icon: Wifi,
+    label: "WiFi Password",
+    iconBg: "bg-orange-500/10",
+    iconColor: "text-orange-500",
+  },
+} as const;
+
+// ─── Decrypt helper ──────────────────────────────────────────────────────────
+
+async function decryptVaultItem(key: CryptoKey, row: VaultItemRow): Promise<DecryptedVaultItem> {
+  const raw = await decryptItem<unknown>(key, { ciphertext: row.ciphertext, iv: row.iv });
+  const base = {
+    id: row.id,
+    name: row.name,
+    favorite: row.favorite,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+
+  switch (row.type) {
+    case "LOGIN":
+      return { ...base, type: "LOGIN" as const, secret: raw as LoginSecret };
+    case "SECURE_NOTE":
+      return { ...base, type: "SECURE_NOTE" as const, secret: raw as SecureNoteSecret };
+    case "API_KEY":
+      return { ...base, type: "API_KEY" as const, secret: raw as ApiKeySecret };
+    case "WIFI_PASSWORD":
+      return { ...base, type: "WIFI_PASSWORD" as const, secret: raw as WifiPasswordSecret };
+  }
+}
+
+// ─── VaultItemCard ────────────────────────────────────────────────────────────
+
+interface VaultItemCardProps {
+  item: DecryptedVaultItem;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function VaultItemCard({ item, onEdit, onDelete }: VaultItemCardProps) {
+  const [pendingFav, startFavTransition] = useTransition();
+  const { Icon, iconBg, iconColor } = TYPE_META[item.type];
+
+  // Derived secondary display text (never secrets directly — shown as metadata)
+  const secondaryText = (() => {
+    if (item.type === "LOGIN") return item.secret.username;
+    if (item.type === "SECURE_NOTE") {
+      const t = item.secret.content.slice(0, 60);
+      return item.secret.content.length > 60 ? `${t}…` : t;
+    }
+    if (item.type === "API_KEY") return item.secret.description;
+    const { ssid, securityType } = item.secret;
+    return ssid ? `${ssid} · ${securityType}` : securityType;
+  })();
+
+  // Primary copy action (the "sensitive" value for this item type)
+  const primaryCopy = (() => {
+    if (item.type === "LOGIN") return { text: item.secret.password, label: "Password" };
+    if (item.type === "SECURE_NOTE") return { text: item.secret.content, label: "Note" };
+    if (item.type === "API_KEY") return { text: item.secret.key, label: "API key" };
+    return { text: item.secret.password, label: "Password" };
+  })();
+
+  // Secondary dropdown copy items specific to each type
+  const dropdownCopyItems = (() => {
+    if (item.type === "LOGIN" && item.secret.username) {
+      return [{ label: "Copy username", text: item.secret.username }];
+    }
+    if (item.type === "WIFI_PASSWORD" && item.secret.ssid) {
+      return [{ label: "Copy SSID", text: item.secret.ssid }];
+    }
+    if (item.type === "API_KEY" && item.secret.description) {
+      return [{ label: "Copy description", text: item.secret.description }];
+    }
+    return [];
+  })();
+
+  const externalUrl = item.type === "LOGIN" ? item.secret.url : "";
+
+  return (
+    <div className="bg-card hover:bg-card/80 flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors">
+      <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", iconBg)}>
+        <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{item.name}</p>
+        {secondaryText && <p className="text-muted-foreground truncate text-xs">{secondaryText}</p>}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1">
+        {/* Primary copy */}
+        {primaryCopy.text && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => void copyToClipboard(primaryCopy.text, primaryCopy.label)}
+            title={`Copy ${primaryCopy.label.toLowerCase()}`}
+          >
+            <Copy className="size-3.5" aria-hidden="true" />
+            <span className="sr-only">Copy {primaryCopy.label}</span>
+          </Button>
+        )}
+
+        {/* Open URL (Login only) */}
+        {externalUrl && (
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+            title="Open website"
+          >
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+            <span className="sr-only">Open website</span>
+          </a>
+        )}
+
+        {/* Favorite */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() =>
+            startFavTransition(async () => {
+              const result = await toggleFavoriteAction(item.id, !item.favorite);
+              if (result.error) toast.error(result.error);
+            })
+          }
+          disabled={pendingFav}
+          title={item.favorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Star
+            className={cn(
+              "size-3.5",
+              item.favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
+            )}
+            aria-hidden="true"
+          />
+          <span className="sr-only">
+            {item.favorite ? "Remove from favorites" : "Add to favorites"}
+          </span>
+        </Button>
+
+        {/* ⋮ More */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+          >
+            <MoreHorizontal className="size-4" aria-hidden="true" />
+            <span className="sr-only">More actions</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="size-3.5" aria-hidden="true" />
+              Edit
+            </DropdownMenuItem>
+            {dropdownCopyItems.map(({ label, text }) => (
+              <DropdownMenuItem
+                key={label}
+                onClick={() => void copyToClipboard(text, label.replace("Copy ", ""))}
+              >
+                <Copy className="size-3.5" aria-hidden="true" />
+                {label}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 className="size-3.5" aria-hidden="true" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+// ─── VaultList ────────────────────────────────────────────────────────────────
+
+interface VaultListProps {
+  items: VaultItemRow[];
+}
+
+type CreateType = VaultItemType | null;
+
+export function VaultList({ items }: VaultListProps) {
+  const [decrypted, setDecrypted] = useState<DecryptedVaultItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [createType, setCreateType] = useState<CreateType>(null);
+  const [editItem, setEditItem] = useState<DecryptedVaultItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isPendingDelete, startDeleteTransition] = useTransition();
+
+  useEffect(() => {
+    const key = getVaultKey();
+    if (!key) return;
+
+    void Promise.all(
+      items.map(async (row) => {
+        try {
+          return await decryptVaultItem(key, row);
+        } catch {
+          // Decryption errors surface as empty secrets so one bad item
+          // doesn't hide the rest of the vault.
+          return {
+            id: row.id,
+            type: row.type,
+            name: row.name,
+            favorite: row.favorite,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            secret: {},
+          } as DecryptedVaultItem;
+        }
+      })
+    ).then((results) => {
+      setDecrypted(results);
+      setLoading(false);
+    });
+  }, [items]);
+
+  const filtered = decrypted.filter((item) => {
+    const q = search.toLowerCase();
+    if (item.name.toLowerCase().includes(q)) return true;
+    if (item.type === "LOGIN")
+      return (
+        item.secret.username.toLowerCase().includes(q) || item.secret.url.toLowerCase().includes(q)
+      );
+    if (item.type === "WIFI_PASSWORD") return item.secret.ssid.toLowerCase().includes(q);
+    return false;
+  });
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
+    startDeleteTransition(async () => {
+      const result = await deleteVaultItemAction(id);
+      if (result.error) toast.error(result.error);
+      else toast.success("Item deleted");
+      setDeleteTarget(null);
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search items…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+          aria-label="Search vault items"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger className={cn(buttonVariants({ size: "sm" }))}>
+            <Plus className="size-4" aria-hidden="true" />
+            New item
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(
+              Object.entries(TYPE_META) as [VaultItemType, (typeof TYPE_META)[VaultItemType]][]
+            ).map(([type, { Icon, label }]) => (
+              <DropdownMenuItem key={type} onClick={() => setCreateType(type)}>
+                <Icon className="size-3.5" aria-hidden="true" />
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <div className="space-y-2" aria-label="Loading vault items">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-15 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
+            <KeyRound className="text-muted-foreground size-5" aria-hidden="true" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">
+              {search ? "No items match your search" : "Your vault is empty"}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {search ? "Try a different search term" : "Add your first item to get started"}
+            </p>
+          </div>
+          {!search && (
+            <Button size="sm" onClick={() => setCreateType("LOGIN")}>
+              <Plus className="size-4" aria-hidden="true" />
+              Add login
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((item) => (
+            <VaultItemCard
+              key={item.id}
+              item={item}
+              onEdit={() => setEditItem(item)}
+              onDelete={() => setDeleteTarget({ id: item.id, name: item.name })}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Create dialogs ──────────────────────────────────────────────────── */}
+      <LoginItemDialog
+        open={createType === "LOGIN"}
+        onOpenChange={(o) => {
+          if (!o) setCreateType(null);
+        }}
+        mode="create"
+      />
+      <SecureNoteDialog
+        open={createType === "SECURE_NOTE"}
+        onOpenChange={(o) => {
+          if (!o) setCreateType(null);
+        }}
+        mode="create"
+      />
+      <ApiKeyDialog
+        open={createType === "API_KEY"}
+        onOpenChange={(o) => {
+          if (!o) setCreateType(null);
+        }}
+        mode="create"
+      />
+      <WifiPasswordDialog
+        open={createType === "WIFI_PASSWORD"}
+        onOpenChange={(o) => {
+          if (!o) setCreateType(null);
+        }}
+        mode="create"
+      />
+
+      {/* ── Edit dialogs (always rendered, open toggled by editItem type) ─── */}
+      <LoginItemDialog
+        open={editItem?.type === "LOGIN"}
+        onOpenChange={(o) => {
+          if (!o) setEditItem(null);
+        }}
+        mode="edit"
+        itemId={editItem?.id}
+        initialValues={
+          editItem?.type === "LOGIN" ? { name: editItem.name, ...editItem.secret } : undefined
+        }
+      />
+      <SecureNoteDialog
+        open={editItem?.type === "SECURE_NOTE"}
+        onOpenChange={(o) => {
+          if (!o) setEditItem(null);
+        }}
+        mode="edit"
+        itemId={editItem?.id}
+        initialValues={
+          editItem?.type === "SECURE_NOTE" ? { name: editItem.name, ...editItem.secret } : undefined
+        }
+      />
+      <ApiKeyDialog
+        open={editItem?.type === "API_KEY"}
+        onOpenChange={(o) => {
+          if (!o) setEditItem(null);
+        }}
+        mode="edit"
+        itemId={editItem?.id}
+        initialValues={
+          editItem?.type === "API_KEY" ? { name: editItem.name, ...editItem.secret } : undefined
+        }
+      />
+      <WifiPasswordDialog
+        open={editItem?.type === "WIFI_PASSWORD"}
+        onOpenChange={(o) => {
+          if (!o) setEditItem(null);
+        }}
+        mode="edit"
+        itemId={editItem?.id}
+        initialValues={
+          editItem?.type === "WIFI_PASSWORD"
+            ? { name: editItem.name, ...editItem.secret }
+            : undefined
+        }
+      />
+
+      {/* ── Delete confirmation ─────────────────────────────────────────────── */}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Delete item?</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            <strong>{deleteTarget?.name}</strong> will be permanently deleted. This cannot be
+            undone.
+          </p>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" size="sm" />}>Cancel</DialogClose>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmDelete}
+              disabled={isPendingDelete}
+            >
+              {isPendingDelete && <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

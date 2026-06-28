@@ -1,0 +1,309 @@
+import Link from "next/link";
+import {
+  Code2,
+  FileText,
+  KeyRound,
+  Lock,
+  RefreshCw,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  Vault,
+  Wifi,
+} from "lucide-react";
+import { auth } from "@/lib/auth";
+import { buttonVariants } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { KeyCryptMark, KeyCryptWordmark } from "@/components/shared/keycrypt-logo";
+import { cn } from "@/lib/utils";
+
+// ─── Nav ─────────────────────────────────────────────────────────────────────
+
+async function MarketingNav() {
+  const session = await auth();
+
+  return (
+    <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+        <Link href="/" className="transition-opacity hover:opacity-80" aria-label="KeyCrypt home">
+          <KeyCryptWordmark height={32} variant="duo" />
+        </Link>
+
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          {session ? (
+            <Link href="/vault" className={buttonVariants({ size: "sm" })}>
+              Open vault
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/auth/signin"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+              >
+                Sign in
+              </Link>
+              <Link href="/auth/signup" className={buttonVariants({ size: "sm" })}>
+                Get started
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ─── Feature card ─────────────────────────────────────────────────────────────
+
+function FeatureCard({
+  Icon,
+  title,
+  description,
+  iconBg,
+  iconColor,
+}: {
+  Icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  iconBg: string;
+  iconColor: string;
+}) {
+  return (
+    <div className="bg-card rounded-xl border p-5">
+      <div className={cn("mb-3 flex size-10 items-center justify-center rounded-xl", iconBg)}>
+        <Icon className={cn("size-5", iconColor)} aria-hidden="true" />
+      </div>
+      <h3 className="mb-1 text-sm font-semibold">{title}</h3>
+      <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+// ─── How it works step ────────────────────────────────────────────────────────
+
+function Step({
+  number,
+  title,
+  description,
+}: {
+  number: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex gap-4">
+      <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold">
+        {number}
+      </div>
+      <div>
+        <h3 className="mb-1 text-sm font-semibold">{title}</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function HomePage() {
+  const session = await auth();
+
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <MarketingNav />
+
+      <main className="flex-1">
+        {/* ── Hero ─────────────────────────────────────────────────────────── */}
+        <section className="relative overflow-hidden border-b py-24 md:py-36">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <div className="bg-primary/10 h-96 w-96 rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative mx-auto max-w-3xl px-4 text-center">
+            <div className="mb-6 flex justify-center">
+              <KeyCryptMark size={72} variant="duo" />
+            </div>
+
+            <div className="bg-card text-muted-foreground mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
+              <ShieldCheck className="size-3.5 text-green-500" aria-hidden="true" />
+              Zero-knowledge · AES-256-GCM · PBKDF2-SHA-256
+            </div>
+
+            <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-6xl">
+              Your passwords, <span className="text-primary">never on our servers</span>
+            </h1>
+
+            <p className="text-muted-foreground mx-auto mb-8 max-w-xl text-base md:text-lg">
+              KeyCrypt encrypts everything in your browser before it leaves your device. We store
+              only ciphertext — mathematically impossible to decrypt without your master password.
+            </p>
+
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              {session ? (
+                <Link href="/vault" className={buttonVariants({ size: "lg" })}>
+                  <Vault className="size-4" aria-hidden="true" />
+                  Open your vault
+                </Link>
+              ) : (
+                <>
+                  <Link href="/auth/signup" className={buttonVariants({ size: "lg" })}>
+                    <Sparkles className="size-4" aria-hidden="true" />
+                    Create free vault
+                  </Link>
+                  <Link
+                    href="/auth/signin"
+                    className={buttonVariants({ variant: "outline", size: "lg" })}
+                  >
+                    Sign in
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Trust bar ────────────────────────────────────────────────────── */}
+        <section className="border-b py-8">
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {[
+                { label: "Zero-knowledge architecture", Icon: Shield },
+                { label: "AES-256-GCM encryption", Icon: Lock },
+                { label: "600,000-iteration PBKDF2", Icon: RefreshCw },
+                { label: "In-browser crypto only", Icon: ShieldCheck },
+              ].map(({ label, Icon }) => (
+                <div key={label} className="text-muted-foreground flex items-center gap-2 text-xs">
+                  <Icon className="size-4 shrink-0 text-green-500" aria-hidden="true" />
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Features ─────────────────────────────────────────────────────── */}
+        <section className="border-b py-20">
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="mb-12 text-center">
+              <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
+                Everything you need, nothing you don&apos;t
+              </h2>
+              <p className="text-muted-foreground">A focused password manager with no bloat.</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <FeatureCard
+                Icon={KeyRound}
+                title="Login credentials"
+                description="Store usernames, passwords, and URLs with one-click copy and site launch."
+                iconBg="bg-primary/10"
+                iconColor="text-primary"
+              />
+              <FeatureCard
+                Icon={FileText}
+                title="Secure notes"
+                description="Encrypted free-form notes for PINs, recovery codes, or any sensitive text."
+                iconBg="bg-green-500/10"
+                iconColor="text-green-500"
+              />
+              <FeatureCard
+                Icon={Code2}
+                title="API keys"
+                description="Keep API keys and tokens safe with description fields and monospace display."
+                iconBg="bg-purple-500/10"
+                iconColor="text-purple-500"
+              />
+              <FeatureCard
+                Icon={Wifi}
+                title="WiFi passwords"
+                description="Store network credentials with SSID, password, and security type."
+                iconBg="bg-orange-500/10"
+                iconColor="text-orange-500"
+              />
+              <FeatureCard
+                Icon={Sparkles}
+                title="Password generator"
+                description="Generate strong passwords with configurable length, charsets, and live entropy score."
+                iconBg="bg-pink-500/10"
+                iconColor="text-pink-500"
+              />
+              <FeatureCard
+                Icon={Lock}
+                title="Auto-lock"
+                description="Vault locks after 15 minutes of inactivity and immediately on tab close."
+                iconBg="bg-amber-500/10"
+                iconColor="text-amber-500"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ── How it works ─────────────────────────────────────────────────── */}
+        <section className="border-b py-20">
+          <div className="mx-auto max-w-3xl px-4">
+            <div className="mb-12 text-center">
+              <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
+                How the zero-knowledge model works
+              </h2>
+              <p className="text-muted-foreground">
+                Your master password never leaves your device. Ever.
+              </p>
+            </div>
+
+            <div className="space-y-8">
+              <Step
+                number="1"
+                title="Choose a master password"
+                description="Your browser derives a 256-bit AES key using PBKDF2-SHA-256 at 600,000 iterations. The master password itself is never sent anywhere — only the derived key is used locally."
+              />
+              <Step
+                number="2"
+                title="Your secrets are encrypted before upload"
+                description="Every vault item is encrypted with AES-256-GCM using a unique random IV. The server receives opaque ciphertext it cannot read — it has no key and no way to derive one."
+              />
+              <Step
+                number="3"
+                title="Unlock anywhere with your master password"
+                description="Sign in on any device, enter your master password, and your browser re-derives the vault key locally. Nothing changes on the server — decryption is entirely client-side."
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Final CTA ────────────────────────────────────────────────────── */}
+        {!session && (
+          <section className="py-24">
+            <div className="mx-auto max-w-xl px-4 text-center">
+              <h2 className="mb-3 text-2xl font-bold tracking-tight md:text-3xl">
+                Ready to take back control of your passwords?
+              </h2>
+              <p className="text-muted-foreground mb-8">
+                Free to use. No credit card. No tracking.
+              </p>
+              <Link href="/auth/signup" className={buttonVariants({ size: "lg" })}>
+                <Sparkles className="size-4" aria-hidden="true" />
+                Create your free vault
+              </Link>
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* ── Footer ───────────────────────────────────────────────────────────── */}
+      <footer className="border-t py-6">
+        <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4 text-xs sm:flex-row">
+          <div className="flex items-center gap-2">
+            <KeyCryptMark size={18} variant="duo" />
+            <span className="text-foreground font-medium">KeyCrypt</span>
+            <span>· Zero-knowledge password manager</span>
+          </div>
+          <p>© {new Date().getFullYear()} KeyCrypt. Built with end-to-end encryption.</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
