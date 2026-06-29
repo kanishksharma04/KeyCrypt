@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import { FieldError } from "./field-error";
 export function SignInForm() {
   const [serverError, setServerError] = useState<string>();
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
 
   const {
     register,
@@ -41,15 +39,17 @@ export function SignInForm() {
         redirect: false,
       });
 
-      if (!result?.ok) {
-        if (result?.code === "EMAIL_NOT_VERIFIED") {
+      // Auth.js v5 returns ok:true + status 200 for BOTH success and failure
+      // when X-Auth-Return-Redirect is set. Check result.error, not result.ok.
+      if (result?.error) {
+        if (result.code === "EMAIL_NOT_VERIFIED") {
           setServerError("Please verify your email before signing in.");
         } else {
           setServerError("Invalid email or password.");
         }
       } else {
-        router.push("/vault");
-        router.refresh();
+        // Hard navigate so the browser sends the new session cookie in the next request
+        window.location.href = "/vault";
       }
     });
   });
