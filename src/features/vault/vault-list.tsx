@@ -4,6 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import {
   Code2,
   Copy,
+  Eye,
+  EyeOff,
   ExternalLink,
   FileText,
   KeyRound,
@@ -117,15 +119,206 @@ async function decryptVaultItem(key: CryptoKey, row: VaultItemRow): Promise<Decr
   }
 }
 
+// ─── ViewItemDialog ───────────────────────────────────────────────────────────
+
+function RevealField({ label, value }: { label: string; value: string }) {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div className="space-y-1">
+      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+      <div className="flex items-center gap-2">
+        <p className="flex-1 font-mono text-sm break-all">
+          {revealed ? value : "•".repeat(Math.min(value.length, 20))}
+        </p>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setRevealed((r) => !r)}
+          title={revealed ? "Hide" : "Reveal"}
+        >
+          {revealed ? (
+            <EyeOff className="size-3.5" aria-hidden="true" />
+          ) : (
+            <Eye className="size-3.5" aria-hidden="true" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => void copyToClipboard(value, label)}
+          title={`Copy ${label}`}
+        >
+          <Copy className="size-3.5" aria-hidden="true" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+      <div className="flex items-center gap-2">
+        <p className={cn("flex-1 text-sm break-all", mono && "font-mono")}>{value || "—"}</p>
+        {value && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => void copyToClipboard(value, label)}
+            title={`Copy ${label}`}
+          >
+            <Copy className="size-3.5" aria-hidden="true" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
+  const { Icon, iconBg, iconColor, label } = TYPE_META[item.type];
+
+  return (
+    <>
+      <DialogHeader>
+        <div className="flex items-center gap-3">
+          <div
+            className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", iconBg)}
+          >
+            <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <DialogTitle className="truncate">{item.name}</DialogTitle>
+            <p className="text-muted-foreground text-xs">{label}</p>
+          </div>
+        </div>
+      </DialogHeader>
+
+      <div className="divide-y">
+        {item.type === "LOGIN" && (
+          <>
+            {item.secret.username && (
+              <div className="py-3">
+                <TextField label="Username" value={item.secret.username} />
+              </div>
+            )}
+            <div className="py-3">
+              <RevealField label="Password" value={item.secret.password} />
+            </div>
+            {item.secret.url && (
+              <div className="py-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Website
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <p className="flex-1 truncate text-sm">{item.secret.url}</p>
+                  <a
+                    href={item.secret.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+                    title="Open website"
+                  >
+                    <ExternalLink className="size-3.5" aria-hidden="true" />
+                  </a>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {item.type === "SECURE_NOTE" && (
+          <div className="py-3">
+            <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+              Content
+            </p>
+            <div className="bg-muted relative rounded-lg p-3">
+              <pre className="max-h-64 overflow-y-auto font-sans text-sm break-words whitespace-pre-wrap">
+                {item.secret.content || "—"}
+              </pre>
+              {item.secret.content && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-2 right-2"
+                  onClick={() => void copyToClipboard(item.secret.content, "Note")}
+                  title="Copy content"
+                >
+                  <Copy className="size-3.5" aria-hidden="true" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {item.type === "API_KEY" && (
+          <>
+            <div className="py-3">
+              <RevealField label="API Key" value={item.secret.key} />
+            </div>
+            {item.secret.description && (
+              <div className="py-3">
+                <TextField label="Description" value={item.secret.description} />
+              </div>
+            )}
+          </>
+        )}
+
+        {item.type === "WIFI_PASSWORD" && (
+          <>
+            {item.secret.ssid && (
+              <div className="py-3">
+                <TextField label="Network (SSID)" value={item.secret.ssid} />
+              </div>
+            )}
+            <div className="py-3">
+              <RevealField label="Password" value={item.secret.password} />
+            </div>
+            <div className="py-3">
+              <TextField label="Security" value={item.secret.securityType} />
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ViewItemDialog({
+  item,
+  onOpenChange,
+}: {
+  item: DecryptedVaultItem | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={!!item} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        {item && <ViewItemContent item={item} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── VaultItemCard ────────────────────────────────────────────────────────────
 
 interface VaultItemCardProps {
   item: DecryptedVaultItem;
+  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function VaultItemCard({ item, onEdit, onDelete }: VaultItemCardProps) {
+function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
   const [pendingFav, startFavTransition] = useTransition();
   const { Icon, iconBg, iconColor } = TYPE_META[item.type];
 
@@ -171,10 +364,14 @@ function VaultItemCard({ item, onEdit, onDelete }: VaultItemCardProps) {
         <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
       </div>
 
-      <div className="min-w-0 flex-1">
+      <button
+        className="min-w-0 flex-1 cursor-pointer text-left"
+        onClick={onView}
+        title="View item"
+      >
         <p className="truncate text-sm font-medium">{item.name}</p>
         {secondaryText && <p className="text-muted-foreground truncate text-xs">{secondaryText}</p>}
-      </div>
+      </button>
 
       <div className="flex shrink-0 items-center gap-1">
         {/* Primary copy */}
@@ -238,6 +435,10 @@ function VaultItemCard({ item, onEdit, onDelete }: VaultItemCardProps) {
             <span className="sr-only">More actions</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onView}>
+              <Eye className="size-3.5" aria-hidden="true" />
+              View
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={onEdit}>
               <Pencil className="size-3.5" aria-hidden="true" />
               Edit
@@ -276,6 +477,7 @@ export function VaultList({ items }: VaultListProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [createType, setCreateType] = useState<CreateType>(null);
+  const [viewItem, setViewItem] = useState<DecryptedVaultItem | null>(null);
   const [editItem, setEditItem] = useState<DecryptedVaultItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isPendingDelete, startDeleteTransition] = useTransition();
@@ -392,12 +594,21 @@ export function VaultList({ items }: VaultListProps) {
             <VaultItemCard
               key={item.id}
               item={item}
+              onView={() => setViewItem(item)}
               onEdit={() => setEditItem(item)}
               onDelete={() => setDeleteTarget({ id: item.id, name: item.name })}
             />
           ))}
         </div>
       )}
+
+      {/* ── View dialog ────────────────────────────────────────────────────── */}
+      <ViewItemDialog
+        item={viewItem}
+        onOpenChange={(open) => {
+          if (!open) setViewItem(null);
+        }}
+      />
 
       {/* ── Create dialogs ──────────────────────────────────────────────────── */}
       <LoginItemDialog
