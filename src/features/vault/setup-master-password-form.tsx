@@ -43,12 +43,14 @@ const STRENGTH_BAR_COLORS = [
 function StrengthMeter({ password }: { password: string }) {
   const score = strengthScore(password);
 
+  if (!password) return <div className="h-7" />;
+
   return (
     <div className="space-y-1">
       <div
         className="flex gap-1"
         role="meter"
-        aria-label={`Password strength: ${password ? STRENGTH_LABELS[score] : "None"}`}
+        aria-label={`Password strength: ${STRENGTH_LABELS[score]}`}
         aria-valuenow={score}
         aria-valuemin={0}
         aria-valuemax={4}
@@ -58,14 +60,12 @@ function StrengthMeter({ password }: { password: string }) {
             key={i}
             className={cn(
               "h-1 flex-1 rounded-full transition-colors duration-300",
-              password && score >= i ? STRENGTH_BAR_COLORS[score] : "bg-muted"
+              score >= i ? STRENGTH_BAR_COLORS[score] : "bg-muted"
             )}
           />
         ))}
       </div>
-      <p className="text-muted-foreground min-h-[16px] text-xs">
-        {password ? STRENGTH_LABELS[score] : ""}
-      </p>
+      <p className="text-muted-foreground text-xs">{STRENGTH_LABELS[score]}</p>
     </div>
   );
 }
