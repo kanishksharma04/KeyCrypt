@@ -42,13 +42,13 @@ const STRENGTH_BAR_COLORS = [
 
 function StrengthMeter({ password }: { password: string }) {
   const score = strengthScore(password);
-  if (!password) return null;
+
   return (
     <div className="space-y-1">
       <div
         className="flex gap-1"
         role="meter"
-        aria-label={`Password strength: ${STRENGTH_LABELS[score]}`}
+        aria-label={`Password strength: ${password ? STRENGTH_LABELS[score] : "None"}`}
         aria-valuenow={score}
         aria-valuemin={0}
         aria-valuemax={4}
@@ -58,12 +58,14 @@ function StrengthMeter({ password }: { password: string }) {
             key={i}
             className={cn(
               "h-1 flex-1 rounded-full transition-colors duration-300",
-              score >= i ? STRENGTH_BAR_COLORS[score] : "bg-muted"
+              password && score >= i ? STRENGTH_BAR_COLORS[score] : "bg-muted"
             )}
           />
         ))}
       </div>
-      {score > 0 && <p className="text-muted-foreground text-xs">{STRENGTH_LABELS[score]}</p>}
+      <p className="text-muted-foreground min-h-[16px] text-xs">
+        {password ? STRENGTH_LABELS[score] : ""}
+      </p>
     </div>
   );
 }
@@ -154,7 +156,7 @@ export function SetupMasterPasswordForm() {
           id="masterPassword"
           type="password"
           autoComplete="new-password"
-          placeholder="At least 12 characters"
+          placeholder="12+ chars, uppercase, number, symbol"
           aria-describedby={errors.masterPassword ? "mp-error" : undefined}
           aria-invalid={!!errors.masterPassword}
           {...register("masterPassword", masterPasswordRegister)}

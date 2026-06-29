@@ -14,6 +14,8 @@ const store = new Map<string, RateLimitRecord>();
  * Call this before processing any sensitive action.
  */
 export function isRateLimited(key: string, maxRequests: number, windowMs: number): boolean {
+  if (process.env.NODE_ENV === "development") return false;
+
   const now = Date.now();
   const record = store.get(key);
 

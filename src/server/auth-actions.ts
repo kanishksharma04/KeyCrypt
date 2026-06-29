@@ -1,8 +1,6 @@
 "use server";
 
-import { AuthError } from "next-auth";
 import { headers } from "next/headers";
-import { signIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { generateToken, consumeToken } from "@/lib/tokens";
@@ -27,6 +25,9 @@ async function getClientIp(): Promise<string> {
 }
 
 // ─── Sign In ──────────────────────────────────────────────────────────────────
+// Only performs rate limiting. The actual credentials auth happens client-side
+// via next-auth/react signIn() to avoid the Auth.js v5 InvalidProvider error
+// that occurs when signIn("credentials") is called from a server action.
 
 export async function signInAction(data: SignInInput): Promise<ActionResult> {
   const parsed = signInSchema.safeParse(data);
@@ -37,22 +38,7 @@ export async function signInAction(data: SignInInput): Promise<ActionResult> {
     return { error: "Too many attempts. Please wait 15 minutes before trying again." };
   }
 
-  try {
-    await signIn("credentials", {
-      ...parsed.data,
-      redirectTo: "/dashboard",
-    });
-    return { success: true };
-  } catch (err) {
-    if (err instanceof AuthError) {
-      if (err.message.includes("EMAIL_NOT_VERIFIED")) {
-        return { error: "Please verify your email before signing in." };
-      }
-      return { error: "Invalid email or password." };
-    }
-    // Re-throw NEXT_REDIRECT so Next.js performs the client redirect
-    throw err;
-  }
+  return { success: true };
 }
 
 // ─── Sign Up ──────────────────────────────────────────────────────────────────
