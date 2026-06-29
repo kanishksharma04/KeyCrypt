@@ -45,7 +45,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!valid) return null;
 
         if (!user.emailVerified) {
-          throw new EmailNotVerifiedError();
+          const smtpConfigured = process.env.NODE_ENV !== "production" || !!process.env.SMTP_HOST;
+          if (smtpConfigured) {
+            throw new EmailNotVerifiedError();
+          }
+          // No SMTP in production — auto-verify legacy unverified accounts on first sign-in
+          await db.user.update({ where: { id: user.id }, data: { emailVerified: new Date() } });
         }
 
         return { id: user.id, email: user.email, name: user.name };
