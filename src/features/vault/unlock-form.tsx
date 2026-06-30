@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { signOut } from "next-auth/react";
 import { unlockSchema, type UnlockInput } from "@/schemas/vault";
@@ -22,6 +22,7 @@ interface UnlockFormProps {
 export function UnlockForm({ salt, verificationBlob, verificationIv }: UnlockFormProps) {
   const router = useRouter();
   const [wrongPassword, setWrongPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -76,15 +77,30 @@ export function UnlockForm({ salt, verificationBlob, verificationIv }: UnlockFor
         <label htmlFor="masterPassword" className="text-sm font-medium">
           Master password
         </label>
-        <Input
-          id="masterPassword"
-          type="password"
-          autoComplete="current-password"
-          autoFocus
-          aria-describedby={errors.masterPassword ? "mp-error" : undefined}
-          aria-invalid={!!errors.masterPassword}
-          {...register("masterPassword")}
-        />
+        <div className="relative">
+          <Input
+            id="masterPassword"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            autoFocus
+            className="pr-9"
+            aria-describedby={errors.masterPassword ? "mp-error" : undefined}
+            aria-invalid={!!errors.masterPassword}
+            {...register("masterPassword")}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+          >
+            {showPassword ? (
+              <EyeOff className="size-4" aria-hidden="true" />
+            ) : (
+              <Eye className="size-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
         <FieldError id="mp-error" message={errors.masterPassword?.message} />
       </div>
 
