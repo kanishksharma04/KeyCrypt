@@ -22,6 +22,21 @@ export const metadata: Metadata = {
   description:
     "Zero-knowledge encrypted password manager. Your secrets never leave your device unencrypted.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  openGraph: {
+    title: "KeyCrypt",
+    description:
+      "Zero-knowledge encrypted password manager. Your secrets never leave your device unencrypted.",
+    siteName: "KeyCrypt",
+    images: [{ url: "/opengraph-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "KeyCrypt",
+    description:
+      "Zero-knowledge encrypted password manager. Your secrets never leave your device unencrypted.",
+    images: ["/opengraph-image.png"],
+  },
 };
 
 export default async function RootLayout({
