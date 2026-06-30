@@ -646,7 +646,7 @@ export function VaultList({ items }: VaultListProps) {
       {/* List */}
       {loading ? (
         <div className="space-y-2" aria-label="Loading vault items">
-          {[1, 2, 3].map((i) => (
+          {Array.from({ length: Math.min(Math.max(items.length, 1), 8) }, (_, i) => (
             <Skeleton key={i} className="h-15 w-full rounded-xl" />
           ))}
         </div>
