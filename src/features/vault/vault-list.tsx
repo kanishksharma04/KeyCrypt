@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
+  Check,
   Code2,
   Copy,
   Eye,
@@ -54,6 +55,22 @@ import type {
 } from "@/types/vault";
 import { cn } from "@/lib/utils";
 
+// ─── Relative time helper ─────────────────────────────────────────────────────
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  return `${Math.floor(mo / 12)}y ago`;
+}
+
 // ─── Clipboard helper ─────────────────────────────────────────────────────────
 
 async function copyToClipboard(text: string, label: string) {
@@ -65,6 +82,30 @@ async function copyToClipboard(text: string, label: string) {
   } catch {
     toast.error("Failed to copy to clipboard");
   }
+}
+
+// ─── CopyButton ───────────────────────────────────────────────────────────────
+
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      onClick={async () => {
+        await copyToClipboard(value, label);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      title={`Copy ${label}`}
+    >
+      {copied ? (
+        <Check className="size-3.5 text-green-500" aria-hidden="true" />
+      ) : (
+        <Copy className="size-3.5" aria-hidden="true" />
+      )}
+    </Button>
+  );
 }
 
 // ─── Type metadata ─────────────────────────────────────────────────────────────
@@ -143,14 +184,7 @@ function RevealField({ label, value }: { label: string; value: string }) {
             <Eye className="size-3.5" aria-hidden="true" />
           )}
         </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => void copyToClipboard(value, label)}
-          title={`Copy ${label}`}
-        >
-          <Copy className="size-3.5" aria-hidden="true" />
-        </Button>
+        <CopyButton value={value} label={label} />
       </div>
     </div>
   );
@@ -170,16 +204,7 @@ function TextField({
       <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
       <div className="flex items-center gap-2">
         <p className={cn("flex-1 text-sm break-all", mono && "font-mono")}>{value || "—"}</p>
-        {value && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => void copyToClipboard(value, label)}
-            title={`Copy ${label}`}
-          >
-            <Copy className="size-3.5" aria-hidden="true" />
-          </Button>
-        )}
+        {value && <CopyButton value={value} label={label} />}
       </div>
     </div>
   );
@@ -370,7 +395,10 @@ function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
         onClick={onView}
         title="View item"
       >
-        <p className="truncate text-sm font-medium">{item.name}</p>
+        <div className="flex items-baseline gap-2">
+          <p className="truncate text-sm font-medium">{item.name}</p>
+          <span className="text-muted-foreground shrink-0 text-xs">{timeAgo(item.updatedAt)}</span>
+        </div>
         {secondaryText && <p className="text-muted-foreground truncate text-xs">{secondaryText}</p>}
       </button>
 
@@ -523,6 +551,10 @@ export function VaultList({ items }: VaultListProps) {
         e.preventDefault();
         searchRef.current?.focus();
       }
+      if (e.key === "Escape" && document.activeElement === searchRef.current) {
+        setSearch("");
+        searchRef.current?.blur();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -614,7 +646,7 @@ export function VaultList({ items }: VaultListProps) {
       {/* List */}
       {loading ? (
         <div className="space-y-2" aria-label="Loading vault items">
-          {[1, 2, 3].map((i) => (
+          {Array.from({ length: Math.min(Math.max(items.length, 1), 8) }, (_, i) => (
             <Skeleton key={i} className="h-15 w-full rounded-xl" />
           ))}
         </div>
