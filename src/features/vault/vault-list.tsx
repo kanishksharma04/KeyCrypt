@@ -478,6 +478,7 @@ export function VaultList({ items }: VaultListProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [createType, setCreateType] = useState<CreateType>(null);
+  const [favOnly, setFavOnly] = useState(false);
   const [viewItem, setViewItem] = useState<DecryptedVaultItem | null>(null);
   const [editItem, setEditItem] = useState<DecryptedVaultItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -512,7 +513,9 @@ export function VaultList({ items }: VaultListProps) {
   }, [items]);
 
   const filtered = decrypted.filter((item) => {
+    if (favOnly && !item.favorite) return false;
     const q = search.toLowerCase();
+    if (!q) return true;
     if (item.name.toLowerCase().includes(q)) return true;
     if (item.type === "LOGIN")
       return (
@@ -537,6 +540,15 @@ export function VaultList({ items }: VaultListProps) {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center gap-2">
+        <Button
+          variant={favOnly ? "default" : "outline"}
+          size="icon-sm"
+          onClick={() => setFavOnly((f) => !f)}
+          title={favOnly ? "Show all items" : "Show favorites only"}
+        >
+          <Star className={cn("size-3.5", favOnly && "fill-current")} aria-hidden="true" />
+          <span className="sr-only">Filter favorites</span>
+        </Button>
         <div className="relative max-w-xs flex-1">
           <Input
             placeholder="Search items…"
