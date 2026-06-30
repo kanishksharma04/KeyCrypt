@@ -121,6 +121,7 @@ function ApiKeyForm({
           <Input
             id="ak-name"
             placeholder="e.g. Stripe live key"
+            autoFocus
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? "ak-name-error" : undefined}
             {...register("name")}

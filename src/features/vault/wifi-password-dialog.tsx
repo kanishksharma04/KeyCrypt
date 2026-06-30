@@ -131,6 +131,7 @@ function WifiPasswordForm({
           <Input
             id="wifi-name"
             placeholder="e.g. Home WiFi"
+            autoFocus
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? "wifi-name-error" : undefined}
             {...register("name")}

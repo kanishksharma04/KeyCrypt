@@ -116,6 +116,7 @@ function SecureNoteForm({
           <Input
             id="note-name"
             placeholder="e.g. SSH key passphrase"
+            autoFocus
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? "note-name-error" : undefined}
             {...register("name")}

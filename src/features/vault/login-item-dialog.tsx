@@ -132,6 +132,7 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
           <Input
             id="item-name"
             placeholder="e.g. GitHub"
+            autoFocus
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? "item-name-error" : undefined}
             {...register("name")}
