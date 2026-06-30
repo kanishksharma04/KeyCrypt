@@ -85,8 +85,13 @@ function FeatureCard({
   iconColor: string;
 }) {
   return (
-    <div className="bg-card rounded-xl border p-5">
-      <div className={cn("mb-3 flex size-10 items-center justify-center rounded-xl", iconBg)}>
+    <div className="bg-card group rounded-xl border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div
+        className={cn(
+          "mb-3 flex size-10 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110",
+          iconBg
+        )}
+      >
         <Icon className={cn("size-5", iconColor)} aria-hidden="true" />
       </div>
       <h3 className="mb-1 text-sm font-semibold">{title}</h3>
@@ -198,8 +203,11 @@ export default async function HomePage() {
                 { label: "600,000-iteration PBKDF2", Icon: RefreshCw },
                 { label: "In-browser crypto only", Icon: ShieldCheck },
               ].map(({ label, Icon }) => (
-                <div key={label} className="text-muted-foreground flex items-center gap-2 text-xs">
-                  <Icon className="size-4 shrink-0 text-green-500" aria-hidden="true" />
+                <div
+                  key={label}
+                  className="text-muted-foreground flex items-center gap-2 text-xs font-medium"
+                >
+                  <Icon className="size-3.5 shrink-0 text-green-500" aria-hidden="true" />
                   {label}
                 </div>
               ))}

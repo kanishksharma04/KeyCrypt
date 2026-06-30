@@ -20,7 +20,7 @@ export default async function SettingsPage() {
           Signed in as <strong>{session.user.email}</strong>
           {session.user.name ? ` (${session.user.name})` : ""}
         </p>
-        <div className="bg-card rounded-xl border px-4 py-3">
+        <div className="bg-card rounded-xl border px-4 py-3 shadow-xs">
           <p className="text-muted-foreground text-sm">
             Account management (email change, avatar) coming in a future update.
           </p>
@@ -36,7 +36,7 @@ export default async function SettingsPage() {
           Changing your master password re-encrypts every vault item in the browser. The server
           never sees your passwords.
         </p>
-        <div className="bg-card rounded-xl border p-4">
+        <div className="bg-card rounded-xl border p-4 shadow-xs">
           <ChangeMasterPasswordForm />
         </div>
       </section>
@@ -50,7 +50,7 @@ export default async function SettingsPage() {
           Signs you out of this device. To invalidate all sessions, change your master password
           after signing back in.
         </p>
-        <div className="bg-card rounded-xl border p-4">
+        <div className="bg-card rounded-xl border p-4 shadow-xs">
           <SignOutButton />
         </div>
       </section>

@@ -385,8 +385,13 @@ function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
   const externalUrl = item.type === "LOGIN" ? item.secret.url : "";
 
   return (
-    <div className="bg-card hover:bg-card/80 flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors">
-      <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", iconBg)}>
+    <div className="bg-card hover:bg-card/80 group flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-150 hover:-translate-y-px hover:shadow-sm">
+      <div
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-150 group-hover:scale-105",
+          iconBg
+        )}
+      >
         <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
       </div>
 
@@ -689,14 +694,19 @@ export function VaultList({ items }: VaultListProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((item) => (
-            <VaultItemCard
+          {filtered.map((item, i) => (
+            <div
               key={item.id}
-              item={item}
-              onView={() => setViewItem(item)}
-              onEdit={() => setEditItem(item)}
-              onDelete={() => setDeleteTarget({ id: item.id, name: item.name })}
-            />
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(i * 35, 210)}ms` }}
+            >
+              <VaultItemCard
+                item={item}
+                onView={() => setViewItem(item)}
+                onEdit={() => setEditItem(item)}
+                onDelete={() => setDeleteTarget({ id: item.id, name: item.name })}
+              />
+            </div>
           ))}
         </div>
       )}

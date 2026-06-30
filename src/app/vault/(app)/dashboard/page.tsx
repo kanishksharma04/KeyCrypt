@@ -34,8 +34,10 @@ function StatCard({
   bg: string;
 }) {
   return (
-    <div className="bg-card flex items-center gap-4 rounded-xl border p-4">
-      <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${bg}`}>
+    <div className="bg-card group flex items-center gap-4 rounded-xl border p-4 transition-all duration-150 hover:-translate-y-px hover:shadow-sm">
+      <div
+        className={`flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-150 group-hover:scale-110 ${bg}`}
+      >
         <Icon className={`size-5 ${color}`} aria-hidden="true" />
       </div>
       <div>
