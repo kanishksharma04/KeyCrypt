@@ -16,6 +16,7 @@ import {
   Star,
   Trash2,
   Wifi,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getVaultKey, decryptItem } from "@/lib/crypto";
@@ -536,13 +537,24 @@ export function VaultList({ items }: VaultListProps) {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center gap-2">
-        <Input
-          placeholder="Search items…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-          aria-label="Search vault items"
-        />
+        <div className="relative max-w-xs flex-1">
+          <Input
+            placeholder="Search items…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-8"
+            aria-label="Search vault items"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+              aria-label="Clear search"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger className={cn(buttonVariants({ size: "sm" }))}>
             <Plus className="size-4" aria-hidden="true" />
