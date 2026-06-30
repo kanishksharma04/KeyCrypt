@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   Code2,
   Copy,
@@ -477,6 +477,7 @@ export function VaultList({ items }: VaultListProps) {
   const [decrypted, setDecrypted] = useState<DecryptedVaultItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [createType, setCreateType] = useState<CreateType>(null);
   const [favOnly, setFavOnly] = useState(false);
   const [viewItem, setViewItem] = useState<DecryptedVaultItem | null>(null);
@@ -511,6 +512,21 @@ export function VaultList({ items }: VaultListProps) {
       setLoading(false);
     });
   }, [items]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const filtered = decrypted.filter((item) => {
     if (favOnly && !item.favorite) return false;
@@ -551,7 +567,8 @@ export function VaultList({ items }: VaultListProps) {
         </Button>
         <div className="relative max-w-xs flex-1">
           <Input
-            placeholder="Search items…"
+            ref={searchRef}
+            placeholder="Search items… ( / )"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pr-8"
