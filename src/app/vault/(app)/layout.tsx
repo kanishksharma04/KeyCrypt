@@ -14,10 +14,14 @@ export default async function VaultAppLayout({ children }: { children: React.Rea
   });
   if (!vaultMeta) redirect("/vault/setup");
 
+  const displayName = session.user.name ?? session.user.email ?? "?";
+  const initials = displayName.split(/[\s@]/)[0]?.[0]?.toUpperCase() ?? "?";
+  const email = session.user.email ?? "";
+
   return (
     <VaultLockProvider>
       <div className="flex min-h-dvh flex-col">
-        <VaultHeader />
+        <VaultHeader initials={initials} email={email} />
         <main className="flex-1">{children}</main>
       </div>
     </VaultLockProvider>
