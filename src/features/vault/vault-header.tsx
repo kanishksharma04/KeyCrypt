@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Lock, LayoutDashboard, LogOut, Settings, Vault } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useVaultLock } from "@/providers/vault-lock-provider";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,10 @@ const NAV_LINKS = [
 export function VaultHeader() {
   const { lock } = useVaultLock();
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const initials =
+    (session?.user?.name ?? session?.user?.email ?? "?").split(/[\s@]/)[0]?.[0]?.toUpperCase() ??
+    "?";
 
   return (
     <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 border-b backdrop-blur">
@@ -69,7 +73,14 @@ export function VaultHeader() {
           })}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-2">
+          {/* User avatar */}
+          <div
+            className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-full text-xs font-semibold"
+            title={session?.user?.email ?? ""}
+          >
+            {initials}
+          </div>
           {/* Lock */}
           <Button variant="ghost" size="icon-sm" onClick={lock} title="Lock vault">
             <Lock className="size-4" aria-hidden="true" />
