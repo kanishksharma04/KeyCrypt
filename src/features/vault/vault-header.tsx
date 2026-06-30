@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Lock, LayoutDashboard, Settings, Vault } from "lucide-react";
+import { Lock, LayoutDashboard, LogOut, Settings, Vault } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useVaultLock } from "@/providers/vault-lock-provider";
 import { cn } from "@/lib/utils";
@@ -68,11 +69,23 @@ export function VaultHeader() {
           })}
         </nav>
 
-        {/* Lock */}
-        <Button variant="ghost" size="icon-sm" onClick={lock} title="Lock vault">
-          <Lock className="size-4" aria-hidden="true" />
-          <span className="sr-only">Lock vault</span>
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          {/* Lock */}
+          <Button variant="ghost" size="icon-sm" onClick={lock} title="Lock vault">
+            <Lock className="size-4" aria-hidden="true" />
+            <span className="sr-only">Lock vault</span>
+          </Button>
+          {/* Sign out */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => void signOut({ callbackUrl: "/auth/signin" })}
+            title="Sign out"
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            <span className="sr-only">Sign out</span>
+          </Button>
+        </div>
       </div>
     </header>
   );
