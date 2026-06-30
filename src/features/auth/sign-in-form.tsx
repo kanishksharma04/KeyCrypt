@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { FieldError } from "./field-error";
 
 export function SignInForm() {
   const [serverError, setServerError] = useState<string>();
+  const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -98,14 +99,29 @@ export function SignInForm() {
             Forgot password?
           </Link>
         </div>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          aria-describedby={errors.password ? "password-error" : undefined}
-          aria-invalid={!!errors.password}
-          {...register("password")}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            className="pr-9"
+            aria-describedby={errors.password ? "password-error" : undefined}
+            aria-invalid={!!errors.password}
+            {...register("password")}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+          >
+            {showPassword ? (
+              <EyeOff className="size-4" aria-hidden="true" />
+            ) : (
+              <Eye className="size-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
         <FieldError id="password-error" message={errors.password?.message} />
       </div>
 

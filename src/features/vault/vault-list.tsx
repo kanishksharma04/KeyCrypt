@@ -602,6 +602,15 @@ export function VaultList({ items }: VaultListProps) {
         </DropdownMenu>
       </div>
 
+      {/* Item count */}
+      {!loading && filtered.length > 0 && (
+        <p className="text-muted-foreground px-0.5 text-xs">
+          {filtered.length === decrypted.length
+            ? `${decrypted.length} ${decrypted.length === 1 ? "item" : "items"}`
+            : `${filtered.length} of ${decrypted.length} items`}
+        </p>
+      )}
+
       {/* List */}
       {loading ? (
         <div className="space-y-2" aria-label="Loading vault items">
@@ -612,20 +621,37 @@ export function VaultList({ items }: VaultListProps) {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
           <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
-            <KeyRound className="text-muted-foreground size-5" aria-hidden="true" />
+            {favOnly && !search ? (
+              <Star className="text-muted-foreground size-5" aria-hidden="true" />
+            ) : (
+              <KeyRound className="text-muted-foreground size-5" aria-hidden="true" />
+            )}
           </div>
           <div className="space-y-1">
             <p className="text-sm font-medium">
-              {search ? "No items match your search" : "Your vault is empty"}
+              {search
+                ? "No items match your search"
+                : favOnly
+                  ? "No favorites yet"
+                  : "Your vault is empty"}
             </p>
             <p className="text-muted-foreground text-xs">
-              {search ? "Try a different search term" : "Add your first item to get started"}
+              {search
+                ? "Try a different search term"
+                : favOnly
+                  ? "Star any item to pin it here"
+                  : "Add your first item to get started"}
             </p>
           </div>
-          {!search && (
+          {!search && !favOnly && (
             <Button size="sm" onClick={() => setCreateType("LOGIN")}>
               <Plus className="size-4" aria-hidden="true" />
               Add login
+            </Button>
+          )}
+          {favOnly && !search && (
+            <Button size="sm" variant="outline" onClick={() => setFavOnly(false)}>
+              Show all items
             </Button>
           )}
         </div>
