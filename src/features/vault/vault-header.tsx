@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Lock, LayoutDashboard, Settings, Vault } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useVaultLock } from "@/providers/vault-lock-provider";
-import { KeyCryptMark } from "@/components/shared/keycrypt-logo";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -27,10 +27,22 @@ export function VaultHeader() {
           className="text-foreground flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80 focus-visible:rounded-md"
           aria-label="KeyCrypt vault"
         >
-          <div className="bg-primary flex size-7 items-center justify-center rounded-lg">
-            <KeyCryptMark size={18} variant="duo" />
-          </div>
-          <span className="font-semibold tracking-tight">KeyCrypt</span>
+          <Image
+            src="/logos/wordmark-black.png"
+            alt="KeyCrypt"
+            width={437}
+            height={158}
+            className="h-7 w-auto dark:hidden"
+            priority
+          />
+          <Image
+            src="/logos/wordmark-white.png"
+            alt="KeyCrypt"
+            width={428}
+            height={158}
+            className="hidden h-7 w-auto dark:block"
+            priority
+          />
         </Link>
 
         {/* Nav links */}

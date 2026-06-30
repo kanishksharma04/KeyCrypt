@@ -14,7 +14,7 @@ import {
 import { auth } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
-import { KeyCryptMark, KeyCryptWordmark } from "@/components/shared/keycrypt-logo";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────
@@ -26,7 +26,22 @@ async function MarketingNav() {
     <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="transition-opacity hover:opacity-80" aria-label="KeyCrypt home">
-          <KeyCryptWordmark height={32} variant="duo" />
+          <Image
+            src="/logos/wordmark-black.png"
+            alt="KeyCrypt"
+            width={437}
+            height={158}
+            className="h-8 w-auto dark:hidden"
+            priority
+          />
+          <Image
+            src="/logos/wordmark-white.png"
+            alt="KeyCrypt"
+            width={428}
+            height={158}
+            className="hidden h-8 w-auto dark:block"
+            priority
+          />
         </Link>
 
         <div className="flex items-center gap-2">
@@ -125,7 +140,14 @@ export default async function HomePage() {
 
           <div className="relative mx-auto max-w-3xl px-4 text-center">
             <div className="mb-6 flex justify-center">
-              <KeyCryptMark size={72} variant="duo" />
+              <Image
+                src="/logos/app-icon.png"
+                alt="KeyCrypt"
+                width={210}
+                height={208}
+                className="size-20 rounded-xl"
+                priority
+              />
             </div>
 
             <div className="bg-card text-muted-foreground mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
@@ -297,7 +319,14 @@ export default async function HomePage() {
       <footer className="border-t py-6">
         <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4 text-xs sm:flex-row">
           <div className="flex items-center gap-2">
-            <KeyCryptMark size={18} variant="duo" />
+            <Image
+              src="/logos/app-icon.png"
+              alt=""
+              width={210}
+              height={208}
+              className="size-5 rounded-md"
+              aria-hidden="true"
+            />
             <span className="text-foreground font-medium">KeyCrypt</span>
             <span>· Zero-knowledge password manager</span>
           </div>

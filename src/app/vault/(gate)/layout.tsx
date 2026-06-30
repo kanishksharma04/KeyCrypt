@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KeyCryptWordmark } from "@/components/shared/keycrypt-logo";
+import Image from "next/image";
 
 // Visual shell for pre-vault screens (setup and unlock).
 // Mirrors the auth layout so the experience is consistent.
@@ -11,7 +11,22 @@ export default function VaultGateLayout({ children }: { children: React.ReactNod
         className="mb-8 transition-opacity hover:opacity-80 focus-visible:rounded-md"
         aria-label="KeyCrypt home"
       >
-        <KeyCryptWordmark height={36} variant="duo" />
+        <Image
+          src="/logos/wordmark-black.png"
+          alt="KeyCrypt"
+          width={437}
+          height={158}
+          className="h-9 w-auto dark:hidden"
+          priority
+        />
+        <Image
+          src="/logos/wordmark-white.png"
+          alt="KeyCrypt"
+          width={428}
+          height={158}
+          className="hidden h-9 w-auto dark:block"
+          priority
+        />
       </Link>
 
       <div className="bg-card w-full max-w-sm rounded-2xl border p-6 shadow-sm">{children}</div>
