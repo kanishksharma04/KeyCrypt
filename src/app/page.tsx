@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GitBranch, ShieldCheck, Sparkles, Vault } from "lucide-react";
+import { ShieldCheck, Sparkles, Vault } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -76,15 +76,6 @@ async function MarketingNav() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <a
-            href="https://github.com/kanishksharma04/KeyCrypt"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-            aria-label="View source on GitHub"
-          >
-            <GitBranch className="size-4" aria-hidden="true" />
-          </a>
           <ThemeToggle />
           {session ? (
             <>
@@ -446,7 +437,6 @@ export default async function HomePage() {
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
                   >
-                    <GitBranch className="size-3.5" aria-hidden="true" />
                     GitHub
                   </a>
                 </li>
