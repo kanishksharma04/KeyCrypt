@@ -74,7 +74,7 @@
   --secondary: oklch(0.2 0 0); /* #27272a */
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.2 0 0);
-  --muted-foreground: oklch(0.707 0 0); /* #a1a1aa */
+  --muted-foreground: oklch(0.74 0 0); /* lifted from #a1a1aa for better contrast */
   --accent: oklch(0.613 0.22 264.054); /* #3b82f6 */
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.577 0.245 27.325); /* #ef4444 */
@@ -236,6 +236,22 @@
   }
   .stagger-6 {
     animation-delay: 240ms;
+  }
+}
+
+/* ─── Scroll-aware nav border ────────────────────────────────────────────── */
+@supports (animation-timeline: scroll()) {
+  .scroll-nav {
+    border-bottom-color: transparent;
+    animation: scroll-nav-border linear both;
+    animation-timeline: scroll();
+    animation-range: 0px 60px;
+  }
+
+  @keyframes scroll-nav-border {
+    to {
+      border-bottom-color: var(--border);
+    }
   }
 }
 

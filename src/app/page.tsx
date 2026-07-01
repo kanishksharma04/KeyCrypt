@@ -23,7 +23,7 @@ async function MarketingNav() {
   const session = await auth();
 
   return (
-    <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
+    <header className="scroll-nav bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="transition-opacity hover:opacity-80" aria-label="KeyCrypt home">
           <Image
@@ -152,7 +152,7 @@ export default async function HomePage() {
               />
             </div>
 
-            <div className="bg-card text-muted-foreground mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
+            <div className="bg-card text-muted-foreground mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wide">
               <ShieldCheck className="size-3.5 text-green-500" aria-hidden="true" />
               Zero-knowledge · AES-256-GCM · PBKDF2-SHA-256
             </div>
