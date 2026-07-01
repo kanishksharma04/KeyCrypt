@@ -225,7 +225,7 @@ export default async function HomePage() {
 
         {/* ── What we never do ─────────────────────────────────────────────── */}
         <section className="border-b py-20">
-          <div className="mx-auto max-w-5xl px-4">
+          <div className="mx-auto max-w-3xl px-4">
             <div className="mb-12 text-center">
               <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
                 02
@@ -236,7 +236,7 @@ export default async function HomePage() {
               <p className="text-muted-foreground">Constraints that make zero-knowledge real.</p>
             </div>
 
-            <div className="grid gap-12 sm:grid-cols-2">
+            <div className="grid gap-10 sm:grid-cols-2 sm:divide-x">
               <div>
                 <p className="text-muted-foreground mb-5 text-xs font-semibold tracking-widest uppercase">
                   Never
@@ -258,7 +258,7 @@ export default async function HomePage() {
                   ))}
                 </ul>
               </div>
-              <div>
+              <div className="sm:pl-10">
                 <p className="text-muted-foreground mb-5 text-xs font-semibold tracking-widest uppercase">
                   Always
                 </p>
