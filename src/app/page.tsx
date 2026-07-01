@@ -160,8 +160,11 @@ export default async function HomePage() {
               Zero-knowledge · AES-256-GCM · PBKDF2-SHA-256
             </div>
 
-            <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-6xl">
-              Your passwords, <span className="text-primary">never on our servers</span>
+            <h1 className="mb-4 text-4xl font-black tracking-tight md:text-6xl">
+              Your passwords,{" "}
+              <span className="from-primary bg-linear-to-r to-blue-400 bg-clip-text text-transparent">
+                never on our servers
+              </span>
             </h1>
 
             <p className="text-muted-foreground mx-auto mb-8 max-w-xl text-base md:text-lg">
