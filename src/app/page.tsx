@@ -295,7 +295,7 @@ export default async function HomePage() {
             </div>
 
             {/* Desktop: horizontal pipeline */}
-            <div className="mb-16 hidden flex-wrap items-start justify-center gap-2 md:flex">
+            <div className="mb-16 hidden items-center justify-center gap-1.5 overflow-x-auto md:flex">
               {[
                 { label: "Master Password", sub: "what you type" },
                 null,
@@ -308,11 +308,11 @@ export default async function HomePage() {
                 { label: "Ciphertext", sub: "all the server sees" },
               ].map((node, i) =>
                 node === null ? (
-                  <span key={i} className="text-muted-foreground mt-3.5 shrink-0 font-mono text-sm">
+                  <span key={i} className="text-muted-foreground shrink-0 font-mono text-sm">
                     →
                   </span>
                 ) : (
-                  <div key={i} className="bg-muted rounded-lg px-4 py-3 text-center">
+                  <div key={i} className="bg-muted shrink-0 rounded-lg px-3 py-2.5 text-center">
                     <p className="font-mono text-xs font-semibold">{node.label}</p>
                     <p className="text-muted-foreground mt-0.5 font-mono text-[10px]">{node.sub}</p>
                   </div>
