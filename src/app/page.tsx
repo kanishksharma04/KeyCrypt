@@ -136,11 +136,8 @@ export default async function HomePage() {
       <main className="flex-1">
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative overflow-hidden border-b py-24 md:py-36">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          >
-            <div className="bg-primary/10 h-96 w-96 rounded-full blur-3xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <div className="bg-primary/8 absolute top-0 left-1/2 h-125 w-225 -translate-x-1/2 rounded-[100%] blur-3xl" />
           </div>
 
           <div className="relative mx-auto max-w-3xl px-4 text-center">
@@ -287,7 +284,11 @@ export default async function HomePage() {
               </p>
             </div>
 
-            <div className="space-y-8">
+            <div className="relative space-y-8">
+              <div
+                className="border-border absolute top-4 bottom-4 left-4 w-px border-l border-dashed"
+                aria-hidden="true"
+              />
               <Step
                 number="1"
                 title="Choose a master password"
