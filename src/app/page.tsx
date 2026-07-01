@@ -1,22 +1,51 @@
 import Link from "next/link";
-import {
-  Code2,
-  FileText,
-  Github,
-  KeyRound,
-  Lock,
-  RefreshCw,
-  Shield,
-  ShieldCheck,
-  Sparkles,
-  Vault,
-  Wifi,
-} from "lucide-react";
+import { Github, ShieldCheck, Sparkles, Vault } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+
+// ─── Static data ─────────────────────────────────────────────────────────────
+
+const TRUST_ITEMS = [
+  "AES-256-GCM encryption",
+  "PBKDF2-SHA-256 key derivation",
+  "600,000 PBKDF2 rounds",
+  "Zero-knowledge architecture",
+  "In-browser crypto only",
+  "No master password transmitted",
+  "Unique IV per vault item",
+  "Auto-lock on inactivity",
+  "No telemetry or tracking",
+  "MIT open source",
+];
+
+const FEATURES = [
+  {
+    title: "Login credentials",
+    description: "Store usernames, passwords, and URLs. One-click copy, one-click launch.",
+  },
+  {
+    title: "Secure notes",
+    description: "Encrypted free-form text for PINs, recovery codes, or any sensitive memo.",
+  },
+  {
+    title: "API keys",
+    description: "Key, service name, and notes with monospace display for easy scanning.",
+  },
+  {
+    title: "WiFi passwords",
+    description: "SSID, password, and security type — stored and copied in one tap.",
+  },
+  {
+    title: "Password generator",
+    description: "Configurable length and character sets with live entropy scoring.",
+  },
+  {
+    title: "Auto-lock",
+    description: "Vault locks after 15 minutes of inactivity or immediately on tab close.",
+  },
+];
 
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 
@@ -76,37 +105,6 @@ async function MarketingNav() {
         </div>
       </div>
     </header>
-  );
-}
-
-// ─── Feature card ─────────────────────────────────────────────────────────────
-
-function FeatureCard({
-  Icon,
-  title,
-  description,
-  iconBg,
-  iconColor,
-}: {
-  Icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  iconBg: string;
-  iconColor: string;
-}) {
-  return (
-    <div className="bg-card group rounded-xl border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <div
-        className={cn(
-          "mb-3 flex size-10 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110",
-          iconBg
-        )}
-      >
-        <Icon className={cn("size-5", iconColor)} aria-hidden="true" />
-      </div>
-      <h3 className="mb-1 text-sm font-semibold">{title}</h3>
-      <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
-    </div>
   );
 }
 
@@ -191,31 +189,24 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ── Trust bar ────────────────────────────────────────────────────── */}
-        <section className="border-b py-8">
-          <div className="mx-auto max-w-5xl px-4">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {[
-                { label: "Zero-knowledge architecture", Icon: Shield },
-                { label: "AES-256-GCM encryption", Icon: Lock },
-                { label: "600,000-iteration PBKDF2", Icon: RefreshCw },
-                { label: "In-browser crypto only", Icon: ShieldCheck },
-              ].map(({ label, Icon }) => (
-                <div
-                  key={label}
-                  className="text-muted-foreground flex items-center gap-2 text-xs font-medium"
-                >
-                  <Icon className="size-3.5 shrink-0 text-green-500" aria-hidden="true" />
-                  {label}
-                </div>
-              ))}
-            </div>
+        {/* ── Trust bar (marquee) ──────────────────────────────────────────── */}
+        <section className="overflow-hidden border-b py-5" aria-label="Security features">
+          <div className="animate-marquee flex w-max gap-10" aria-hidden="true">
+            {[...TRUST_ITEMS, ...TRUST_ITEMS].map((item, i) => (
+              <span
+                key={i}
+                className="text-muted-foreground flex items-center gap-3 text-xs font-medium whitespace-nowrap"
+              >
+                <span className="size-1 shrink-0 rounded-full bg-green-500" />
+                {item}
+              </span>
+            ))}
           </div>
         </section>
 
         {/* ── Features ─────────────────────────────────────────────────────── */}
         <section className="border-b py-20">
-          <div className="mx-auto max-w-5xl px-4">
+          <div className="mx-auto max-w-4xl px-4">
             <div className="mb-12 text-center">
               <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
                 01
@@ -226,49 +217,13 @@ export default async function HomePage() {
               <p className="text-muted-foreground">A focused password manager with no bloat.</p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <FeatureCard
-                Icon={KeyRound}
-                title="Login credentials"
-                description="Store usernames, passwords, and URLs with one-click copy and site launch."
-                iconBg="bg-primary/10"
-                iconColor="text-primary"
-              />
-              <FeatureCard
-                Icon={FileText}
-                title="Secure notes"
-                description="Encrypted free-form notes for PINs, recovery codes, or any sensitive text."
-                iconBg="bg-green-500/10"
-                iconColor="text-green-500"
-              />
-              <FeatureCard
-                Icon={Code2}
-                title="API keys"
-                description="Keep API keys and tokens safe with description fields and monospace display."
-                iconBg="bg-purple-500/10"
-                iconColor="text-purple-500"
-              />
-              <FeatureCard
-                Icon={Wifi}
-                title="WiFi passwords"
-                description="Store network credentials with SSID, password, and security type."
-                iconBg="bg-orange-500/10"
-                iconColor="text-orange-500"
-              />
-              <FeatureCard
-                Icon={Sparkles}
-                title="Password generator"
-                description="Generate strong passwords with configurable length, charsets, and live entropy score."
-                iconBg="bg-pink-500/10"
-                iconColor="text-pink-500"
-              />
-              <FeatureCard
-                Icon={Lock}
-                title="Auto-lock"
-                description="Vault locks after 15 minutes of inactivity and immediately on tab close."
-                iconBg="bg-amber-500/10"
-                iconColor="text-amber-500"
-              />
+            <div className="divide-y">
+              {FEATURES.map(({ title, description }) => (
+                <div key={title} className="grid gap-4 py-5 sm:grid-cols-[12rem_1fr] sm:gap-8">
+                  <p className="text-sm font-semibold sm:pt-0.5">{title}</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -348,7 +303,34 @@ export default async function HomePage() {
               </p>
             </div>
 
-            <div className="relative space-y-8">
+            {/* Desktop: horizontal pipeline */}
+            <div className="mb-16 hidden flex-wrap items-start justify-center gap-2 md:flex">
+              {[
+                { label: "Master Password", sub: "what you type" },
+                null,
+                { label: "PBKDF2-SHA-256", sub: "600,000 rounds" },
+                null,
+                { label: "256-bit Vault Key", sub: "never leaves device" },
+                null,
+                { label: "AES-256-GCM", sub: "random IV per item" },
+                null,
+                { label: "Ciphertext", sub: "all the server sees" },
+              ].map((node, i) =>
+                node === null ? (
+                  <span key={i} className="text-muted-foreground mt-3.5 shrink-0 font-mono text-sm">
+                    →
+                  </span>
+                ) : (
+                  <div key={i} className="bg-muted rounded-lg px-4 py-3 text-center">
+                    <p className="font-mono text-xs font-semibold">{node.label}</p>
+                    <p className="text-muted-foreground mt-0.5 font-mono text-[10px]">{node.sub}</p>
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Mobile: stacked steps */}
+            <div className="relative space-y-8 md:hidden">
               <div
                 className="border-border absolute top-4 bottom-4 left-4 w-px border-l border-dashed"
                 aria-hidden="true"
