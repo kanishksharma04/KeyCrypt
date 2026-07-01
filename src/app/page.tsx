@@ -281,7 +281,7 @@ export default async function HomePage() {
 
         {/* ── How it works ─────────────────────────────────────────────────── */}
         <section className="border-b py-20">
-          <div className="mx-auto max-w-3xl px-4">
+          <div className="mx-auto max-w-4xl px-4">
             <div className="mb-12 text-center">
               <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
                 03
@@ -295,7 +295,7 @@ export default async function HomePage() {
             </div>
 
             {/* Desktop: horizontal pipeline */}
-            <div className="mb-16 hidden items-center justify-center gap-1.5 overflow-x-auto md:flex">
+            <div className="mb-16 hidden items-center justify-center gap-2 md:flex">
               {[
                 { label: "Master Password", sub: "what you type" },
                 null,
