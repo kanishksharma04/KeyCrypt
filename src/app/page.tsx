@@ -217,6 +217,9 @@ export default async function HomePage() {
         <section className="border-b py-20">
           <div className="mx-auto max-w-5xl px-4">
             <div className="mb-12 text-center">
+              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
+                01
+              </span>
               <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
                 Everything you need, nothing you don&apos;t
               </h2>
@@ -270,10 +273,73 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* ── What we never do ─────────────────────────────────────────────── */}
+        <section className="border-b py-20">
+          <div className="mx-auto max-w-5xl px-4">
+            <div className="mb-12 text-center">
+              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
+                02
+              </span>
+              <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
+                What we never do
+              </h2>
+              <p className="text-muted-foreground">Constraints that make zero-knowledge real.</p>
+            </div>
+
+            <div className="grid gap-12 sm:grid-cols-2">
+              <div>
+                <p className="text-muted-foreground mb-5 text-xs font-semibold tracking-widest uppercase">
+                  Never
+                </p>
+                <ul className="space-y-3.5">
+                  {[
+                    "Store your master password",
+                    "Transmit unencrypted vault data",
+                    "Log or read your vault contents",
+                    "Sell or share your information",
+                    "Derive your encryption key server-side",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-sm">
+                      <span className="text-destructive mt-px shrink-0 font-mono text-xs leading-5">
+                        ✗
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-5 text-xs font-semibold tracking-widest uppercase">
+                  Always
+                </p>
+                <ul className="space-y-3.5">
+                  {[
+                    "Encrypt before data leaves your device",
+                    "Derive your vault key client-side only",
+                    "Use a unique random IV per item",
+                    "Clear clipboard after 30 seconds",
+                    "Wipe the vault key from memory on lock",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-sm">
+                      <span className="mt-px shrink-0 font-mono text-xs leading-5 text-green-500">
+                        ✓
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ── How it works ─────────────────────────────────────────────────── */}
         <section className="border-b py-20">
           <div className="mx-auto max-w-3xl px-4">
             <div className="mb-12 text-center">
+              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
+                03
+              </span>
               <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
                 How the zero-knowledge model works
               </h2>
@@ -326,21 +392,91 @@ export default async function HomePage() {
       </main>
 
       {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      <footer className="border-t py-6">
-        <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4 text-xs sm:flex-row">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/logos/app-icon.png"
-              alt=""
-              width={210}
-              height={208}
-              className="size-5 rounded-md"
-              aria-hidden="true"
-            />
-            <span className="text-foreground font-medium">KeyCrypt</span>
-            <span>· Zero-knowledge password manager</span>
+      <footer className="border-t py-12">
+        <div className="mx-auto max-w-5xl px-4">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Brand */}
+            <div className="lg:col-span-2">
+              <div className="mb-3 flex items-center gap-2">
+                <Image
+                  src="/logos/app-icon.png"
+                  alt=""
+                  width={210}
+                  height={208}
+                  className="size-6 rounded-md"
+                  aria-hidden="true"
+                />
+                <span className="font-semibold">KeyCrypt</span>
+              </div>
+              <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
+                Zero-knowledge password manager. Everything encrypted in your browser — nothing
+                readable on our servers.
+              </p>
+            </div>
+
+            {/* Product */}
+            <div>
+              <p className="text-muted-foreground mb-4 text-xs font-semibold tracking-widest uppercase">
+                Product
+              </p>
+              <ul className="space-y-2.5 text-sm">
+                <li>
+                  <Link
+                    href="/vault"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Vault
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/auth/signin"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/auth/signup"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Create account
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Open source */}
+            <div>
+              <p className="text-muted-foreground mb-4 text-xs font-semibold tracking-widest uppercase">
+                Open source
+              </p>
+              <ul className="space-y-2.5 text-sm">
+                <li>
+                  <a
+                    href="https://github.com/kanishksharma04/KeyCrypt"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
+                  >
+                    <Github className="size-3.5" aria-hidden="true" />
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <span className="text-muted-foreground">MIT License</span>
+                </li>
+              </ul>
+            </div>
           </div>
-          <p>© {new Date().getFullYear()} KeyCrypt. Built with end-to-end encryption.</p>
+
+          <div className="border-border mt-10 flex flex-col items-center justify-between gap-2 border-t pt-6 sm:flex-row">
+            <p className="text-muted-foreground text-xs">
+              © {new Date().getFullYear()} KeyCrypt · Zero-knowledge password manager
+            </p>
+            <p className="text-muted-foreground text-xs">Built with end-to-end encryption</p>
+          </div>
         </div>
       </footer>
     </div>
