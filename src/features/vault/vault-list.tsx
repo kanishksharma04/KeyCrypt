@@ -385,7 +385,7 @@ function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
   const externalUrl = item.type === "LOGIN" ? item.secret.url : "";
 
   return (
-    <div className="bg-card hover:bg-card/80 group flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-150 hover:-translate-y-px hover:shadow-sm">
+    <div className="bg-card hover:bg-card/80 group flex items-center gap-3 rounded-xl border px-4 py-2.5 transition-all duration-150 hover:-translate-y-px hover:shadow-sm">
       <div
         className={cn(
           "flex size-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-150 group-hover:scale-105",
@@ -660,42 +660,46 @@ export function VaultList({ items }: VaultListProps) {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
-            {favOnly && !search ? (
-              <Star className="text-muted-foreground size-5" aria-hidden="true" />
-            ) : (
-              <KeyRound className="text-muted-foreground size-5" aria-hidden="true" />
+        !search && !favOnly ? (
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-20 text-center">
+            <div className="bg-primary/10 flex size-16 items-center justify-center rounded-2xl">
+              <KeyRound className="text-primary size-8" aria-hidden="true" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-base font-semibold">Your vault is empty</p>
+              <p className="text-muted-foreground mx-auto max-w-xs text-sm">
+                Add your first item to start encrypting your digital life.
+              </p>
+            </div>
+            <Button onClick={() => setCreateType("LOGIN")}>
+              <Plus className="size-4" aria-hidden="true" />
+              Add your first login
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+            <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
+              {favOnly && !search ? (
+                <Star className="text-muted-foreground size-5" aria-hidden="true" />
+              ) : (
+                <KeyRound className="text-muted-foreground size-5" aria-hidden="true" />
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                {search ? "No items match your search" : "No favorites yet"}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {search ? "Try a different search term" : "Star any item to pin it here"}
+              </p>
+            </div>
+            {favOnly && !search && (
+              <Button size="sm" variant="outline" onClick={() => setFavOnly(false)}>
+                Show all items
+              </Button>
             )}
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium">
-              {search
-                ? "No items match your search"
-                : favOnly
-                  ? "No favorites yet"
-                  : "Your vault is empty"}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              {search
-                ? "Try a different search term"
-                : favOnly
-                  ? "Star any item to pin it here"
-                  : "Add your first item to get started"}
-            </p>
-          </div>
-          {!search && !favOnly && (
-            <Button size="sm" onClick={() => setCreateType("LOGIN")}>
-              <Plus className="size-4" aria-hidden="true" />
-              Add login
-            </Button>
-          )}
-          {favOnly && !search && (
-            <Button size="sm" variant="outline" onClick={() => setFavOnly(false)}>
-              Show all items
-            </Button>
-          )}
-        </div>
+        )
       ) : (
         <div className="space-y-2">
           {filtered.map((item, i) => (

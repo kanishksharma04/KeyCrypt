@@ -41,7 +41,7 @@ function StatCard({
         <Icon className={`size-5 ${color}`} aria-hidden="true" />
       </div>
       <div>
-        <p className="text-2xl font-bold tabular-nums">{value}</p>
+        <p className="text-2xl font-black tabular-nums">{value}</p>
         <p className="text-muted-foreground text-sm">{label}</p>
       </div>
     </div>
