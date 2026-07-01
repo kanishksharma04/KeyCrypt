@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Code2,
   FileText,
+  Github,
   KeyRound,
   Lock,
   RefreshCw,
@@ -45,6 +46,15 @@ async function MarketingNav() {
         </Link>
 
         <div className="flex items-center gap-2">
+          <a
+            href="https://github.com/kanishksharma04/KeyCrypt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            aria-label="View source on GitHub"
+          >
+            <Github className="size-4" aria-hidden="true" />
+          </a>
           <ThemeToggle />
           {session ? (
             <Link href="/vault" className={buttonVariants({ size: "sm" })}>
@@ -141,32 +151,20 @@ export default async function HomePage() {
           </div>
 
           <div className="relative mx-auto max-w-3xl px-4 text-center">
-            <div className="mb-6 flex justify-center">
-              <Image
-                src="/logos/app-icon.png"
-                alt="KeyCrypt"
-                width={210}
-                height={208}
-                className="size-20 rounded-xl"
-                priority
-              />
-            </div>
-
-            <div className="bg-card text-muted-foreground mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wide">
+            <div className="bg-card text-muted-foreground mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wide">
               <ShieldCheck className="size-3.5 text-green-500" aria-hidden="true" />
               Zero-knowledge · AES-256-GCM · PBKDF2-SHA-256
             </div>
 
-            <h1 className="mb-4 text-4xl font-black tracking-tight md:text-6xl">
+            <h1 className="mb-5 text-4xl font-black tracking-tight md:text-6xl md:tracking-[-0.04em]">
               Your passwords,{" "}
               <span className="from-primary bg-linear-to-r to-blue-400 bg-clip-text text-transparent">
                 never on our servers
               </span>
             </h1>
 
-            <p className="text-muted-foreground mx-auto mb-8 max-w-xl text-base md:text-lg">
-              KeyCrypt encrypts everything in your browser before it leaves your device. We store
-              only ciphertext — mathematically impossible to decrypt without your master password.
+            <p className="text-muted-foreground mx-auto mb-8 max-w-md text-base md:text-lg">
+              Your browser encrypts it. Our servers never can.
             </p>
 
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
