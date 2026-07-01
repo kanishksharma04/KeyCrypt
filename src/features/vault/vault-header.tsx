@@ -29,9 +29,9 @@ export function VaultHeader({ initials, email }: VaultHeaderProps) {
       <div className="container mx-auto flex h-12 max-w-4xl items-center gap-4 px-4">
         {/* Logo */}
         <Link
-          href="/vault"
+          href="/"
           className="text-foreground flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80 focus-visible:rounded-md"
-          aria-label="KeyCrypt vault"
+          aria-label="KeyCrypt home"
         >
           <Image
             src="/logos/wordmark-black.png"
