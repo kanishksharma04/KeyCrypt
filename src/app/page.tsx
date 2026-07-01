@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Github, ShieldCheck, Sparkles, Vault } from "lucide-react";
+import { GitBranch, ShieldCheck, Sparkles, Vault } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -82,7 +82,7 @@ async function MarketingNav() {
             className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
             aria-label="View source on GitHub"
           >
-            <Github className="size-4" aria-hidden="true" />
+            <GitBranch className="size-4" aria-hidden="true" />
           </a>
           <ThemeToggle />
           {session ? (
@@ -442,7 +442,7 @@ export default async function HomePage() {
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
                   >
-                    <Github className="size-3.5" aria-hidden="true" />
+                    <GitBranch className="size-3.5" aria-hidden="true" />
                     GitHub
                   </a>
                 </li>
