@@ -351,10 +351,7 @@ function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
   // Derived secondary display text (never secrets directly — shown as metadata)
   const secondaryText = (() => {
     if (item.type === "LOGIN") return item.secret.username;
-    if (item.type === "SECURE_NOTE") {
-      const t = item.secret.content.slice(0, 60);
-      return item.secret.content.length > 60 ? `${t}…` : t;
-    }
+    if (item.type === "SECURE_NOTE") return null;
     if (item.type === "API_KEY") return item.secret.description;
     const { ssid, securityType } = item.secret;
     return ssid ? `${ssid} · ${securityType}` : securityType;
