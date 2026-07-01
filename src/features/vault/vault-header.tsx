@@ -77,7 +77,7 @@ export function VaultHeader({ initials, email }: VaultHeaderProps) {
         <div className="flex shrink-0 items-center gap-2">
           {/* User avatar */}
           <div
-            className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-full text-xs font-semibold"
+            className="bg-primary/10 text-primary hover:ring-primary/30 flex size-6 cursor-default items-center justify-center rounded-full text-xs font-semibold ring-2 ring-transparent transition-all duration-150"
             title={email}
           >
             {initials}

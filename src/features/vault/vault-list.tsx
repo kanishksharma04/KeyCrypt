@@ -602,16 +602,16 @@ export function VaultList({ items }: VaultListProps) {
           <Star className={cn("size-3.5", favOnly && "fill-current")} aria-hidden="true" />
           <span className="sr-only">Filter favorites</span>
         </Button>
-        <div className="relative max-w-xs flex-1">
+        <div className="group relative max-w-xs flex-1">
           <Input
             ref={searchRef}
-            placeholder="Search items… ( / )"
+            placeholder="Search items…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pr-8"
             aria-label="Search vault items"
           />
-          {search && (
+          {search ? (
             <button
               onClick={() => setSearch("")}
               className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
@@ -619,6 +619,10 @@ export function VaultList({ items }: VaultListProps) {
             >
               <X className="size-3.5" />
             </button>
+          ) : (
+            <kbd className="bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 hidden h-5 -translate-y-1/2 items-center rounded border px-1.5 font-mono text-[10px] opacity-100 transition-opacity duration-150 select-none group-focus-within:opacity-0 sm:flex">
+              /
+            </kbd>
           )}
         </div>
         <DropdownMenu>

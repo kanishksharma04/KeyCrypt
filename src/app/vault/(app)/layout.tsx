@@ -22,7 +22,7 @@ export default async function VaultAppLayout({ children }: { children: React.Rea
     <VaultLockProvider>
       <div className="flex min-h-dvh flex-col">
         <VaultHeader initials={initials} email={email} />
-        <main className="flex-1">{children}</main>
+        <main className="animate-fade-in flex-1">{children}</main>
       </div>
     </VaultLockProvider>
   );
