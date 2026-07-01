@@ -224,9 +224,9 @@ export default async function HomePage() {
         </section>
 
         {/* ── What we never do ─────────────────────────────────────────────── */}
-        <section className="border-b py-20">
-          <div className="mx-auto max-w-3xl px-4">
-            <div className="mb-12 text-center">
+        <section className="border-b py-24">
+          <div className="mx-auto max-w-2xl px-4">
+            <div className="mb-16 text-center">
               <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
                 02
               </span>
@@ -236,12 +236,12 @@ export default async function HomePage() {
               <p className="text-muted-foreground">Constraints that make zero-knowledge real.</p>
             </div>
 
-            <div className="grid gap-10 sm:grid-cols-2 sm:divide-x">
-              <div>
-                <p className="text-muted-foreground mb-5 text-xs font-semibold tracking-widest uppercase">
+            <div className="grid sm:grid-cols-2 sm:divide-x">
+              <div className="pb-10 sm:pr-10 sm:pb-0">
+                <p className="text-muted-foreground mb-7 text-xs font-semibold tracking-[0.2em] uppercase">
                   Never
                 </p>
-                <ul className="space-y-3.5">
+                <ul className="space-y-5">
                   {[
                     "Store your master password",
                     "Transmit unencrypted vault data",
@@ -249,20 +249,18 @@ export default async function HomePage() {
                     "Sell or share your information",
                     "Derive your encryption key server-side",
                   ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm">
-                      <span className="text-destructive mt-px shrink-0 font-mono text-xs leading-5">
-                        ✗
-                      </span>
+                    <li key={item} className="flex items-center gap-3.5 text-sm">
+                      <span className="text-destructive shrink-0 font-mono text-xs">✗</span>
                       {item}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="sm:pl-10">
-                <p className="text-muted-foreground mb-5 text-xs font-semibold tracking-widest uppercase">
+              <div className="border-border border-t pt-10 sm:border-t-0 sm:pt-0 sm:pl-10">
+                <p className="text-muted-foreground mb-7 text-xs font-semibold tracking-[0.2em] uppercase">
                   Always
                 </p>
-                <ul className="space-y-3.5">
+                <ul className="space-y-5">
                   {[
                     "Encrypt before data leaves your device",
                     "Derive your vault key client-side only",
@@ -270,10 +268,8 @@ export default async function HomePage() {
                     "Clear clipboard after 30 seconds",
                     "Wipe the vault key from memory on lock",
                   ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm">
-                      <span className="mt-px shrink-0 font-mono text-xs leading-5 text-green-500">
-                        ✓
-                      </span>
+                    <li key={item} className="flex items-center gap-3.5 text-sm">
+                      <span className="shrink-0 font-mono text-xs text-green-500">✓</span>
                       {item}
                     </li>
                   ))}
