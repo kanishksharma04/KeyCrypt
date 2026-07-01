@@ -424,24 +424,21 @@ export default async function HomePage() {
               </ul>
             </div>
 
-            {/* Open source */}
+            {/* Developer */}
             <div>
               <p className="text-muted-foreground mb-4 text-xs font-semibold tracking-widest uppercase">
-                Open source
+                Developer
               </p>
               <ul className="space-y-2.5 text-sm">
                 <li>
                   <a
-                    href="https://github.com/kanishksharma04/KeyCrypt"
+                    href="https://github.com/kanishksharma04"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
                   >
                     GitHub
                   </a>
-                </li>
-                <li>
-                  <span className="text-muted-foreground">MIT License</span>
                 </li>
               </ul>
             </div>
