@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import Image from "next/image";
+import { SignOutButton } from "@/components/shared/sign-out-button";
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
@@ -86,9 +87,12 @@ async function MarketingNav() {
           </a>
           <ThemeToggle />
           {session ? (
-            <Link href="/vault" className={buttonVariants({ size: "sm" })}>
-              Open vault
-            </Link>
+            <>
+              <SignOutButton />
+              <Link href="/vault" className={buttonVariants({ size: "sm" })}>
+                Open vault
+              </Link>
+            </>
           ) : (
             <>
               <Link
