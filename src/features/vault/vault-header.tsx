@@ -25,7 +25,7 @@ export function VaultHeader({ initials, email }: VaultHeaderProps) {
   const pathname = usePathname();
 
   return (
-    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 border-b backdrop-blur">
+    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 border-b backdrop-blur-md">
       <div className="container mx-auto flex h-12 max-w-4xl items-center gap-4 px-4">
         {/* Logo */}
         <Link
