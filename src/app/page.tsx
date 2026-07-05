@@ -159,7 +159,7 @@ export default async function HomePage() {
               </span>
             </h1>
 
-            <p className="text-muted-foreground mx-auto mb-8 max-w-md text-base md:text-lg">
+            <p className="text-muted-foreground mx-auto mb-8 max-w-md text-base font-medium md:text-lg">
               Your browser encrypts it. Our servers never can.
             </p>
 
