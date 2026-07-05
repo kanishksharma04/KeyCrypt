@@ -382,7 +382,7 @@ export default async function HomePage() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {/* Brand */}
             <div className="lg:col-span-2">
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-3 inline-flex items-center gap-2 transition-opacity hover:opacity-70">
                 <Image
                   src="/logos/app-icon.png"
                   alt=""
