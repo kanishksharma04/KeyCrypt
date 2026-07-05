@@ -144,7 +144,7 @@ export default async function HomePage() {
           </div>
 
           <div className="relative mx-auto max-w-3xl px-4 text-center">
-            <div className="bg-card text-muted-foreground mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wide">
+            <div className="bg-card text-muted-foreground mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wide shadow-sm">
               <span className="relative flex size-2 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-60" />
                 <span className="relative inline-flex size-2 rounded-full bg-green-500" />
@@ -317,7 +317,7 @@ export default async function HomePage() {
                 { label: "Ciphertext", sub: "all the server sees" },
               ].map((node, i) =>
                 node === null ? (
-                  <span key={i} className="text-muted-foreground shrink-0 font-mono text-sm">
+                  <span key={i} className="text-muted-foreground/60 shrink-0 font-mono text-sm">
                     →
                   </span>
                 ) : (
