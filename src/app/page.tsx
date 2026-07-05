@@ -362,7 +362,7 @@ export default async function HomePage() {
           <section className="border-t py-24">
             <div className="mx-auto max-w-xl px-4 text-center">
               <h2 className="mb-3 text-2xl font-bold tracking-tight md:text-3xl">
-                Ready to take back control of your passwords?
+                Your passwords belong to you. Not us.
               </h2>
               <p className="text-muted-foreground mb-8">
                 Free to use. No credit card. No tracking.
