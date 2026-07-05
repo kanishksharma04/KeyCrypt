@@ -29,7 +29,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </Link>
 
       {/* Card shell */}
-      <div className="bg-card before:via-primary/50 relative w-full max-w-sm rounded-2xl border p-6 shadow-sm before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-2xl before:bg-linear-to-r before:from-transparent before:to-transparent">
+      <div className="bg-card before:via-primary/50 relative w-full max-w-sm rounded-2xl border p-8 shadow-sm before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-2xl before:bg-linear-to-r before:from-transparent before:to-transparent">
         {children}
       </div>
 
