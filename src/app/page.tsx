@@ -333,7 +333,7 @@ export default async function HomePage() {
             </div>
 
             {/* Mobile: stacked steps */}
-            <div className="relative space-y-8 md:hidden">
+            <div className="relative space-y-10 md:hidden">
               <div
                 className="border-border absolute top-4 bottom-4 left-4 w-px border-l border-dashed"
                 aria-hidden="true"
