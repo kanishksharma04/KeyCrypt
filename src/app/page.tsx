@@ -209,7 +209,7 @@ export default async function HomePage() {
         <section className="border-b py-20">
           <div className="mx-auto max-w-4xl px-4">
             <div className="mb-12 text-center">
-              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
+              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.25em] uppercase">
                 01
               </span>
               <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
@@ -236,7 +236,7 @@ export default async function HomePage() {
         <section className="bg-muted/30 border-b py-24">
           <div className="mx-auto max-w-2xl px-4">
             <div className="mb-16 text-center">
-              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
+              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.25em] uppercase">
                 02
               </span>
               <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
@@ -292,7 +292,7 @@ export default async function HomePage() {
         <section className="border-b py-20">
           <div className="mx-auto max-w-4xl px-4">
             <div className="mb-12 text-center">
-              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.15em] uppercase">
+              <span className="text-muted-foreground mb-2 block font-mono text-xs tracking-[0.25em] uppercase">
                 03
               </span>
               <h2 className="mb-2 text-2xl font-bold tracking-tight md:text-3xl">
