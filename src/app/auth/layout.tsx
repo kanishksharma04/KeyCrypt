@@ -35,7 +35,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Footer */}
       <p className="text-muted-foreground mt-6 text-center text-xs">
-        Zero-knowledge encryption. Your master password never leaves your device.
+        End-to-end encrypted. Your master password never reaches our servers.
       </p>
     </div>
   );
