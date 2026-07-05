@@ -321,7 +321,10 @@ export default async function HomePage() {
                     →
                   </span>
                 ) : (
-                  <div key={i} className="bg-muted shrink-0 rounded-lg px-3 py-2.5 text-center">
+                  <div
+                    key={i}
+                    className="bg-muted hover:bg-muted/70 shrink-0 cursor-default rounded-lg px-3 py-2.5 text-center transition-colors"
+                  >
                     <p className="font-mono text-xs font-semibold">{node.label}</p>
                     <p className="text-muted-foreground mt-0.5 font-mono text-[10px]">{node.sub}</p>
                   </div>
