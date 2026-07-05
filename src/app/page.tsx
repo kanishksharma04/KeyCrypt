@@ -163,7 +163,7 @@ export default async function HomePage() {
               Your browser encrypts it. Our servers never can.
             </p>
 
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               {session ? (
                 <Link href="/vault" className={buttonVariants({ size: "lg" })}>
                   <Vault className="size-4" aria-hidden="true" />
