@@ -145,7 +145,10 @@ export default async function HomePage() {
 
           <div className="relative mx-auto max-w-3xl px-4 text-center">
             <div className="bg-card text-muted-foreground mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wide">
-              <ShieldCheck className="size-3.5 text-green-500" aria-hidden="true" />
+              <span className="relative flex size-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-60" />
+                <span className="relative inline-flex size-2 rounded-full bg-green-500" />
+              </span>
               Zero-knowledge · AES-256-GCM · PBKDF2-SHA-256
             </div>
 
@@ -217,7 +220,10 @@ export default async function HomePage() {
 
             <div className="divide-y">
               {FEATURES.map(({ title, description }) => (
-                <div key={title} className="grid gap-4 py-5 sm:grid-cols-[12rem_1fr] sm:gap-8">
+                <div
+                  key={title}
+                  className="group hover:bg-muted/50 -mx-3 grid gap-4 rounded-lg px-3 py-5 transition-colors sm:grid-cols-[12rem_1fr] sm:gap-8"
+                >
                   <p className="text-sm font-semibold sm:pt-0.5">{title}</p>
                   <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
                 </div>
