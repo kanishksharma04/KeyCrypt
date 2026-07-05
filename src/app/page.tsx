@@ -198,7 +198,7 @@ export default async function HomePage() {
                 key={i}
                 className="text-muted-foreground flex items-center gap-3 text-xs font-medium whitespace-nowrap"
               >
-                <span className="size-1 shrink-0 rounded-full bg-green-500" />
+                <span className="size-1.5 shrink-0 rounded-full bg-green-500" />
                 {item}
               </span>
             ))}
