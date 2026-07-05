@@ -54,7 +54,7 @@ async function MarketingNav() {
   const session = await auth();
 
   return (
-    <header className="scroll-nav bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
+    <header className="scroll-nav bg-background/80 sticky top-0 z-40 border-b backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="transition-opacity hover:opacity-80" aria-label="KeyCrypt home">
           <Image
