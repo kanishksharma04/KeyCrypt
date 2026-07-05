@@ -186,7 +186,10 @@ export default async function HomePage() {
 
         {/* ── Trust bar (marquee) ──────────────────────────────────────────── */}
         <section className="overflow-hidden border-b py-5" aria-label="Security features">
-          <div className="animate-marquee flex w-max gap-10" aria-hidden="true">
+          <div
+            className="animate-marquee flex w-max gap-10 hover:[animation-play-state:paused]"
+            aria-hidden="true"
+          >
             {[...TRUST_ITEMS, ...TRUST_ITEMS].map((item, i) => (
               <span
                 key={i}
