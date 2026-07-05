@@ -359,7 +359,7 @@ export default async function HomePage() {
 
         {/* ── Final CTA ────────────────────────────────────────────────────── */}
         {!session && (
-          <section className="py-24">
+          <section className="border-t py-24">
             <div className="mx-auto max-w-xl px-4 text-center">
               <h2 className="mb-3 text-2xl font-bold tracking-tight md:text-3xl">
                 Ready to take back control of your passwords?
