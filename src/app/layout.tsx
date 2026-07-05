@@ -16,7 +16,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "KeyCrypt",
+    default: "KeyCrypt — Zero-Knowledge Password Manager",
     template: "%s | KeyCrypt",
   },
   description:
