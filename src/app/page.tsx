@@ -443,9 +443,10 @@ export default async function HomePage() {
                     href="https://github.com/kanishksharma04"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
                   >
                     GitHub
+                    <span className="text-[10px] opacity-60">↗</span>
                   </a>
                 </li>
               </ul>
