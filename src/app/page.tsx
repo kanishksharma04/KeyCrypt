@@ -140,7 +140,7 @@ export default async function HomePage() {
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative overflow-hidden border-b py-24 md:py-36">
           <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-            <div className="bg-primary/8 absolute top-0 left-1/2 h-125 w-225 -translate-x-1/2 rounded-[100%] blur-3xl" />
+            <div className="bg-primary/12 absolute top-0 left-1/2 h-125 w-225 -translate-x-1/2 rounded-[100%] blur-3xl" />
           </div>
 
           <div className="relative mx-auto max-w-3xl px-4 text-center">
@@ -452,11 +452,14 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="border-border mt-10 flex flex-col items-center justify-between gap-2 border-t pt-6 sm:flex-row">
-            <p className="text-muted-foreground text-xs">
-              © {new Date().getFullYear()} KeyCrypt · Zero-knowledge password manager
-            </p>
-            <p className="text-muted-foreground text-xs">Built with end-to-end encryption</p>
+          <div className="mt-10 pt-6">
+            <div className="from-border/0 via-border to-border/0 mb-6 h-px bg-linear-to-r" />
+            <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
+              <p className="text-muted-foreground text-xs">
+                © {new Date().getFullYear()} KeyCrypt · Zero-knowledge password manager
+              </p>
+              <p className="text-muted-foreground text-xs">Built with end-to-end encryption</p>
+            </div>
           </div>
         </div>
       </footer>
