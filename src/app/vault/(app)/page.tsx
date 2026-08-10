@@ -2,11 +2,23 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { VaultList } from "@/features/vault/vault-list";
-import type { VaultItemRow } from "@/types/vault";
+import type { VaultItemRow, VaultItemType } from "@/types/vault";
 
-export default async function VaultPage() {
+const VALID_TYPES: VaultItemType[] = ["LOGIN", "SECURE_NOTE", "API_KEY", "WIFI_PASSWORD"];
+
+export default async function VaultPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string; new?: string }>;
+}) {
   const session = await auth();
   if (!session) redirect("/auth/signin");
+
+  const params = await searchParams;
+  const initialOpenId = params.open;
+  const initialNewType = VALID_TYPES.includes(params.new as VaultItemType)
+    ? (params.new as VaultItemType)
+    : undefined;
 
   const rawItems = await db.vaultItem.findMany({
     where: { userId: session.user.id },
@@ -37,7 +49,7 @@ export default async function VaultPage() {
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-6">
-      <VaultList items={items} />
+      <VaultList items={items} initialOpenId={initialOpenId} initialNewType={initialNewType} />
     </div>
   );
 }

@@ -5,6 +5,21 @@ import type { VaultItemType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+// Lightweight item list for the command palette — names are already stored in
+// plaintext (see VaultItem schema comment), so no decryption is needed to search them.
+export async function getVaultItemSummariesAction(): Promise<
+  { id: string; type: VaultItemType; name: string }[] | { error: string }
+> {
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+
+  return db.vaultItem.findMany({
+    where: { userId: session.user.id },
+    select: { id: true, type: true, name: true },
+    orderBy: [{ favorite: "desc" }, { updatedAt: "desc" }],
+  });
+}
+
 export async function createVaultItemAction(data: {
   type: VaultItemType;
   name: string;

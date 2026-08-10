@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   generatePassword,
   getPasswordStrength,
+  estimatePasswordStrength,
   DEFAULT_PASSWORD_OPTIONS,
   type PasswordOptions,
 } from "../password-generator";
@@ -95,5 +96,38 @@ describe("getPasswordStrength", () => {
   it("matches DEFAULT_PASSWORD_OPTIONS with Strong", () => {
     const s = getPasswordStrength(DEFAULT_PASSWORD_OPTIONS);
     expect(s.label).toBe("Strong");
+  });
+});
+
+describe("estimatePasswordStrength", () => {
+  it("returns Weak for an empty password", () => {
+    const s = estimatePasswordStrength("");
+    expect(s.label).toBe("Weak");
+    expect(s.bits).toBe(0);
+  });
+
+  it("returns Weak for a short lowercase-only password", () => {
+    const s = estimatePasswordStrength("abcdef");
+    expect(s.label).toBe("Weak");
+    expect(s.level).toBe(0);
+  });
+
+  it("returns Strong for a long mixed-charset password", () => {
+    const s = estimatePasswordStrength("Tr0ub4dor&3xtraLong!Pw");
+    expect(s.label).toBe("Strong");
+    expect(s.level).toBe(3);
+  });
+
+  it("detects each character class independently", () => {
+    // digits only: pool = 10
+    const s = estimatePasswordStrength("0123456789");
+    expect(s.bits).toBeCloseTo(10 * Math.log2(10), 5);
+  });
+
+  it("scores a generated password the same way it generated it", () => {
+    const pw = generatePassword(DEFAULT_PASSWORD_OPTIONS);
+    const generated = getPasswordStrength(DEFAULT_PASSWORD_OPTIONS);
+    const estimated = estimatePasswordStrength(pw);
+    expect(estimated.label).toBe(generated.label);
   });
 });

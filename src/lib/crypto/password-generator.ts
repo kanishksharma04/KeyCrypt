@@ -73,16 +73,38 @@ export interface PasswordStrength {
   level: 0 | 1 | 2 | 3;
 }
 
+function bitsToStrength(bits: number): PasswordStrength {
+  if (bits < 40) return { bits, label: "Weak", level: 0 };
+  if (bits < 60) return { bits, label: "Fair", level: 1 };
+  if (bits < 80) return { bits, label: "Good", level: 2 };
+  return { bits, label: "Strong", level: 3 };
+}
+
 export function getPasswordStrength(options: PasswordOptions): PasswordStrength {
   const active = (Object.keys(CHARSETS) as CharsetKey[]).filter((k) => options[k]);
   const poolSize =
     active.length > 0
       ? active.reduce((n, k) => n + CHARSETS[k].length, 0)
       : CHARSETS.lowercase.length;
-  const bits = options.length * Math.log2(poolSize);
+  return bitsToStrength(options.length * Math.log2(poolSize));
+}
 
-  if (bits < 40) return { bits, label: "Weak", level: 0 };
-  if (bits < 60) return { bits, label: "Fair", level: 1 };
-  if (bits < 80) return { bits, label: "Good", level: 2 };
-  return { bits, label: "Strong", level: 3 };
+/**
+ * Estimate the strength of an existing (possibly human-chosen) password
+ * string, as opposed to getPasswordStrength which scores generator options
+ * before generation. Detects which character classes are present and reuses
+ * the same length × log2(poolSize) approximation — not a full strength
+ * library like zxcvbn, but enough to flag genuinely weak vault entries.
+ */
+export function estimatePasswordStrength(password: string): PasswordStrength {
+  if (!password) return bitsToStrength(0);
+
+  let poolSize = 0;
+  if (/[a-z]/.test(password)) poolSize += CHARSETS.lowercase.length;
+  if (/[A-Z]/.test(password)) poolSize += CHARSETS.uppercase.length;
+  if (/[0-9]/.test(password)) poolSize += CHARSETS.numbers.length;
+  if (/[^a-zA-Z0-9]/.test(password)) poolSize += CHARSETS.symbols.length;
+
+  const bits = password.length * Math.log2(poolSize || CHARSETS.lowercase.length);
+  return bitsToStrength(bits);
 }

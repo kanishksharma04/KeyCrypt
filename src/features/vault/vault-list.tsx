@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Check,
   Code2,
@@ -499,16 +500,19 @@ function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
 
 interface VaultListProps {
   items: VaultItemRow[];
+  initialOpenId?: string;
+  initialNewType?: VaultItemType;
 }
 
 type CreateType = VaultItemType | null;
 
-export function VaultList({ items }: VaultListProps) {
+export function VaultList({ items, initialOpenId, initialNewType }: VaultListProps) {
+  const router = useRouter();
   const [decrypted, setDecrypted] = useState<DecryptedVaultItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
-  const [createType, setCreateType] = useState<CreateType>(null);
+  const [createType, setCreateType] = useState<CreateType>(initialNewType ?? null);
   const [favOnly, setFavOnly] = useState(false);
   const [viewItem, setViewItem] = useState<DecryptedVaultItem | null>(null);
   const [editItem, setEditItem] = useState<DecryptedVaultItem | null>(null);
@@ -542,6 +546,22 @@ export function VaultList({ items }: VaultListProps) {
       setLoading(false);
     });
   }, [items]);
+
+  // Deep-link support for the command palette and vault health score links
+  // (/vault?open=<id>, /vault?new=<type>) — consume once, then strip from the URL.
+  useEffect(() => {
+    if (!initialOpenId && !initialNewType) return;
+    if (initialOpenId) {
+      const match = decrypted.find((item) => item.id === initialOpenId);
+      if (!match) {
+        if (loading) return; // wait for decryption to finish before giving up
+      } else {
+        queueMicrotask(() => setViewItem(match));
+      }
+    }
+    router.replace("/vault");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialOpenId, initialNewType, decrypted, loading]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

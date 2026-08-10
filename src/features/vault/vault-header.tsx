@@ -3,10 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Lock, LayoutDashboard, LogOut, Settings, Vault } from "lucide-react";
+import { Lock, LayoutDashboard, LogOut, Search, Settings, Vault } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useVaultLock } from "@/providers/vault-lock-provider";
+import { useCommandPalette } from "@/providers/command-palette-provider";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -22,6 +23,7 @@ interface VaultHeaderProps {
 
 export function VaultHeader({ initials, email }: VaultHeaderProps) {
   const { lock } = useVaultLock();
+  const { open: openPalette } = useCommandPalette();
   const pathname = usePathname();
 
   return (
@@ -75,6 +77,17 @@ export function VaultHeader({ initials, email }: VaultHeaderProps) {
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
+          {/* Command palette trigger */}
+          <button
+            onClick={openPalette}
+            className="text-muted-foreground hover:border-ring/40 hover:text-foreground flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors duration-150"
+          >
+            <Search className="size-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Search</span>
+            <kbd className="bg-muted hidden items-center rounded border px-1 font-mono text-[10px] sm:flex">
+              ⌘K
+            </kbd>
+          </button>
           {/* User avatar */}
           <div
             className="bg-primary/10 text-primary hover:ring-primary/30 flex size-6 cursor-default items-center justify-center rounded-full text-xs font-semibold ring-2 ring-transparent transition-all duration-150"

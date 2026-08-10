@@ -23,6 +23,7 @@ export { toBase64, fromBase64, bufferToBase64, stringToBytes, bytesToString } fr
 export {
   generatePassword,
   getPasswordStrength,
+  estimatePasswordStrength,
   DEFAULT_PASSWORD_OPTIONS,
 } from "./password-generator";
 

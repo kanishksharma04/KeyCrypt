@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Code2, FileText, KeyRound, Star, Vault, Wifi } from "lucide-react";
 import { getVaultStatsAction } from "@/server/settings-actions";
+import { VaultHealthScore } from "@/features/vault/vault-health-score";
 
 const TYPE_META = {
   LOGIN: { label: "Logins", Icon: KeyRound, color: "text-primary", bg: "bg-primary/10" },
@@ -71,6 +72,9 @@ export default async function DashboardPage() {
       {/* Overview cards */}
       {stats && (
         <div className="space-y-6">
+          {/* Vault health */}
+          <VaultHealthScore />
+
           {/* Total + favorites */}
           <div className="grid gap-4 sm:grid-cols-2">
             <StatCard

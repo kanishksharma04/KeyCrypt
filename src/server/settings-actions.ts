@@ -45,6 +45,24 @@ export async function getVaultStatsAction(): Promise<VaultStats | null> {
   };
 }
 
+// ─── Vault health ──────────────────────────────────────────────────────────────
+// Returns ciphertext only — decryption and scoring happen entirely client-side.
+
+export async function getLoginItemsForHealthAction(): Promise<
+  | { id: string; name: string; ciphertext: string; iv: string; updatedAt: string }[]
+  | { error: string }
+> {
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+
+  const items = await db.vaultItem.findMany({
+    where: { userId: session.user.id, type: "LOGIN" },
+    select: { id: true, name: true, ciphertext: true, iv: true, updatedAt: true },
+  });
+
+  return items.map((item) => ({ ...item, updatedAt: item.updatedAt.toISOString() }));
+}
+
 // ─── Re-encryption ─────────────────────────────────────────────────────────────
 
 export async function getAllItemsForReEncryptionAction(): Promise<
