@@ -49,6 +49,8 @@ The vault key lives **only in browser memory**. It is cleared on lock, inactivit
 
 ### Vault UX
 
+- **Command palette** — `⌘K` / `Ctrl+K` for quick navigation, item search, and actions (new item, lock vault, toggle theme)
+- **Vault health score** — client-side detection of weak, reused, and stale passwords; decrypted data never leaves the browser
 - **View dialog** — reveal fields with eye toggle, one-click copy with ✓ checkmark feedback
 - **Password generator** — configurable length, character sets, live entropy score
 - **Favorites filter** — star items and filter to pinned items only
@@ -78,15 +80,15 @@ The vault key lives **only in browser memory**. It is cleared on lock, inactivit
 
 ## Tech stack
 
-| Layer           | Choice                                     |
-| --------------- | ------------------------------------------ |
-| Framework       | Next.js 16 (App Router, React 19)          |
-| Language        | TypeScript (strict)                        |
-| Styling         | Tailwind CSS v4 + shadcn/ui + base-nova    |
-| Auth            | Auth.js v5 (JWT sessions)                  |
-| Database        | PostgreSQL via Prisma 6 (Neon recommended) |
-| Crypto          | Web Crypto API (browser-native, zero deps) |
-| Package manager | pnpm                                       |
+| Layer           | Choice                                          |
+| --------------- | ----------------------------------------------- |
+| Framework       | Next.js 16 (App Router, React 19)               |
+| Language        | TypeScript (strict)                             |
+| Styling         | Tailwind CSS v4 + shadcn/ui + base-nova         |
+| Auth            | Auth.js v5 (Credentials provider, JWT sessions) |
+| Database        | PostgreSQL via Prisma 6 (Neon recommended)      |
+| Crypto          | Web Crypto API (browser-native, zero deps)      |
+| Package manager | pnpm                                            |
 
 ---
 
@@ -179,6 +181,12 @@ pnpm db:studio    # Open Prisma Studio
 
 ## Changelog
 
+### August 11, 2026
+
+- **Command palette** — `⌘K` launcher for navigation, item search, and quick actions (new item, lock vault, toggle theme)
+- **Vault health score** — dashboard widget flagging weak, reused, and stale passwords, computed entirely client-side
+- Removed the white background baked into the favicon
+
 ### June 30, 2026
 
 #### New interactions
@@ -243,15 +251,17 @@ src/
 │   └── page.tsx            # Public landing page
 ├── components/
 │   ├── shared/             # ThemeToggle, KeyCryptLogo, PageHeader
-│   └── ui/                 # shadcn/ui primitives — Button, Input, Dialog, …
+│   └── ui/                 # shadcn/ui primitives — Button, Input, Dialog, Command, …
 ├── features/
 │   ├── auth/               # Sign-in/up forms, field errors, forgot/reset password
-│   └── vault/              # VaultList, VaultHeader, item dialogs, password generator
+│   └── vault/              # VaultList, VaultHeader, CommandPalette, VaultHealthScore, item dialogs, password generator
 ├── lib/
-│   ├── auth.ts             # Auth.js configuration
-│   ├── crypto.ts           # Web Crypto API — key derivation, encrypt, decrypt
+│   ├── auth.ts             # Auth.js configuration (Credentials provider, JWT sessions)
+│   ├── crypto/             # Web Crypto API — key derivation, encryption, verification (sole encryption surface)
+│   ├── vault-health.ts     # Client-side weak/reused/stale password detection
+│   ├── rate-limit.ts       # In-memory rate limiting
 │   └── db.ts               # Prisma client singleton
-├── providers/              # ThemeProvider, VaultLockProvider
+├── providers/              # ThemeProvider, VaultLockProvider, CommandPaletteProvider
 ├── schemas/                # Zod schemas for vault items and auth forms
 ├── server/                 # Server actions — vault CRUD, auth, settings
 └── types/                  # Shared TypeScript types
