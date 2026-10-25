@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Protected route prefixes
-const PROTECTED = ["/dashboard", "/vault", "/settings"];
+const PROTECTED = ["/vault"];
 // Routes that redirect to vault when already signed in
 const AUTH_ONLY = ["/auth/signin", "/auth/signup"];
 

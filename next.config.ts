@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
 
+  // Legacy route: the dashboard moved to /vault/dashboard.
+  async redirects() {
+    return [{ source: "/dashboard", destination: "/vault/dashboard", permanent: true }];
+  },
+
   // Static security headers applied on every response.
   // CSP and HSTS are set dynamically in middleware (nonce-based per request).
   async headers() {
