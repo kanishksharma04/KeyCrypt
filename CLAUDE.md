@@ -79,6 +79,22 @@ Environment variables: see `.env.example` (`DATABASE_URL`, `AUTH_SECRET`,
   `prettier --write` on JS/JSON/CSS/MD.
 - Never bypass hooks with `--no-verify`.
 
+## Dependencies
+
+- Auth.js is a beta and stays **pinned to exact versions** (`next-auth` 5.0.0-beta.31,
+  `@auth/prisma-adapter` 2.11.2) — no `^`/`~` ranges. Upgrade only after checking the
+  sign-in flow by hand: sign up, verify email, sign in (correct password, wrong password,
+  unverified email), sign out, then unlock the vault.
+- Things an upgrade can break:
+  - `src/features/auth/sign-in-form.tsx` signs in with client-side `signIn("credentials")`
+    from `next-auth/react` because calling it from a server action raised
+    `InvalidProvider`; `signInAction` only does validation and rate limiting. The form
+    checks `result.error`, not `result.ok`, because both outcomes return `ok: true`.
+  - `src/lib/auth.ts` uses the JWT session strategy (required by the Credentials
+    provider), so the `Session` table is unused.
+- `next-auth` declares a `nodemailer` ^7 peer dependency; the app uses nodemailer 9, so
+  pnpm reports an unmet peer warning.
+
 ## Folder map
 
 ```

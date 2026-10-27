@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@auth/prisma-adapter':
-        specifier: ^2.11.2
+        specifier: 2.11.2
         version: 2.11.2(@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3))(nodemailer@9.0.1)
       '@base-ui/react':
         specifier: ^1.6.0
