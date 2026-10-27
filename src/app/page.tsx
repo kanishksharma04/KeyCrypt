@@ -79,7 +79,7 @@ async function MarketingNav() {
           <ThemeToggle />
           {session ? (
             <>
-              <SignOutButton />
+              <SignOutButton size="sm" callbackUrl="/" />
               <Link href="/vault" className={buttonVariants({ size: "sm" })}>
                 Open vault
               </Link>

@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { SignOutButton } from "@/features/vault/sign-out-button";
+import { SignOutButton } from "@/components/shared/sign-out-button";
 import { ChangeMasterPasswordForm } from "@/features/vault/change-master-password-form";
 
 export default async function SettingsPage() {
@@ -51,7 +51,11 @@ export default async function SettingsPage() {
           after signing back in.
         </p>
         <div className="bg-card rounded-xl border p-4 shadow-xs">
-          <SignOutButton />
+          <SignOutButton
+            display="icon-label"
+            variant="destructive"
+            label="Sign out of this device"
+          />
         </div>
       </section>
     </div>

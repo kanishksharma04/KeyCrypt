@@ -6,11 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { signOut } from "next-auth/react";
 import { unlockSchema, type UnlockInput } from "@/schemas/vault";
 import { fromBase64, deriveVaultKey, verifyVaultKey, setVaultKey } from "@/lib/crypto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SignOutButton } from "@/components/shared/sign-out-button";
 import { FieldError } from "@/features/auth/field-error";
 
 interface UnlockFormProps {
@@ -110,14 +110,7 @@ export function UnlockForm({ salt, verificationBlob, verificationIv }: UnlockFor
       </Button>
 
       <p className="text-muted-foreground text-center text-sm">
-        Not you?{" "}
-        <button
-          type="button"
-          onClick={() => void signOut({ callbackUrl: "/auth/signin" })}
-          className="text-primary font-medium underline-offset-4 hover:underline"
-        >
-          Sign out
-        </button>
+        Not you? <SignOutButton variant="link" className="h-auto p-0 align-baseline" />
       </p>
     </form>
   );
