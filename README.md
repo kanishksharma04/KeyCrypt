@@ -132,11 +132,28 @@ SMTP_PASS=""
 EMAIL_FROM="KeyCrypt <noreply@yourdomain.com>"
 ```
 
-### 3. Push the database schema
+### 3. Apply the database migrations
+
+The schema is managed with Prisma Migrate (`prisma/migrations`). On a new, empty database:
 
 ```bash
-pnpm db:push
+pnpm db:deploy    # prisma migrate deploy — applies every pending migration
 ```
+
+**Existing database created with `db:push`?** Its tables already match the baseline
+migration, so mark it as applied once instead of running it:
+
+```bash
+pnpm prisma migrate resolve --applied 0_init
+pnpm db:deploy    # should report "No pending migrations to apply"
+```
+
+**Changing the schema:** edit `prisma/schema.prisma`, then run `pnpm db:migrate --name <change>`
+against your local dev database. This creates a new folder in `prisma/migrations`; commit it
+with the schema change.
+
+`pnpm db:push` still exists for throwaway local databases only. It skips migration history
+and can drop data without asking, so never point it at a database you care about.
 
 ### 4. Start the dev server
 
@@ -156,7 +173,10 @@ pnpm build        # Production build
 pnpm start        # Start production server
 pnpm typecheck    # TypeScript type check
 pnpm lint         # ESLint
-pnpm db:push      # Push Prisma schema to database
+pnpm test         # Vitest
+pnpm db:deploy    # Apply pending migrations (prisma migrate deploy)
+pnpm db:migrate   # Create + apply a new migration in development (prisma migrate dev)
+pnpm db:push      # Throwaway local databases only — no migration history
 pnpm db:studio    # Open Prisma Studio
 ```
 
@@ -175,7 +195,11 @@ pnpm db:studio    # Open Prisma Studio
 | `AUTH_TRUST_HOST`     | `true`                        |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
 
-3. Deploy.
+3. Apply migrations to the production database from your machine with
+   `DATABASE_URL=<direct, non-pooler connection string> pnpm db:deploy`
+   (`pnpm build` does not run migrations). If the database was created with `db:push`,
+   baseline it first with `pnpm prisma migrate resolve --applied 0_init`.
+4. Deploy.
 
 ---
 

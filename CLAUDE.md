@@ -61,10 +61,18 @@ pnpm lint            # eslint   (lint:fix to autofix)
 pnpm format          # prettier --write .   (format:check to verify)
 pnpm test            # vitest run   (test:watch, test:coverage)
 pnpm db:generate     # prisma generate
-pnpm db:push         # prisma db push
-pnpm db:migrate      # prisma migrate dev
+pnpm db:deploy       # prisma migrate deploy (apply pending migrations)
+pnpm db:migrate      # prisma migrate dev (create a migration; dev DB only)
+pnpm db:push         # prisma db push — throwaway local DBs only
 pnpm db:studio       # prisma studio
 ```
+
+Database changes go through Prisma Migrate (`prisma/migrations`, baseline `0_init`):
+edit the schema, run `pnpm db:migrate --name <change>` locally, and commit the new
+migration folder with the schema change. Never use `db:push` on a database with data;
+it can drop columns without asking. To adopt migrations on an existing `db:push`
+database, run `pnpm prisma migrate resolve --applied 0_init` once. Never run Prisma
+commands against production unless explicitly asked.
 
 Before committing, `pnpm typecheck`, `pnpm lint` and `pnpm test` must all pass.
 
@@ -99,6 +107,7 @@ Environment variables: see `.env.example` (`DATABASE_URL`, `AUTH_SECRET`,
 
 ```
 prisma/schema.prisma   User, Account, Session, VaultMeta, VaultItem, AuditLog, ...
+prisma/migrations/     Prisma Migrate history (0_init = baseline)
 src/
   app/                 App Router routes
     auth/              signin, signup, verify-email, forgot/reset-password, error
