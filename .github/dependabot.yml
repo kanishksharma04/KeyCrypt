@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    ignore:
+      # Auth.js is a pinned beta; upgrade by hand (see CLAUDE.md "Dependencies").
+      - dependency-name: next-auth
+      - dependency-name: "@auth/*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

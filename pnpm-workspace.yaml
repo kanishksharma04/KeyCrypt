@@ -1,7 +1,9 @@
-onlyBuiltDependencies:
-  - "@node-rs/argon2"
-  - "@prisma/client"
-  - "@prisma/engines"
-  - prisma
-  - sharp
-  - unrs-resolver
+# Packages allowed to run install (build) scripts. pnpm 11 reads `allowBuilds`;
+# any other dependency with a build script fails `pnpm install`.
+allowBuilds:
+  "@node-rs/argon2": true
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
