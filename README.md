@@ -201,13 +201,15 @@ before each test. It refuses to run unless the database name contains `test`.
 1. Push to GitHub and import the repo in the [Vercel dashboard](https://vercel.com/new).
 2. Set these environment variables:
 
-| Variable              | Value                         |
-| --------------------- | ----------------------------- |
-| `DATABASE_URL`        | Neon pooler connection string |
-| `AUTH_SECRET`         | `openssl rand -base64 32`     |
-| `AUTH_URL`            | `https://your-app.vercel.app` |
-| `AUTH_TRUST_HOST`     | `true`                        |
-| `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
+| Variable                   | Value                                            |
+| -------------------------- | ------------------------------------------------ |
+| `DATABASE_URL`             | Neon pooler connection string                    |
+| `AUTH_SECRET`              | `openssl rand -base64 32`                        |
+| `AUTH_URL`                 | `https://your-app.vercel.app`                    |
+| `AUTH_TRUST_HOST`          | `true`                                           |
+| `NEXT_PUBLIC_APP_URL`      | `https://your-app.vercel.app`                    |
+| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST URL (optional, recommended)   |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (optional, recommended) |
 
 3. Apply migrations to the production database from your machine with
    `DATABASE_URL=<direct, non-pooler connection string> pnpm db:deploy`

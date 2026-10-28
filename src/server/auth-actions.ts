@@ -30,7 +30,7 @@ export async function signInAction(data: SignInInput): Promise<ActionResult> {
   if (!parsed.success) return { error: "Invalid email or password" };
 
   const ip = getClientIp(await headers());
-  if (rateLimiters.signIn(ip)) {
+  if (await rateLimiters.signIn(ip)) {
     return { error: "Too many attempts. Please wait 15 minutes before trying again." };
   }
 
@@ -47,7 +47,7 @@ export async function signUpAction(data: SignUpInput): Promise<ActionResult> {
   }
 
   const ip = getClientIp(await headers());
-  if (rateLimiters.signUp(ip)) {
+  if (await rateLimiters.signUp(ip)) {
     return { error: "Too many accounts created from this IP. Try again later." };
   }
 
@@ -118,7 +118,7 @@ export async function forgotPasswordAction(data: ForgotPasswordInput): Promise<A
   const parsed = forgotPasswordSchema.safeParse(data);
   if (!parsed.success) return { error: "Invalid email address" };
 
-  if (rateLimiters.passwordReset(parsed.data.email)) {
+  if (await rateLimiters.passwordReset(parsed.data.email)) {
     return { error: "Too many requests. Try again in an hour." };
   }
 
