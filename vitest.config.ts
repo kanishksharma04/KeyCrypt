@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import { resolve } from "path";
 
 export default defineConfig({
@@ -6,6 +6,8 @@ export default defineConfig({
     // Node environment has globalThis.crypto (Web Crypto) in Node ≥18
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // Database-backed tests run separately via `pnpm test:integration`.
+    exclude: [...configDefaults.exclude, "src/**/*.integration.test.ts"],
     coverage: {
       provider: "v8",
       include: ["src/lib/crypto/**/*.ts"],

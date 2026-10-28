@@ -19,6 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Used only by the integration tests (DATABASE_URL_TEST).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: keycrypt
+          POSTGRES_PASSWORD: keycrypt
+          POSTGRES_DB: keycrypt_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U keycrypt -d keycrypt_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
     # Dummy values: the build validates env (src/lib/env.ts) but never connects
     # to the database, because every route is rendered on demand.
     env:
@@ -53,6 +69,11 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+      - name: Integration tests
+        run: pnpm test:integration
+        env:
+          DATABASE_URL_TEST: postgresql://keycrypt:keycrypt@localhost:5432/keycrypt_test
 
       - name: Build
         run: pnpm build

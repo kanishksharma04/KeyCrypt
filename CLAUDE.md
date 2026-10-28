@@ -59,7 +59,8 @@ pnpm start           # next start
 pnpm typecheck       # tsc --noEmit
 pnpm lint            # eslint   (lint:fix to autofix)
 pnpm format          # prettier --write .   (format:check to verify)
-pnpm test            # vitest run   (test:watch, test:coverage)
+pnpm test            # vitest run, unit tests only, no database (test:watch, test:coverage)
+pnpm test:integration # server actions vs real Postgres; needs DATABASE_URL_TEST (see README)
 pnpm db:generate     # prisma generate
 pnpm db:deploy       # prisma migrate deploy (apply pending migrations)
 pnpm db:migrate      # prisma migrate dev (create a migration; dev DB only)
@@ -126,4 +127,7 @@ src/
   middleware.ts        route guards + per-request CSP nonce
 ```
 
-Tests live next to code in `__tests__` folders and match `src/**/*.test.ts`.
+Tests live next to code in `__tests__` folders. Unit tests match `src/**/*.test.ts`;
+database-backed tests are `*.integration.test.ts` and use the helpers in
+`src/test/integration` (`createTestUser`, `signInAs` to mock `auth()`; tables are
+truncated before each test).

@@ -173,12 +173,26 @@ pnpm build        # Production build
 pnpm start        # Start production server
 pnpm typecheck    # TypeScript type check
 pnpm lint         # ESLint
-pnpm test         # Vitest
+pnpm test         # Vitest unit tests (no database)
+pnpm test:integration # Server-action tests against Postgres (see below)
 pnpm db:deploy    # Apply pending migrations (prisma migrate deploy)
 pnpm db:migrate   # Create + apply a new migration in development (prisma migrate dev)
 pnpm db:push      # Throwaway local databases only — no migration history
 pnpm db:studio    # Open Prisma Studio
 ```
+
+### Integration tests
+
+Server actions are tested against a real, throwaway Postgres:
+
+```bash
+docker compose -f docker-compose.test.yml up -d --wait
+export DATABASE_URL_TEST=postgresql://keycrypt:keycrypt@localhost:54329/keycrypt_test
+pnpm test:integration
+```
+
+The suite applies migrations (`prisma migrate deploy`) once, then truncates every table
+before each test. It refuses to run unless the database name contains `test`.
 
 ---
 
