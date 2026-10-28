@@ -33,9 +33,9 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-// ─── Middleware ────────────────────────────────────────────────────────────────
+// ─── Proxy (Next.js 16 name for middleware; runs on the Node.js runtime) ──────
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Auth.js stores the session token in one of two cookies (secure vs plain).
@@ -46,7 +46,7 @@ export function middleware(req: NextRequest) {
   const isAuthOnly = AUTH_ONLY.some((p) => pathname.startsWith(p));
 
   // Lightweight redirect guards — real session validation happens in each
-  // route via auth() (DB round-trip). Middleware is Edge-only, no Prisma.
+  // route via auth() (DB round-trip). Keep the proxy cheap: no Prisma here.
   if (isProtected && !sessionToken) {
     const url = req.nextUrl.clone();
     url.pathname = "/auth/signin";

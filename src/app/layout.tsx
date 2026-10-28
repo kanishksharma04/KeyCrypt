@@ -44,7 +44,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // The nonce is injected by middleware and used by Next.js to stamp its own
+  // The nonce is injected by the proxy (src/proxy.ts) and used by Next.js to stamp its own
   // <script> tags, satisfying the nonce-based Content-Security-Policy.
   const nonce = (await headers()).get("x-nonce") ?? "";
 

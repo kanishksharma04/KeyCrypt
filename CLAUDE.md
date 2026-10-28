@@ -124,7 +124,7 @@ src/
   schemas/             Zod schemas (auth, vault)
   server/              server actions (auth, vault, vault items, settings)
   types/               shared types, next-auth augmentation
-  middleware.ts        route guards + per-request CSP nonce
+  proxy.ts             Next 16 "proxy" (ex-middleware): route guards + per-request CSP nonce
 ```
 
 Tests live next to code in `__tests__` folders. Unit tests match `src/**/*.test.ts`;

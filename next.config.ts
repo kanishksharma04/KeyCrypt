@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   },
 
   // Static security headers applied on every response.
-  // CSP and HSTS are set dynamically in middleware (nonce-based per request).
+  // CSP and HSTS are set dynamically in src/proxy.ts (nonce-based per request).
   async headers() {
     return [
       {
