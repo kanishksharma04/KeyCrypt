@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/password";
 import { generateToken, consumeToken } from "@/lib/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
 import { rateLimiters } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/client-ip";
 import {
   signInSchema,
   signUpSchema,
@@ -19,11 +20,6 @@ import {
 
 type ActionResult = { error: string } | { success: true; message?: string; emailSent?: boolean };
 
-async function getClientIp(): Promise<string> {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? "unknown";
-}
-
 // ─── Sign In ──────────────────────────────────────────────────────────────────
 // Only performs rate limiting. The actual credentials auth happens client-side
 // via next-auth/react signIn() to avoid the Auth.js v5 InvalidProvider error
@@ -33,7 +29,7 @@ export async function signInAction(data: SignInInput): Promise<ActionResult> {
   const parsed = signInSchema.safeParse(data);
   if (!parsed.success) return { error: "Invalid email or password" };
 
-  const ip = await getClientIp();
+  const ip = getClientIp(await headers());
   if (rateLimiters.signIn(ip)) {
     return { error: "Too many attempts. Please wait 15 minutes before trying again." };
   }
@@ -50,7 +46,7 @@ export async function signUpAction(data: SignUpInput): Promise<ActionResult> {
     return { error: first?.message ?? "Invalid input" };
   }
 
-  const ip = await getClientIp();
+  const ip = getClientIp(await headers());
   if (rateLimiters.signUp(ip)) {
     return { error: "Too many accounts created from this IP. Try again later." };
   }
