@@ -142,13 +142,12 @@ export async function resetPasswordAction(data: ResetPasswordInput): Promise<Act
   if (!valid) return resetLinkError;
 
   const passwordHash = await hashPassword(parsed.data.password);
+  // Bumping tokenVersion ends every existing (JWT) session for this account
+  // within TOKEN_VERSION_CHECK_INTERVAL_MS (src/lib/session-version.ts).
   await db.user.update({
     where: { email: parsed.data.email },
-    data: { passwordHash },
+    data: { passwordHash, tokenVersion: { increment: 1 } },
   });
-
-  // Invalidate all existing sessions for this user after password change
-  await db.session.deleteMany({ where: { user: { email: parsed.data.email } } });
 
   return { success: true };
 }

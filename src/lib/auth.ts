@@ -3,12 +3,14 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import { authorizeCredentials } from "@/lib/authorize-credentials";
+import { checkTokenVersion } from "@/lib/session-version";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
   // Auth.js v5 requires JWT strategy when using the Credentials provider.
   // Database sessions are not supported with credentials-based auth.
-  session: { strategy: "jwt" },
+  // Revocation works through User.tokenVersion (src/lib/session-version.ts).
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
 
   pages: {
     signIn: "/auth/signin",
@@ -31,9 +33,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   callbacks: {
     async jwt({ token, user }) {
-      // On initial sign-in, user is present — persist id into the token
-      if (user?.id) token.sub = user.id;
-      return token;
+      // Initial sign-in: user comes from authorize(). Stamp the token with the
+      // user's current tokenVersion.
+      if (user?.id) {
+        token.sub = user.id;
+        token.tokenVersion = user.tokenVersion ?? 0;
+        token.verCheckedAt = Date.now();
+        return token;
+      }
+      // Every later request: end the session if it has been revoked.
+      return checkTokenVersion(token);
     },
     session({ session, token }) {
       // Expose user.id from the JWT so server components can read it

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { ChangeMasterPasswordForm } from "@/features/vault/change-master-password-form";
+import { SignOutAllDevicesButton } from "@/features/vault/sign-out-all-devices-button";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -47,15 +48,16 @@ export default async function SettingsPage() {
           Sign out
         </h2>
         <p className="text-muted-foreground mb-4 text-sm">
-          Signs you out of this device. To invalidate all sessions, change your master password
-          after signing back in.
+          Sign out of this browser, or end every session on every device (for example after using a
+          shared computer or losing a device).
         </p>
-        <div className="bg-card rounded-xl border p-4 shadow-xs">
+        <div className="bg-card flex flex-wrap gap-3 rounded-xl border p-4 shadow-xs">
           <SignOutButton
             display="icon-label"
             variant="destructive"
             label="Sign out of this device"
           />
+          <SignOutAllDevicesButton />
         </div>
       </section>
     </div>

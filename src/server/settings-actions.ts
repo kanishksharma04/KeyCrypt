@@ -1,8 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { auth, signOut } from "@/lib/auth";
+import { revokeAllSessions } from "@/lib/session-version";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
@@ -172,17 +172,20 @@ export async function changeMasterPasswordAction(input: {
 }
 
 // ─── Sign-out all devices ─────────────────────────────────────────────────────
-// JWT sessions can't be listed or revoked server-side individually.
-// The only server-side lever is incrementing tokenVersion so all existing
-// tokens fail the next rotation check. For now we log and redirect.
+// JWT sessions can't be listed or deleted, so bump tokenVersion: every existing
+// token fails its next version check (within 60 s) and its session ends.
+// This device is signed out immediately.
 
-export async function signOutEverywhereAction(): Promise<void> {
+export async function signOutEverywhereAction(): Promise<{ error?: string }> {
   const session = await auth();
-  if (!session) return;
+  if (!session) return { error: "Not authenticated" };
 
+  await revokeAllSessions(session.user.id);
   await db.auditLog.create({
     data: { userId: session.user.id, action: "auth.sessions.revoked_all" },
   });
 
-  redirect("/auth/signin");
+  // Clears this browser's session cookie and redirects (throws NEXT_REDIRECT).
+  await signOut({ redirectTo: "/auth/signin" });
+  return {};
 }

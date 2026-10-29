@@ -16,6 +16,9 @@ all vault encryption and decryption happens in the browser.
 
 - **Account password** (sign-in): hashed server-side with Argon2id via
   `@node-rs/argon2` (`src/lib/password.ts`; memoryCost 19456, timeCost 2).
+- **Sessions**: Auth.js JWTs, 7-day max age, revocable by bumping `User.tokenVersion`
+  (checked at most every 60 s in the jwt callback, `src/lib/session-version.ts`).
+  "Sign out of all devices" and password reset both bump it.
 - **Master password** (vault): never leaves the browser and is never sent to the server.
 - **Vault key**: derived in the browser with PBKDF2-SHA-256, 600,000 iterations,
   16-byte random salt, into an AES-256-GCM `CryptoKey` that is **non-extractable**

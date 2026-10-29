@@ -38,7 +38,14 @@ export async function authorizeCredentials(
 
   const user = await db.user.findUnique({
     where: { email },
-    select: { id: true, email: true, name: true, passwordHash: true, emailVerified: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      passwordHash: true,
+      emailVerified: true,
+      tokenVersion: true,
+    },
   });
 
   // Unknown email: run a full Argon2 verify anyway so timing matches a wrong
@@ -60,5 +67,5 @@ export async function authorizeCredentials(
     await db.user.update({ where: { id: user.id }, data: { emailVerified: new Date() } });
   }
 
-  return { id: user.id, email: user.email, name: user.name };
+  return { id: user.id, email: user.email, name: user.name, tokenVersion: user.tokenVersion };
 }
