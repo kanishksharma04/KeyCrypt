@@ -15,6 +15,7 @@ import {
   type ForgotPasswordInput,
   type ResetPasswordInput,
 } from "@/schemas/auth";
+import { INVALID_INPUT, tokenSchema, verifyEmailInput } from "@/schemas/server";
 
 type ActionResult = { error: string } | { success: true; message?: string; emailSent?: boolean };
 
@@ -85,11 +86,14 @@ export async function signUpAction(data: SignUpInput): Promise<ActionResult> {
 // ─── Verify Email ─────────────────────────────────────────────────────────────
 
 export async function verifyEmailAction(email: string, token: string): Promise<ActionResult> {
-  const valid = await consumeToken("verify", email, token);
+  const parsed = verifyEmailInput.safeParse({ email, token });
+  if (!parsed.success) return { error: INVALID_INPUT };
+
+  const valid = await consumeToken("verify", parsed.data.email, parsed.data.token);
   if (!valid) return { error: "Invalid or expired verification link." };
 
   await db.user.update({
-    where: { email },
+    where: { email: parsed.data.email },
     data: { emailVerified: new Date() },
   });
 
@@ -130,8 +134,12 @@ export async function resetPasswordAction(data: ResetPasswordInput): Promise<Act
     return { error: first?.message ?? "Invalid input" };
   }
 
+  const resetLinkError = { error: "Invalid or expired reset link. Request a new one." };
+  // The shared form schema only requires a token; check its exact format here.
+  if (!tokenSchema.safeParse(parsed.data.token).success) return resetLinkError;
+
   const valid = await consumeToken("reset", parsed.data.email, parsed.data.token);
-  if (!valid) return { error: "Invalid or expired reset link. Request a new one." };
+  if (!valid) return resetLinkError;
 
   const passwordHash = await hashPassword(parsed.data.password);
   await db.user.update({

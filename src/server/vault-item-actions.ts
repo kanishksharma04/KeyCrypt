@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import type { VaultItemType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  INVALID_INPUT,
+  createVaultItemInput,
+  itemIdInput,
+  toggleFavoriteInput,
+  updateVaultItemInput,
+} from "@/schemas/server";
 
 // Lightweight item list for the command palette — names are already stored in
 // plaintext (see VaultItem schema comment), so no decryption is needed to search them.
@@ -20,12 +27,16 @@ export async function getVaultItemSummariesAction(): Promise<
   });
 }
 
-export async function createVaultItemAction(data: {
+export async function createVaultItemAction(input: {
   type: VaultItemType;
   name: string;
   ciphertext: string;
   iv: string;
 }): Promise<{ id: string } | { error: string }> {
+  const parsed = createVaultItemInput.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const data = parsed.data;
+
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
@@ -48,12 +59,16 @@ export async function createVaultItemAction(data: {
   return { id: item.id };
 }
 
-export async function updateVaultItemAction(data: {
+export async function updateVaultItemAction(input: {
   id: string;
   name: string;
   ciphertext: string;
   iv: string;
 }): Promise<{ error?: string }> {
+  const parsed = updateVaultItemInput.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const data = parsed.data;
+
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
@@ -69,7 +84,11 @@ export async function updateVaultItemAction(data: {
   return {};
 }
 
-export async function deleteVaultItemAction(id: string): Promise<{ error?: string }> {
+export async function deleteVaultItemAction(rawId: string): Promise<{ error?: string }> {
+  const parsed = itemIdInput.safeParse({ id: rawId });
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const { id } = parsed.data;
+
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
@@ -89,9 +108,13 @@ export async function deleteVaultItemAction(id: string): Promise<{ error?: strin
 }
 
 export async function toggleFavoriteAction(
-  id: string,
-  favorite: boolean
+  rawId: string,
+  rawFavorite: boolean
 ): Promise<{ error?: string }> {
+  const parsed = toggleFavoriteInput.safeParse({ id: rawId, favorite: rawFavorite });
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const { id, favorite } = parsed.data;
+
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 

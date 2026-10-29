@@ -2,12 +2,17 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { INVALID_INPUT, setupVaultInput } from "@/schemas/server";
 
-export async function setupVaultAction(data: {
+export async function setupVaultAction(input: {
   salt: string;
   verificationBlob: string;
   verificationIv: string;
 }): Promise<{ error: string } | null> {
+  const parsed = setupVaultInput.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const data = parsed.data;
+
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 

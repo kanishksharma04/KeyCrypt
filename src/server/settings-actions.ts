@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { INVALID_INPUT, changeMasterPasswordInput } from "@/schemas/server";
 
 // ─── Stats ─────────────────────────────────────────────────────────────────────
 
@@ -79,12 +80,16 @@ export async function getAllItemsForReEncryptionAction(): Promise<
   return items;
 }
 
-export async function changeMasterPasswordAction(data: {
+export async function changeMasterPasswordAction(input: {
   newSalt: string;
   newVerificationBlob: string;
   newVerificationIv: string;
   items: { id: string; ciphertext: string; iv: string }[];
 }): Promise<{ error?: string }> {
+  const parsed = changeMasterPasswordInput.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const data = parsed.data;
+
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
