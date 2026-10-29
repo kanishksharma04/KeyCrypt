@@ -20,6 +20,8 @@ export { setVaultKey, getVaultKey, clearVaultKey, isVaultUnlocked } from "./vaul
 
 export { toBase64, fromBase64, bufferToBase64, stringToBytes, bytesToString } from "./utils";
 
+export { hmacSign, hmacVerify } from "./hmac";
+
 export {
   generatePassword,
   getPasswordStrength,

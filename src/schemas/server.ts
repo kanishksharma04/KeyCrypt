@@ -85,6 +85,10 @@ export const changeMasterPasswordInput = z.object({
     .max(MAX_ITEMS_PER_MASTER_PASSWORD_CHANGE),
 });
 
+export const confirmAccountPasswordInput = z.object({
+  password: z.string().min(1).max(256),
+});
+
 export const verifyEmailInput = z.object({
   email: z.string().email().max(254),
   token: tokenSchema,

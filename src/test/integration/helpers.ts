@@ -24,6 +24,48 @@ export function getMockSession(): Session | null {
   return currentSession;
 }
 
+// ─── Cookie jar (backs the mocked next/headers cookies()) ────────────────────
+
+interface StoredCookie {
+  name: string;
+  value: string;
+  options?: Record<string, unknown>;
+}
+
+const cookieJar = new Map<string, StoredCookie>();
+
+export const testCookieJar = {
+  get: (name: string) => {
+    const c = cookieJar.get(name);
+    return c ? { name: c.name, value: c.value } : undefined;
+  },
+  getAll: () => [...cookieJar.values()].map(({ name, value }) => ({ name, value })),
+  has: (name: string) => cookieJar.has(name),
+  set: (name: string, value: string, options?: Record<string, unknown>) => {
+    cookieJar.set(name, { name, value, options });
+  },
+  delete: (name: string) => cookieJar.delete(name),
+};
+
+/** The cookie as last set, including its options (httpOnly, sameSite, ...). */
+export function getTestCookie(name: string): StoredCookie | undefined {
+  return cookieJar.get(name);
+}
+
+export function setTestCookie(name: string, value: string): void {
+  cookieJar.set(name, { name, value });
+}
+
+export function clearTestCookies(): void {
+  cookieJar.clear();
+}
+
+/** Give the current "browser" a valid re-auth cookie for this user (5 minutes). */
+export async function grantRecentReauth(userId: string): Promise<void> {
+  const { createReauthCookieValue, REAUTH_COOKIE, REAUTH_TTL_MS } = await import("@/lib/reauth");
+  setTestCookie(REAUTH_COOKIE, await createReauthCookieValue(userId, Date.now() + REAUTH_TTL_MS));
+}
+
 // ─── Data helpers ────────────────────────────────────────────────────────────
 
 export async function createTestUser(overrides: { email?: string; name?: string } = {}) {

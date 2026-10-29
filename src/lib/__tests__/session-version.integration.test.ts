@@ -8,7 +8,7 @@ import { authorizeCredentials } from "@/lib/authorize-credentials";
 import { checkTokenVersion, TOKEN_VERSION_CHECK_INTERVAL_MS } from "@/lib/session-version";
 import { signOutEverywhereAction } from "@/server/settings-actions";
 import { resetPasswordAction } from "@/server/auth-actions";
-import { createTestUser, signInAs } from "@/test/integration/helpers";
+import { createTestUser, grantRecentReauth, signInAs } from "@/test/integration/helpers";
 
 const T0 = Date.UTC(2026, 9, 29, 16, 0, 0);
 const LATER = T0 + TOKEN_VERSION_CHECK_INTERVAL_MS + 1;
@@ -32,6 +32,7 @@ describe("checkTokenVersion", () => {
 
   it("rejects the old token after Sign out of all devices", async () => {
     signInAs(user);
+    await grantRecentReauth(user.id);
     await signOutEverywhereAction();
     expect(signOut).toHaveBeenCalledWith({ redirectTo: "/auth/signin" }); // this device
 

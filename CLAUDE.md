@@ -43,14 +43,17 @@ all vault encryption and decryption happens in the browser.
 3. Every server action (`src/server/*`, `"use server"`) calls `auth()`, returns early
    when there is no session, and scopes **every** Prisma query by `session.user.id`
    (put `userId` in the `where` clause for updates/deletes to prevent IDOR).
-4. Validate untrusted input with Zod schemas from `src/schemas`. Auth actions do this
-   with `safeParse`; vault/settings actions currently take typed params, so add Zod
-   validation when you touch them.
-5. Never use `Math.random` for anything secret. Use `crypto.getRandomValues` in the
+4. Every exported server action `safeParse`s its input first (schemas in
+   `src/schemas/server.ts` and `src/schemas/auth.ts`) and returns
+   `{ error: "Invalid input" }` without echoing the input.
+5. Destructive actions (master-password change, sign out all devices, and later account
+   deletion/export) call `requireRecentReauth(userId)` from `src/lib/reauth.ts` right
+   after `auth()`. The UI asks first with `ConfirmPasswordDialog` (account password).
+6. Never use `Math.random` for anything secret. Use `crypto.getRandomValues` in the
    browser (`src/lib/crypto`) or Node's `randomBytes` on the server (`src/lib/tokens.ts`).
-6. Don't log or toast secrets, keys or decrypted data. Write security-relevant events
+7. Don't log or toast secrets, keys or decrypted data. Write security-relevant events
    to `AuditLog` without secret content.
-7. Respect `noUncheckedIndexedAccess`: handle `undefined` from indexed access instead of
+8. Respect `noUncheckedIndexedAccess`: handle `undefined` from indexed access instead of
    silencing it.
 
 ## Commands

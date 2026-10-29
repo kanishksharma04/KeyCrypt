@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth, signOut } from "@/lib/auth";
 import { revokeAllSessions } from "@/lib/session-version";
+import { requireRecentReauth } from "@/lib/reauth";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
@@ -102,6 +103,9 @@ export async function changeMasterPasswordAction(input: {
 
   const userId = session.user.id;
 
+  const reauth = await requireRecentReauth(userId);
+  if (!reauth.ok) return { error: reauth.error };
+
   // Re-keying is all-or-nothing. Any item left under the old key would be
   // unreadable forever (its salt is about to be replaced), so the client must
   // prove it read the current verifier and must submit EVERY item, exactly once.
@@ -179,6 +183,9 @@ export async function changeMasterPasswordAction(input: {
 export async function signOutEverywhereAction(): Promise<{ error?: string }> {
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
+
+  const reauth = await requireRecentReauth(session.user.id);
+  if (!reauth.ok) return { error: reauth.error };
 
   await revokeAllSessions(session.user.id);
   await db.auditLog.create({

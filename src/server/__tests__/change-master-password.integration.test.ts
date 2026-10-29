@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import { changeMasterPasswordAction } from "@/server/settings-actions";
 import { changeMasterPassword } from "@/features/vault/change-master-password";
-import { createTestUser, signInAs } from "@/test/integration/helpers";
+import { createTestUser, grantRecentReauth, signInAs } from "@/test/integration/helpers";
 
 // Lets a test simulate "another tab added an item" right after the client
 // fetched the item list for re-encryption.
@@ -70,6 +70,7 @@ beforeEach(async () => {
   const user = await createTestUser();
   userId = user.id;
   signInAs(user);
+  await grantRecentReauth(user.id);
 
   // A real vault: salt + verifier + items, all under the old master password.
   const salt = generateSalt();

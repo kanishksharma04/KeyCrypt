@@ -14,7 +14,12 @@ export default defineConfig({
     setupFiles: ["./src/test/integration/setup.ts"],
     // Point the app's Prisma client (src/lib/db.ts) at the test database before
     // any module is loaded.
-    env: { DATABASE_URL: testDatabaseUrl, NODE_ENV: "test" },
+    env: {
+      DATABASE_URL: testDatabaseUrl,
+      NODE_ENV: "test",
+      // Signs re-auth cookies in tests (src/lib/reauth.ts). Not a real secret.
+      AUTH_SECRET: "integration-tests-only-secret-0123456789abcdef",
+    },
     // All files share one database and truncate it between tests.
     fileParallelism: false,
     testTimeout: 15_000,
