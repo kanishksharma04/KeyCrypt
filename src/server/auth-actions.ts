@@ -8,11 +8,9 @@ import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
 import { rateLimiters } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
 import {
-  signInSchema,
   signUpSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  type SignInInput,
   type SignUpInput,
   type ForgotPasswordInput,
   type ResetPasswordInput,
@@ -20,22 +18,8 @@ import {
 
 type ActionResult = { error: string } | { success: true; message?: string; emailSent?: boolean };
 
-// ─── Sign In ──────────────────────────────────────────────────────────────────
-// Only performs rate limiting. The actual credentials auth happens client-side
-// via next-auth/react signIn() to avoid the Auth.js v5 InvalidProvider error
-// that occurs when signIn("credentials") is called from a server action.
-
-export async function signInAction(data: SignInInput): Promise<ActionResult> {
-  const parsed = signInSchema.safeParse(data);
-  if (!parsed.success) return { error: "Invalid email or password" };
-
-  const ip = getClientIp(await headers());
-  if (await rateLimiters.signIn(ip)) {
-    return { error: "Too many attempts. Please wait 15 minutes before trying again." };
-  }
-
-  return { success: true };
-}
+// Sign-in has no server action: the form calls next-auth/react signIn() and all
+// checks (including rate limiting) run in src/lib/authorize-credentials.ts.
 
 // ─── Sign Up ──────────────────────────────────────────────────────────────────
 

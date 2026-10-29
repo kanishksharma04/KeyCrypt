@@ -8,7 +8,6 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signInAction } from "@/server/auth-actions";
 import { signInSchema, type SignInInput } from "@/schemas/auth";
 import { FieldError } from "./field-error";
 
@@ -26,14 +25,8 @@ export function SignInForm() {
   const onSubmit = handleSubmit((data) => {
     setServerError(undefined);
     startTransition(async () => {
-      // Rate limit check via server action
-      const rateCheck = await signInAction(data);
-      if ("error" in rateCheck) {
-        setServerError(rateCheck.error);
-        return;
-      }
-
-      // Actual auth via client-side signIn to avoid Auth.js v5 callback route issue
+      // Client-side signIn avoids the Auth.js v5 InvalidProvider error from server
+      // actions. Rate limiting is enforced server-side inside authorize().
       const result = await signIn("credentials", {
         email: data.email,
         password: data.password,
@@ -43,7 +36,9 @@ export function SignInForm() {
       // Auth.js v5 returns ok:true + status 200 for BOTH success and failure
       // when X-Auth-Return-Redirect is set. Check result.error, not result.ok.
       if (result?.error) {
-        if (result.code === "EMAIL_NOT_VERIFIED") {
+        if (result.code === "RATE_LIMITED") {
+          setServerError("Too many attempts. Try again in 15 minutes.");
+        } else if (result.code === "EMAIL_NOT_VERIFIED") {
           setServerError("Please verify your email before signing in.");
         } else {
           setServerError("Invalid email or password.");

@@ -1,13 +1,8 @@
-import NextAuth, { CredentialsSignin } from "next-auth";
+import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
-import { verifyPassword } from "@/lib/password";
-import { signInSchema } from "@/schemas/auth";
-
-class EmailNotVerifiedError extends CredentialsSignin {
-  code = "EMAIL_NOT_VERIFIED" as const;
-}
+import { authorizeCredentials } from "@/lib/authorize-credentials";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -28,33 +23,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        const parsed = signInSchema.safeParse(credentials);
-        if (!parsed.success) return null;
-
-        const user = await db.user.findUnique({
-          where: { email: parsed.data.email },
-          select: { id: true, email: true, name: true, passwordHash: true, emailVerified: true },
-        });
-
-        // Return null for both "user not found" and "wrong password" to avoid
-        // leaking which emails are registered (timing-safe implicit in Argon2).
-        if (!user?.passwordHash) return null;
-
-        const valid = await verifyPassword(parsed.data.password, user.passwordHash);
-        if (!valid) return null;
-
-        if (!user.emailVerified) {
-          const smtpConfigured = process.env.NODE_ENV !== "production" || !!process.env.SMTP_HOST;
-          if (smtpConfigured) {
-            throw new EmailNotVerifiedError();
-          }
-          // No SMTP in production — auto-verify legacy unverified accounts on first sign-in
-          await db.user.update({ where: { id: user.id }, data: { emailVerified: new Date() } });
-        }
-
-        return { id: user.id, email: user.email, name: user.name };
-      },
+      // Rate limiting, timing equalisation and the email-verified check all
+      // live in authorizeCredentials (src/lib/authorize-credentials.ts).
+      authorize: (credentials, request) => authorizeCredentials(credentials, request),
     }),
   ],
 

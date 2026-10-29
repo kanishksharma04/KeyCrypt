@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, vi } from "vitest";
 import { db } from "@/lib/db";
+import { resetRateLimitStateForTests } from "@/lib/rate-limit";
 import { resetDatabase, signOutTestUser } from "./helpers";
 
 // ─── Framework mocks (apply to every integration test file) ──────────────────
@@ -35,6 +36,7 @@ vi.mock("next/headers", () => ({
 
 beforeEach(async () => {
   signOutTestUser();
+  resetRateLimitStateForTests();
   await resetDatabase();
 });
 

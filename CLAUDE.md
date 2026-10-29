@@ -97,8 +97,9 @@ Environment variables: see `.env.example` (`DATABASE_URL`, `AUTH_SECRET`,
 - Things an upgrade can break:
   - `src/features/auth/sign-in-form.tsx` signs in with client-side `signIn("credentials")`
     from `next-auth/react` because calling it from a server action raised
-    `InvalidProvider`; `signInAction` only does validation and rate limiting. The form
-    checks `result.error`, not `result.ok`, because both outcomes return `ok: true`.
+    `InvalidProvider`. All checks, including the per-IP and per-email rate limits, run
+    in `authorize()` (`src/lib/authorize-credentials.ts`). The form checks
+    `result.error`/`result.code`, not `result.ok`, because both outcomes return `ok: true`.
   - `src/lib/auth.ts` uses the JWT session strategy (required by the Credentials
     provider), so the `Session` table is unused.
 - `next-auth` declares a `nodemailer` ^7 peer dependency; the app uses nodemailer 9, so
