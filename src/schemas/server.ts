@@ -74,6 +74,9 @@ export const setupVaultInput = z.object({
 export const MAX_ITEMS_PER_MASTER_PASSWORD_CHANGE = 5_000;
 
 export const changeMasterPasswordInput = z.object({
+  // The verifier the client read and checked the current master password against.
+  currentVerificationBlob: verificationBlobSchema,
+  currentVerificationIv: ivSchema,
   newSalt: saltSchema,
   newVerificationBlob: verificationBlobSchema,
   newVerificationIv: ivSchema,

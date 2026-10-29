@@ -6,23 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { changeMasterPasswordSchema, type ChangeMasterPasswordInput } from "@/schemas/vault";
-import {
-  getVaultKey,
-  setVaultKey,
-  deriveVaultKey,
-  generateSalt,
-  createVerificationBlob,
-  verifyVaultKey,
-  encryptItem,
-  decryptItem,
-  toBase64,
-  fromBase64,
-} from "@/lib/crypto";
-import { getVaultMetaAction } from "@/server/vault-actions";
-import {
-  getAllItemsForReEncryptionAction,
-  changeMasterPasswordAction,
-} from "@/server/settings-actions";
+import { changeMasterPassword } from "./change-master-password";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/features/auth/field-error";
@@ -58,72 +42,12 @@ export function ChangeMasterPasswordForm() {
     setServerError(undefined);
     startTransition(async () => {
       try {
-        const oldKey = getVaultKey();
-        if (!oldKey) {
-          setServerError("Vault is locked. Please unlock and try again.");
-          return;
-        }
-
-        // 1. Verify the current master password against the stored verification blob
-        const meta = await getVaultMetaAction();
-        if (!meta) {
-          setServerError("Failed to load vault data.");
-          return;
-        }
-
-        // deriveVaultKey expects Uint8Array — the DB stores base64
-        const saltBytes = fromBase64(meta.salt);
-        const currentKey = await deriveVaultKey(data.currentPassword, saltBytes);
-        const isValid = await verifyVaultKey(currentKey, {
-          ciphertext: meta.verificationBlob,
-          iv: meta.verificationIv,
-        });
-        if (!isValid) {
-          setServerError("Current master password is incorrect.");
-          return;
-        }
-
-        // 2. Fetch all vault items (encrypted) for re-encryption
-        const itemsResult = await getAllItemsForReEncryptionAction();
-        if ("error" in itemsResult) {
-          setServerError(itemsResult.error);
-          return;
-        }
-
-        // 3. Derive new vault key from new password + fresh salt
-        const newSaltBytes = generateSalt();
-        const newKey = await deriveVaultKey(data.newPassword, newSaltBytes);
-
-        // 4. Re-encrypt every vault item: decrypt with old key → encrypt with new key
-        const reEncrypted = await Promise.all(
-          itemsResult.map(async (item) => {
-            const plaintext = await decryptItem<unknown>(oldKey, {
-              ciphertext: item.ciphertext,
-              iv: item.iv,
-            });
-            const { ciphertext, iv } = await encryptItem(newKey, plaintext);
-            return { id: item.id, ciphertext, iv };
-          })
-        );
-
-        // 5. Create a new verification blob signed with the new key
-        const { ciphertext: newBlob, iv: newBlobIv } = await createVerificationBlob(newKey);
-
-        // 6. Persist everything atomically: new VaultMeta + all re-encrypted items
-        const result = await changeMasterPasswordAction({
-          newSalt: toBase64(newSaltBytes),
-          newVerificationBlob: newBlob,
-          newVerificationIv: newBlobIv,
-          items: reEncrypted,
-        });
-
-        if (result.error) {
+        // Re-keys the vault in the browser; retries once if the vault changed meanwhile.
+        const result = await changeMasterPassword(data.currentPassword, data.newPassword);
+        if (!result.ok) {
           setServerError(result.error);
           return;
         }
-
-        // 7. Swap the in-memory vault key — user stays unlocked after the change
-        setVaultKey(newKey);
 
         toast.success("Master password changed successfully.");
         reset();

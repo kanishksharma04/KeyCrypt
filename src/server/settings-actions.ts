@@ -3,7 +3,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import { INVALID_INPUT, changeMasterPasswordInput } from "@/schemas/server";
 
 // ─── Stats ─────────────────────────────────────────────────────────────────────
@@ -80,7 +82,12 @@ export async function getAllItemsForReEncryptionAction(): Promise<
   return items;
 }
 
+/** Thrown inside the transaction to roll back after writes have started. */
+class VaultChangedError extends Error {}
+
 export async function changeMasterPasswordAction(input: {
+  currentVerificationBlob: string;
+  currentVerificationIv: string;
   newSalt: string;
   newVerificationBlob: string;
   newVerificationIv: string;
@@ -95,31 +102,66 @@ export async function changeMasterPasswordAction(input: {
 
   const userId = session.user.id;
 
-  // All items must belong to this user (prevents tampering with other users' data)
-  if (data.items.length > 0) {
-    const count = await db.vaultItem.count({
-      where: { userId, id: { in: data.items.map((i) => i.id) } },
-    });
-    if (count !== data.items.length) return { error: "Item ownership check failed" };
-  }
+  // Re-keying is all-or-nothing. Any item left under the old key would be
+  // unreadable forever (its salt is about to be replaced), so the client must
+  // prove it read the current verifier and must submit EVERY item, exactly once.
+  //
+  // Serializable isolation makes Postgres abort this transaction if another
+  // request adds, removes or rewrites this user's items or VaultMeta meanwhile.
+  try {
+    await db.$transaction(
+      async (tx) => {
+        const meta = await tx.vaultMeta.findUnique({
+          where: { userId },
+          select: { verificationBlob: true, verificationIv: true },
+        });
+        if (
+          !meta ||
+          meta.verificationBlob !== data.currentVerificationBlob ||
+          meta.verificationIv !== data.currentVerificationIv
+        ) {
+          throw new VaultChangedError();
+        }
 
-  // Atomic transaction: update VaultMeta + re-encrypt all items
-  await db.$transaction([
-    db.vaultMeta.update({
-      where: { userId },
-      data: {
-        salt: data.newSalt,
-        verificationBlob: data.newVerificationBlob,
-        verificationIv: data.newVerificationIv,
+        const existing = await tx.vaultItem.findMany({ where: { userId }, select: { id: true } });
+        const submitted = new Set(data.items.map((i) => i.id));
+        const exactMatch =
+          submitted.size === data.items.length && // no duplicates
+          submitted.size === existing.length && // nothing missing or extra…
+          existing.every((e) => submitted.has(e.id)); // …and the same ids
+        if (!exactMatch) throw new VaultChangedError();
+
+        for (const item of data.items) {
+          const { count } = await tx.vaultItem.updateMany({
+            where: { id: item.id, userId },
+            data: { ciphertext: item.ciphertext, iv: item.iv },
+          });
+          if (count !== 1) throw new VaultChangedError();
+        }
+
+        await tx.vaultMeta.update({
+          where: { userId },
+          data: {
+            salt: data.newSalt,
+            verificationBlob: data.newVerificationBlob,
+            verificationIv: data.newVerificationIv,
+          },
+        });
       },
-    }),
-    ...data.items.map((item) =>
-      db.vaultItem.update({
-        where: { id: item.id },
-        data: { ciphertext: item.ciphertext, iv: item.iv },
-      })
-    ),
-  ]);
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        // Up to 5,000 sequential item updates.
+        timeout: 60_000,
+      }
+    );
+  } catch (err) {
+    const serializationFailure =
+      err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
+    if (err instanceof VaultChangedError || serializationFailure) {
+      return { error: VAULT_CHANGED_ERROR };
+    }
+    throw err;
+  }
 
   await db.auditLog.create({
     data: { userId, action: "vault.master_password.changed" },
