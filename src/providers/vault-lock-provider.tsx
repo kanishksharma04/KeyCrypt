@@ -4,9 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { clearVaultKey, isVaultUnlocked } from "@/lib/crypto";
-
-// 15 minutes of inactivity → lock the vault
-const INACTIVITY_MS = 15 * 60 * 1000;
+import { ACTIVITY_THROTTLE_MS, LOCK_CHECK_INTERVAL_MS, shouldLock } from "@/lib/vault-lock";
 
 const ACTIVITY_EVENTS = ["mousemove", "keydown", "click", "scroll", "touchstart"] as const;
 
@@ -21,7 +19,11 @@ export function VaultLockProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   // Derive initial state synchronously so locked content is never flashed to the user.
   const [isLocked, setIsLocked] = useState(() => !isVaultUnlocked());
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Timestamps, not timers: see src/lib/vault-lock.ts for why.
+  // Set on mount (render must stay pure, so no Date.now() here).
+  const lastActivityAt = useRef(0);
+  const hiddenAt = useRef<number | null>(null);
 
   const lock = useCallback(() => {
     clearVaultKey();
@@ -29,33 +31,53 @@ export function VaultLockProvider({ children }: { children: React.ReactNode }) {
     router.replace("/vault/unlock");
   }, [router]);
 
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(lock, INACTIVITY_MS);
-  }, [lock]);
-
   useEffect(() => {
     if (!isVaultUnlocked()) {
       router.replace("/vault/unlock");
       return;
     }
 
-    resetTimer();
+    lastActivityAt.current = Date.now();
+    hiddenAt.current = document.hidden ? Date.now() : null;
 
-    ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
+    const check = () => {
+      if (!isVaultUnlocked()) return; // already locked
+      if (shouldLock(Date.now(), lastActivityAt.current, hiddenAt.current)) lock();
+    };
 
-    // Belt-and-suspenders: clear the in-memory key on tab close.
-    // The key is lost when the JS context is destroyed anyway, but clearing
-    // it explicitly ensures no lingering reference.
-    const handleUnload = () => clearVaultKey();
-    window.addEventListener("beforeunload", handleUnload);
+    // Throttled: mousemove fires constantly; one timestamp per second is plenty.
+    const onActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityAt.current >= ACTIVITY_THROTTLE_MS) lastActivityAt.current = now;
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenAt.current = Date.now();
+      } else {
+        // Decide on the hidden period (and any sleep) before forgetting it.
+        check();
+        hiddenAt.current = null;
+      }
+    };
+
+    // Belt-and-suspenders: clear the in-memory key when the page unloads.
+    // Not reliable on its own (mobile browsers often skip it); the key is gone
+    // with the page's memory anyway.
+    const onUnload = () => clearVaultKey();
+
+    const interval = setInterval(check, LOCK_CHECK_INTERVAL_MS);
+    ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("beforeunload", onUnload);
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, resetTimer));
-      window.removeEventListener("beforeunload", handleUnload);
+      clearInterval(interval);
+      ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, onActivity));
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("beforeunload", onUnload);
     };
-  }, [lock, resetTimer, router]);
+  }, [lock, router]);
 
   if (isLocked) {
     return (
