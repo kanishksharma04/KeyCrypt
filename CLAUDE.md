@@ -131,7 +131,8 @@ src/
   schemas/             Zod schemas (auth, vault)
   server/              server actions (auth, vault, vault items, settings)
   types/               shared types, next-auth augmentation
-  proxy.ts             Next 16 "proxy" (ex-middleware): route guards + per-request CSP nonce
+  proxy.ts             Next 16 "proxy" (ex-middleware): verifies the session JWT with the
+                       edge-safe lib/auth.config.ts (no Prisma), route guards, CSP nonce
 ```
 
 Tests live next to code in `__tests__` folders. Unit tests match `src/**/*.test.ts`;

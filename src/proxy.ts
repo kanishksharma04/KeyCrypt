@@ -1,4 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
+
+// Edge-safe Auth.js instance: verifies the session JWT (signature + expiry)
+// without touching the database. Invalid or tampered tokens yield req.auth = null
+// and their cookies are cleared on the response.
+const { auth } = NextAuth(authConfig);
 
 // Protected route prefixes
 const PROTECTED = ["/vault"];
@@ -35,26 +42,24 @@ function buildCsp(nonce: string): string {
 
 // ─── Proxy (Next.js 16 name for middleware; runs on the Node.js runtime) ──────
 
-export function proxy(req: NextRequest) {
+export const proxy = auth((req) => {
   const { pathname } = req.nextUrl;
 
-  // Auth.js stores the session token in one of two cookies (secure vs plain).
-  const sessionToken =
-    req.cookies.get("authjs.session-token") ?? req.cookies.get("__Secure-authjs.session-token");
+  // A session whose JWT verified. Revocation (tokenVersion) is checked later,
+  // on the Node side, by auth() in each route. Keep the proxy cheap: no Prisma here.
+  const isSignedIn = !!req.auth;
 
   const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
   const isAuthOnly = AUTH_ONLY.some((p) => pathname.startsWith(p));
 
-  // Lightweight redirect guards — real session validation happens in each
-  // route via auth() (DB round-trip). Keep the proxy cheap: no Prisma here.
-  if (isProtected && !sessionToken) {
+  if (isProtected && !isSignedIn) {
     const url = req.nextUrl.clone();
     url.pathname = "/auth/signin";
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (isAuthOnly && sessionToken) {
+  if (isAuthOnly && isSignedIn) {
     const url = req.nextUrl.clone();
     url.pathname = "/vault/dashboard";
     return NextResponse.redirect(url);
@@ -83,7 +88,7 @@ export function proxy(req: NextRequest) {
   }
 
   return response;
-}
+});
 
 export const config = {
   matcher: [
