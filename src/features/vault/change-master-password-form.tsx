@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dialog";
 import { FieldError } from "@/features/auth/field-error";
+import { isSameAsAccountPassword, PASSWORD_REUSE_ERROR } from "@/lib/password-reuse";
 
 const EMPTY: ChangeMasterPasswordInput = {
   currentPassword: "",
@@ -48,10 +49,15 @@ export function ChangeMasterPasswordForm() {
   });
 
   // Runs once the account password was confirmed (5-minute re-auth window).
-  function runChange() {
+  function runChange(accountPassword: string) {
     const data = awaitingConfirm;
     setAwaitingConfirm(null);
     if (!data) return;
+    // Browser-only comparison: the master password is never sent for this check.
+    if (isSameAsAccountPassword(data.newPassword, accountPassword)) {
+      setServerError(PASSWORD_REUSE_ERROR);
+      return;
+    }
     startTransition(async () => {
       try {
         // Re-keys the vault in the browser; retries once if the vault changed meanwhile.

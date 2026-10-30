@@ -18,8 +18,12 @@ import { confirmAccountPasswordAction } from "@/server/reauth-actions";
 interface ConfirmPasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Called after the server accepted the password and set the 5-minute re-auth cookie. */
-  onConfirmed: () => void | Promise<void>;
+  /**
+   * Called after the server accepted the password and set the 5-minute re-auth
+   * cookie. Receives the (verified) account password so callers can compare it
+   * in the browser, e.g. against a new master password. Never send it anywhere.
+   */
+  onConfirmed: (accountPassword: string) => void | Promise<void>;
   title?: string;
   description?: React.ReactNode;
   confirmLabel?: string;
@@ -64,8 +68,9 @@ export function ConfirmPasswordDialog({
         setError(result.error);
         return;
       }
+      const confirmed = password;
       setPassword("");
-      await onConfirmed();
+      await onConfirmed(confirmed);
     });
   }
 
