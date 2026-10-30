@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Check,
   Code2,
   Copy,
   Eye,
@@ -54,6 +53,8 @@ import type {
   VaultItemRow,
   VaultItemType,
 } from "@/types/vault";
+import { CopyButton } from "@/components/shared/copy-button";
+import { copySecret, COPIED_TOAST } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 // ─── Relative time helper ─────────────────────────────────────────────────────
@@ -74,39 +75,14 @@ function timeAgo(iso: string): string {
 
 // ─── Clipboard helper ─────────────────────────────────────────────────────────
 
-async function copyToClipboard(text: string, label: string) {
+/** Copy a secret; the clipboard clears after 30 s (src/lib/clipboard.ts). */
+async function copyToClipboard(text: string) {
   try {
-    await navigator.clipboard.writeText(text);
-    toast.success(`${label} copied`);
-    // Clear clipboard after 30 s to limit accidental exposure
-    setTimeout(() => void navigator.clipboard.writeText(""), 30_000);
+    await copySecret(text);
+    toast.success(COPIED_TOAST);
   } catch {
     toast.error("Failed to copy to clipboard");
   }
-}
-
-// ─── CopyButton ───────────────────────────────────────────────────────────────
-
-function CopyButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={async () => {
-        await copyToClipboard(value, label);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }}
-      title={`Copy ${label}`}
-    >
-      {copied ? (
-        <Check className="size-3.5 text-green-500" aria-hidden="true" />
-      ) : (
-        <Copy className="size-3.5" aria-hidden="true" />
-      )}
-    </Button>
-  );
 }
 
 // ─── Type metadata ─────────────────────────────────────────────────────────────
@@ -185,7 +161,13 @@ function RevealField({ label, value }: { label: string; value: string }) {
             <Eye className="size-3.5" aria-hidden="true" />
           )}
         </Button>
-        <CopyButton value={value} label={label} />
+        <CopyButton
+          value={value}
+          label={label}
+          size="icon-sm"
+          resetMs={1500}
+          className="[&_svg]:size-3.5"
+        />
       </div>
     </div>
   );
@@ -205,7 +187,15 @@ function TextField({
       <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
       <div className="flex items-center gap-2">
         <p className={cn("flex-1 text-sm break-all", mono && "font-mono")}>{value || "—"}</p>
-        {value && <CopyButton value={value} label={label} />}
+        {value && (
+          <CopyButton
+            value={value}
+            label={label}
+            size="icon-sm"
+            resetMs={1500}
+            className="[&_svg]:size-3.5"
+          />
+        )}
       </div>
     </div>
   );
@@ -277,7 +267,7 @@ function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
                   variant="ghost"
                   size="icon-sm"
                   className="absolute top-2 right-2"
-                  onClick={() => void copyToClipboard(item.secret.content, "Note")}
+                  onClick={() => void copyToClipboard(item.secret.content)}
                   title="Copy content"
                 >
                   <Copy className="size-3.5" aria-hidden="true" />
@@ -411,7 +401,7 @@ function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => void copyToClipboard(primaryCopy.text, primaryCopy.label)}
+            onClick={() => void copyToClipboard(primaryCopy.text)}
             title={`Copy ${primaryCopy.label.toLowerCase()}`}
           >
             <Copy className="size-3.5" aria-hidden="true" />
@@ -476,10 +466,7 @@ function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
               Edit
             </DropdownMenuItem>
             {dropdownCopyItems.map(({ label, text }) => (
-              <DropdownMenuItem
-                key={label}
-                onClick={() => void copyToClipboard(text, label.replace("Copy ", ""))}
-              >
+              <DropdownMenuItem key={label} onClick={() => void copyToClipboard(text)}>
                 <Copy className="size-3.5" aria-hidden="true" />
                 {label}
               </DropdownMenuItem>

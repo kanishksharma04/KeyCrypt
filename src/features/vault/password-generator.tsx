@@ -13,6 +13,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { copySecret, COPIED_TOAST } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 // ─── Strength bar ─────────────────────────────────────────────────────────────
@@ -89,9 +90,8 @@ function PasswordGeneratorPanel({ onUse }: PasswordGeneratorPanelProps) {
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(password);
-      toast.success("Password copied");
-      setTimeout(() => void navigator.clipboard.writeText(""), 30_000);
+      await copySecret(password); // clears after 30 s
+      toast.success(COPIED_TOAST);
     } catch {
       toast.error("Failed to copy");
     }

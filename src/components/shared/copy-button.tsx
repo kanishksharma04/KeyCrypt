@@ -2,32 +2,53 @@
 
 import { useState, useCallback } from "react";
 import { Check, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import type { VariantProps } from "class-variance-authority";
+import { Button, type buttonVariants } from "@/components/ui/button";
+import { copySecret, COPIED_TOAST } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 interface CopyButtonProps {
   value: string;
-  /** Milliseconds before the button resets (default: 2000). */
+  /** What is being copied, for screen readers (e.g. "Password"). */
+  label?: string;
+  /** Milliseconds before the icon resets (default: 2000). */
   resetMs?: number;
   className?: string;
-  size?: "default" | "sm" | "lg" | "icon";
+  size?: VariantProps<typeof buttonVariants>["size"];
 }
 
-export function CopyButton({ value, resetMs = 2000, className, size = "icon" }: CopyButtonProps) {
+/** Copies a secret and clears the clipboard 30 seconds later (src/lib/clipboard.ts). */
+export function CopyButton({
+  value,
+  label,
+  resetMs = 2000,
+  className,
+  size = "icon",
+}: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(value);
+    try {
+      await copySecret(value);
+    } catch {
+      toast.error("Failed to copy to clipboard");
+      return;
+    }
+    toast.success(COPIED_TOAST);
     setCopied(true);
     setTimeout(() => setCopied(false), resetMs);
   }, [value, resetMs]);
+
+  const what = label ? label.toLowerCase() : "to clipboard";
 
   return (
     <Button
       variant="ghost"
       size={size}
       onClick={handleCopy}
-      aria-label={copied ? "Copied" : "Copy to clipboard"}
+      aria-label={copied ? "Copied" : `Copy ${what}`}
+      title={label ? `Copy ${what}` : undefined}
       className={cn("transition-colors", className)}
     >
       {copied ? (
