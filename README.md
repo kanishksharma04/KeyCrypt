@@ -25,7 +25,7 @@ vaultKey   = PBKDF2(masterPassword, salt, 600_000 iterations, SHA-256, 256-bit)
 ciphertext = AES-256-GCM(vaultKey, randomIV, plaintext)
 ```
 
-The vault key lives **only in browser memory**. It is cleared on lock, inactivity timeout (15 min), or tab close.
+The vault key exists only in this page's memory. It is never written to disk or browser storage, and it is gone when you lock, after 15 minutes of inactivity or 5 minutes in a hidden tab, or when the page is closed or reloaded.
 
 ---
 
@@ -44,7 +44,7 @@ The vault key lives **only in browser memory**. It is cleared on lock, inactivit
 - AES-256-GCM encryption with a unique random IV per item
 - PBKDF2-SHA-256 key derivation at 600,000 iterations
 - Nonce-based Content Security Policy (CSP) + HSTS in production
-- Auto-lock after 15 minutes of inactivity
+- Auto-lock after 15 minutes of inactivity or 5 minutes in a hidden tab (also checked on wake from sleep)
 - Master password change with full client-side re-encryption of every item
 
 ### Vault UX

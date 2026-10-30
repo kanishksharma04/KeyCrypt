@@ -44,7 +44,8 @@ const FEATURES = [
   },
   {
     title: "Auto-lock",
-    description: "Vault locks after 15 minutes of inactivity or immediately on tab close.",
+    description:
+      "The vault key exists only in this page's memory. It is never written to disk or browser storage, and it is gone when you lock, after 15 minutes of inactivity or 5 minutes in a hidden tab, or when the page is closed or reloaded.",
   },
 ];
 
