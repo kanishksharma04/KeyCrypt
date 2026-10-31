@@ -85,6 +85,10 @@ export const changeMasterPasswordInput = z.object({
     .max(MAX_ITEMS_PER_MASTER_PASSWORD_CHANGE),
 });
 
+export const recordVaultExportInput = z.object({
+  format: z.enum(["encrypted-json", "csv"]),
+});
+
 export const confirmAccountPasswordInput = z.object({
   password: z.string().min(1).max(256),
 });

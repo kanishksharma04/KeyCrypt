@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { ChangeMasterPasswordForm } from "@/features/vault/change-master-password-form";
 import { SignOutAllDevicesButton } from "@/features/vault/sign-out-all-devices-button";
+import { ExportVault } from "@/features/vault/export-vault";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -39,6 +40,20 @@ export default async function SettingsPage() {
         </p>
         <div className="bg-card rounded-xl border p-4 shadow-xs">
           <ChangeMasterPasswordForm />
+        </div>
+      </section>
+
+      {/* Export */}
+      <section aria-labelledby="export-heading" className="mb-10">
+        <h2 id="export-heading" className="mb-1 text-base font-semibold">
+          Export
+        </h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          Download a copy of your vault. The file is built in this browser; nothing decrypted is
+          sent to the server.
+        </p>
+        <div className="bg-card rounded-xl border p-4 shadow-xs">
+          <ExportVault />
         </div>
       </section>
 

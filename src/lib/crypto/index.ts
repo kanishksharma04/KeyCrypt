@@ -23,6 +23,15 @@ export { toBase64, fromBase64, bufferToBase64, stringToBytes, bytesToString } fr
 export { hmacSign, hmacVerify } from "./hmac";
 
 export {
+  encryptExport,
+  decryptExport,
+  ExportDecryptionError,
+  EXPORT_FORMAT,
+  EXPORT_VERSION,
+} from "./export";
+export type { EncryptedExportFile } from "./export";
+
+export {
   generatePassword,
   getPasswordStrength,
   estimatePasswordStrength,

@@ -60,6 +60,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Vault health score** — client-side detection of weak, reused, and stale passwords; decrypted data never leaves the browser
 - **View dialog** — reveal fields with eye toggle, one-click copy with ✓ checkmark feedback
 - **Password generator** — configurable length, character sets, live entropy score
+- **Export** — Settings → Export, built in the browser: an encrypted JSON file (`keycrypt-export` v1, PBKDF2 600k + AES-256-GCM under a separate export password), or a plain Bitwarden-format CSV after re-entering your account password
 - **Favorites filter** — star items and filter to pinned items only
 - **Search** — live filter across name, username, URL, SSID; press `/` to focus, `Escape` to clear
 - **Item count** — shows `3 items` or `2 of 5 items` when filtered

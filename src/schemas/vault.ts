@@ -35,6 +35,18 @@ export const changeMasterPasswordSchema = z
   });
 export type ChangeMasterPasswordInput = z.infer<typeof changeMasterPasswordSchema>;
 
+// Password that protects an encrypted export file (never sent anywhere).
+export const exportPasswordSchema = z
+  .object({
+    exportPassword: z.string().min(12, "At least 12 characters").max(128, "Maximum 128 characters"),
+    confirmExportPassword: z.string(),
+  })
+  .refine((d) => d.exportPassword === d.confirmExportPassword, {
+    message: "Passwords do not match",
+    path: ["confirmExportPassword"],
+  });
+export type ExportPasswordInput = z.infer<typeof exportPasswordSchema>;
+
 export type MasterPasswordInput = z.infer<typeof masterPasswordSchema>;
 export type UnlockInput = z.infer<typeof unlockSchema>;
 
