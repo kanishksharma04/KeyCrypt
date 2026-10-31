@@ -315,7 +315,7 @@ export default async function HomePage() {
                 null,
                 { label: "AES-256-GCM", sub: "random IV per item" },
                 null,
-                { label: "Ciphertext", sub: "all the server sees" },
+                { label: "Ciphertext", sub: "what the server stores" },
               ].map((node, i) =>
                 node === null ? (
                   <span key={i} className="text-muted-foreground/60 shrink-0 font-mono text-sm">
@@ -347,7 +347,7 @@ export default async function HomePage() {
               <Step
                 number="2"
                 title="Your secrets are encrypted before upload"
-                description="Every vault item is encrypted with AES-256-GCM using a unique random IV. The server receives opaque ciphertext it cannot read — it has no key and no way to derive one."
+                description="The contents of every vault item are encrypted with AES-256-GCM using a unique random IV. The server receives opaque ciphertext it cannot read — it has no key and no way to derive one."
               />
               <Step
                 number="3"
@@ -355,6 +355,13 @@ export default async function HomePage() {
                 description="Sign in on any device, enter your master password, and your browser re-derives the vault key locally. Nothing changes on the server — decryption is entirely client-side."
               />
             </div>
+
+            <p className="text-muted-foreground mx-auto mt-12 max-w-2xl text-center text-sm leading-relaxed">
+              <span className="text-foreground font-medium">What the server can see today:</span>{" "}
+              your email and name, each item&apos;s name and type, which items are favourites, when
+              items were created and changed, and an activity log of account events (with your IP
+              address at sign-up). Usernames, passwords, URLs, notes and keys are always encrypted.
+            </p>
           </div>
         </section>
 
@@ -395,8 +402,8 @@ export default async function HomePage() {
                 <span className="font-semibold">KeyCrypt</span>
               </div>
               <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
-                Zero-knowledge password manager. Everything encrypted in your browser — nothing
-                readable on our servers.
+                Zero-knowledge password manager. Your secrets are encrypted in your browser and
+                unreadable on our servers.
               </p>
             </div>
 

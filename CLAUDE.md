@@ -1,7 +1,8 @@
 # CLAUDE.md
 
-KeyCrypt is a zero-knowledge password manager. The server stores only ciphertext;
-all vault encryption and decryption happens in the browser.
+KeyCrypt is a zero-knowledge password manager. Item contents reach the server only as
+ciphertext (some metadata is plain text, see "Security model"); all vault encryption and
+decryption happens in the browser.
 
 ## Stack
 
@@ -30,9 +31,11 @@ all vault encryption and decryption happens in the browser.
   `VaultMeta` (`verificationBlob` + `verificationIv`) alongside the salt. Unlock decrypts
   it client-side to check the master password (`src/lib/crypto/verification.ts`);
   nothing is compared on the server.
-- `VaultItem` stores `ciphertext` + `iv`. Only the item `name`, `type` and `favorite`
-  flag are plaintext (for listing and search); usernames, passwords, URLs and notes
-  live inside the ciphertext.
+- `VaultItem` stores `ciphertext` + `iv`. Server-visible plain text today: item `name`,
+  `type`, `favorite`, `createdAt`/`updatedAt`; usernames, passwords, URLs and notes live
+  inside the ciphertext. `AuditLog` stores actions with timestamps (IP only at sign-up,
+  item type on create; `userAgent` is never written). Keep README's security table and
+  the landing page's "What the server can see today" note in sync with any change here.
 
 ## Hard rules
 
