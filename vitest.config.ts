@@ -3,9 +3,11 @@ import { resolve } from "path";
 
 export default defineConfig({
   test: {
-    // Node environment has globalThis.crypto (Web Crypto) in Node ≥18
+    // Node environment has globalThis.crypto (Web Crypto) in Node ≥18.
+    // Component tests (*.test.tsx) opt into jsdom per file with
+    // `// @vitest-environment jsdom`.
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
     // Database-backed tests run separately via `pnpm test:integration`.
     exclude: [...configDefaults.exclude, "src/**/*.integration.test.ts"],
     coverage: {
