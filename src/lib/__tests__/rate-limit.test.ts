@@ -20,6 +20,8 @@ beforeEach(() => {
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
   vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+  vi.stubEnv("E2E", "");
+  vi.stubEnv("E2E_DISABLE_RATE_LIMIT", "");
 });
 
 afterEach(() => {
@@ -70,6 +72,37 @@ describe("in-memory fallback (no Upstash env)", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await isRateLimited("k", 5, 60_000);
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("E2E bypass", () => {
+  async function blockedAfterTwo() {
+    await isRateLimited("k", 1, 60_000);
+    return isRateLimited("k", 1, 60_000);
+  }
+
+  it("is honoured only when E2E=1 and E2E_DISABLE_RATE_LIMIT=1 are both set", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubEnv("E2E", "1");
+    vi.stubEnv("E2E_DISABLE_RATE_LIMIT", "1");
+    expect(await blockedAfterTwo()).toBe(false);
+  });
+
+  it("is ignored with only E2E_DISABLE_RATE_LIMIT set", async () => {
+    vi.stubEnv("E2E_DISABLE_RATE_LIMIT", "1");
+    expect(await blockedAfterTwo()).toBe(true);
+  });
+
+  it("is ignored with only E2E set", async () => {
+    vi.stubEnv("E2E", "1");
+    expect(await blockedAfterTwo()).toBe(true);
+  });
+
+  it("is ignored for values other than 1", async () => {
+    vi.stubEnv("E2E", "true");
+    vi.stubEnv("E2E_DISABLE_RATE_LIMIT", "true");
+    expect(await blockedAfterTwo()).toBe(true);
   });
 });
 

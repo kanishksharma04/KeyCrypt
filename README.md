@@ -182,6 +182,7 @@ pnpm typecheck    # TypeScript type check
 pnpm lint         # ESLint
 pnpm test         # Vitest unit tests (no database)
 pnpm test:integration # Server-action tests against Postgres (see below)
+pnpm test:e2e     # Playwright end-to-end tests against a production build (see below)
 pnpm db:deploy    # Apply pending migrations (prisma migrate deploy)
 pnpm db:migrate   # Create + apply a new migration in development (prisma migrate dev)
 pnpm db:push      # Throwaway local databases only — no migration history
@@ -200,6 +201,21 @@ pnpm test:integration
 
 The suite applies migrations (`prisma migrate deploy`) once, then truncates every table
 before each test. It refuses to run unless the database name contains `test`.
+
+### End-to-end tests
+
+With the same test database and `DATABASE_URL_TEST` exported:
+
+```bash
+pnpm exec playwright install chromium   # once
+pnpm test:e2e
+```
+
+Playwright migrates the database, runs `pnpm build && pnpm start` (production mode, so the
+CSP nonce and HSTS are live) and drives Chromium through sign-up, vault setup, all four item
+types, lock/unlock and a master-password change. SMTP is left unset so new accounts are
+auto-verified, and rate limits are switched off with `E2E=1` + `E2E_DISABLE_RATE_LIMIT=1`.
+Never set those two variables in a real deployment.
 
 ---
 

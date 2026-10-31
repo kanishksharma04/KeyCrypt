@@ -70,6 +70,7 @@ pnpm lint            # eslint   (lint:fix to autofix)
 pnpm format          # prettier --write .   (format:check to verify)
 pnpm test            # vitest run, unit tests only, no database (test:watch, test:coverage)
 pnpm test:integration # server actions vs real Postgres; needs DATABASE_URL_TEST (see README)
+pnpm test:e2e        # Playwright vs a production build (e2e/); needs DATABASE_URL_TEST
 pnpm db:generate     # prisma generate
 pnpm db:deploy       # prisma migrate deploy (apply pending migrations)
 pnpm db:migrate      # prisma migrate dev (create a migration; dev DB only)

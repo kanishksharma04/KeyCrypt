@@ -70,6 +70,18 @@ function getUpstashLimiter(client: Redis, maxRequests: number, windowMs: number)
   return limiter;
 }
 
+// ─── E2E bypass ──────────────────────────────────────────────────────────────
+
+/**
+ * End-to-end tests run a production build, where limits are on, and sign in
+ * more often than real users. They may switch limits off, but only when BOTH
+ * E2E=1 and E2E_DISABLE_RATE_LIMIT=1 are set (playwright.config.ts does this).
+ * Never set either in a real deployment.
+ */
+function isE2ERateLimitBypass(): boolean {
+  return process.env.E2E === "1" && process.env.E2E_DISABLE_RATE_LIMIT === "1";
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
@@ -82,6 +94,7 @@ export async function isRateLimited(
   windowMs: number
 ): Promise<boolean> {
   if (process.env.NODE_ENV === "development") return false;
+  if (isE2ERateLimitBypass()) return false;
 
   const client = getRedis();
   if (!client) return isRateLimitedInMemory(key, maxRequests, windowMs);
