@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { wifiPasswordSchema, WIFI_SECURITY_TYPES, type WifiPasswordInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
@@ -12,14 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/features/auth/field-error";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ItemDialog, ItemDialogShell } from "./item-dialog-shell";
 import type { WifiPasswordSecret } from "@/types/vault";
 
 const EMPTY_VALUES: WifiPasswordInput = {
@@ -109,112 +102,95 @@ function WifiPasswordForm({
   });
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{mode === "create" ? "Add WiFi password" : "Edit WiFi password"}</DialogTitle>
-      </DialogHeader>
+    <ItemDialogShell
+      title={mode === "create" ? "Add WiFi password" : "Edit WiFi password"}
+      formId="wifi-form"
+      onSubmit={onSubmit}
+      serverError={serverError}
+      isPending={isPending}
+    >
+      <div className="space-y-1">
+        <label htmlFor="wifi-name" className="text-sm font-medium">
+          Network name <span aria-hidden="true">*</span>
+        </label>
+        <Input
+          id="wifi-name"
+          placeholder="e.g. Home WiFi"
+          autoFocus
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? "wifi-name-error" : undefined}
+          {...register("name")}
+        />
+        <FieldError id="wifi-name-error" message={errors.name?.message} />
+      </div>
 
-      <form id="wifi-form" onSubmit={onSubmit} noValidate className="space-y-3">
-        {serverError && (
-          <div
-            role="alert"
-            className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm"
+      <div className="space-y-1">
+        <label htmlFor="wifi-ssid" className="text-sm font-medium">
+          SSID
+        </label>
+        <Input
+          id="wifi-ssid"
+          placeholder="Exact network SSID"
+          autoComplete="off"
+          {...register("ssid")}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="wifi-password" className="text-sm font-medium">
+          Password
+        </label>
+        <div className="relative">
+          <Input
+            id="wifi-password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            className="pr-9"
+            {...register("password")}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-1/2 right-1 -translate-y-1/2"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            {serverError}
-          </div>
-        )}
-
-        <div className="space-y-1">
-          <label htmlFor="wifi-name" className="text-sm font-medium">
-            Network name <span aria-hidden="true">*</span>
-          </label>
-          <Input
-            id="wifi-name"
-            placeholder="e.g. Home WiFi"
-            autoFocus
-            aria-invalid={!!errors.name}
-            aria-describedby={errors.name ? "wifi-name-error" : undefined}
-            {...register("name")}
-          />
-          <FieldError id="wifi-name-error" message={errors.name?.message} />
+            {showPassword ? (
+              <EyeOff className="size-3.5" aria-hidden="true" />
+            ) : (
+              <Eye className="size-3.5" aria-hidden="true" />
+            )}
+          </Button>
         </div>
+      </div>
 
-        <div className="space-y-1">
-          <label htmlFor="wifi-ssid" className="text-sm font-medium">
-            SSID
-          </label>
-          <Input
-            id="wifi-ssid"
-            placeholder="Exact network SSID"
-            autoComplete="off"
-            {...register("ssid")}
-          />
-        </div>
+      <div className="space-y-1">
+        <label htmlFor="wifi-security" className="text-sm font-medium">
+          Security type
+        </label>
+        <select id="wifi-security" className={SELECT_CLASS} {...register("securityType")}>
+          {WIFI_SECURITY_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t === "Open" ? "Open (no password)" : t}
+            </option>
+          ))}
+        </select>
+        <FieldError id="wifi-security-error" message={errors.securityType?.message} />
+      </div>
 
-        <div className="space-y-1">
-          <label htmlFor="wifi-password" className="text-sm font-medium">
-            Password
-          </label>
-          <div className="relative">
-            <Input
-              id="wifi-password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              className="pr-9"
-              {...register("password")}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="absolute top-1/2 right-1 -translate-y-1/2"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? (
-                <EyeOff className="size-3.5" aria-hidden="true" />
-              ) : (
-                <Eye className="size-3.5" aria-hidden="true" />
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="wifi-security" className="text-sm font-medium">
-            Security type
-          </label>
-          <select id="wifi-security" className={SELECT_CLASS} {...register("securityType")}>
-            {WIFI_SECURITY_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t === "Open" ? "Open (no password)" : t}
-              </option>
-            ))}
-          </select>
-          <FieldError id="wifi-security-error" message={errors.securityType?.message} />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="wifi-notes" className="text-sm font-medium">
-            Notes
-          </label>
-          <Textarea
-            id="wifi-notes"
-            placeholder="Optional notes"
-            className="min-h-14 resize-none"
-            {...register("notes")}
-          />
-        </div>
-      </form>
-
-      <DialogFooter>
-        <DialogClose render={<Button variant="outline" size="sm" />}>Cancel</DialogClose>
-        <Button form="wifi-form" type="submit" size="sm" disabled={isPending}>
-          {isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />}
-          {isPending ? "Saving…" : "Save"}
-        </Button>
-      </DialogFooter>
-    </>
+      <div className="space-y-1">
+        <label htmlFor="wifi-notes" className="text-sm font-medium">
+          Notes
+        </label>
+        <Textarea
+          id="wifi-notes"
+          placeholder="Optional notes"
+          className="min-h-14 resize-none"
+          {...register("notes")}
+        />
+      </div>
+    </ItemDialogShell>
   );
 }
 
@@ -234,17 +210,15 @@ export function WifiPasswordDialog({
   initialValues,
 }: WifiPasswordDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        {open && (
-          <WifiPasswordForm
-            mode={mode}
-            itemId={itemId}
-            initialValues={initialValues}
-            onClose={() => onOpenChange(false)}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+    <ItemDialog open={open} onOpenChange={onOpenChange}>
+      {(close) => (
+        <WifiPasswordForm
+          mode={mode}
+          itemId={itemId}
+          initialValues={initialValues}
+          onClose={close}
+        />
+      )}
+    </ItemDialog>
   );
 }

@@ -1,37 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Code2,
-  Copy,
-  Eye,
-  EyeOff,
-  ExternalLink,
-  FileText,
-  KeyRound,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Star,
-  Trash2,
-  Wifi,
-  X,
-} from "lucide-react";
+import { KeyRound, Loader2, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
-import { getVaultKey, decryptItem } from "@/lib/crypto";
-import { deleteVaultItemAction, toggleFavoriteAction } from "@/server/vault-item-actions";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { deleteVaultItemAction } from "@/server/vault-item-actions";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogClose,
@@ -44,449 +19,20 @@ import { LoginItemDialog } from "./login-item-dialog";
 import { SecureNoteDialog } from "./secure-note-dialog";
 import { ApiKeyDialog } from "./api-key-dialog";
 import { WifiPasswordDialog } from "./wifi-password-dialog";
+import { useDecryptedItems } from "./use-decrypted-items";
+import { VaultToolbar, filterVaultItems } from "./vault-toolbar";
+import { VaultItemRow } from "./vault-item-row";
+import { ViewItemDialog } from "./view-item-dialog";
 import type {
   DecryptedVaultItem,
-  LoginSecret,
-  SecureNoteSecret,
-  ApiKeySecret,
-  WifiPasswordSecret,
-  VaultItemRow,
+  VaultItemRow as VaultItemRowData,
   VaultItemType,
 } from "@/types/vault";
-import { CopyButton } from "@/components/shared/copy-button";
-import { copySecret, COPIED_TOAST } from "@/lib/clipboard";
-import { cn } from "@/lib/utils";
-
-// ─── Relative time helper ─────────────────────────────────────────────────────
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 30) return `${d}d ago`;
-  const mo = Math.floor(d / 30);
-  if (mo < 12) return `${mo}mo ago`;
-  return `${Math.floor(mo / 12)}y ago`;
-}
-
-// ─── Clipboard helper ─────────────────────────────────────────────────────────
-
-/** Copy a secret; the clipboard clears after 30 s (src/lib/clipboard.ts). */
-async function copyToClipboard(text: string) {
-  try {
-    await copySecret(text);
-    toast.success(COPIED_TOAST);
-  } catch {
-    toast.error("Failed to copy to clipboard");
-  }
-}
-
-// ─── Type metadata ─────────────────────────────────────────────────────────────
-
-const TYPE_META = {
-  LOGIN: {
-    Icon: KeyRound,
-    label: "Login",
-    iconBg: "bg-primary/10",
-    iconColor: "text-primary",
-  },
-  SECURE_NOTE: {
-    Icon: FileText,
-    label: "Secure Note",
-    iconBg: "bg-green-500/10",
-    iconColor: "text-green-500",
-  },
-  API_KEY: {
-    Icon: Code2,
-    label: "API Key",
-    iconBg: "bg-purple-500/10",
-    iconColor: "text-purple-500",
-  },
-  WIFI_PASSWORD: {
-    Icon: Wifi,
-    label: "WiFi Password",
-    iconBg: "bg-orange-500/10",
-    iconColor: "text-orange-500",
-  },
-} as const;
-
-// ─── Decrypt helper ──────────────────────────────────────────────────────────
-
-async function decryptVaultItem(key: CryptoKey, row: VaultItemRow): Promise<DecryptedVaultItem> {
-  const raw = await decryptItem<unknown>(key, { ciphertext: row.ciphertext, iv: row.iv });
-  const base = {
-    id: row.id,
-    name: row.name,
-    favorite: row.favorite,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-
-  switch (row.type) {
-    case "LOGIN":
-      return { ...base, type: "LOGIN" as const, secret: raw as LoginSecret };
-    case "SECURE_NOTE":
-      return { ...base, type: "SECURE_NOTE" as const, secret: raw as SecureNoteSecret };
-    case "API_KEY":
-      return { ...base, type: "API_KEY" as const, secret: raw as ApiKeySecret };
-    case "WIFI_PASSWORD":
-      return { ...base, type: "WIFI_PASSWORD" as const, secret: raw as WifiPasswordSecret };
-  }
-}
-
-// ─── ViewItemDialog ───────────────────────────────────────────────────────────
-
-function RevealField({ label, value }: { label: string; value: string }) {
-  const [revealed, setRevealed] = useState(false);
-  return (
-    <div className="space-y-1">
-      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-      <div className="flex items-center gap-2">
-        <p className="flex-1 font-mono text-sm break-all">
-          {revealed ? value : "•".repeat(Math.min(value.length, 20))}
-        </p>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setRevealed((r) => !r)}
-          title={revealed ? "Hide" : "Reveal"}
-        >
-          {revealed ? (
-            <EyeOff className="size-3.5" aria-hidden="true" />
-          ) : (
-            <Eye className="size-3.5" aria-hidden="true" />
-          )}
-        </Button>
-        <CopyButton
-          value={value}
-          label={label}
-          size="icon-sm"
-          resetMs={1500}
-          className="[&_svg]:size-3.5"
-        />
-      </div>
-    </div>
-  );
-}
-
-function TextField({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-      <div className="flex items-center gap-2">
-        <p className={cn("flex-1 text-sm break-all", mono && "font-mono")}>{value || "—"}</p>
-        {value && (
-          <CopyButton
-            value={value}
-            label={label}
-            size="icon-sm"
-            resetMs={1500}
-            className="[&_svg]:size-3.5"
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
-  const { Icon, iconBg, iconColor, label } = TYPE_META[item.type];
-
-  return (
-    <>
-      <DialogHeader>
-        <div className="flex items-center gap-3">
-          <div
-            className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", iconBg)}
-          >
-            <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <DialogTitle className="truncate">{item.name}</DialogTitle>
-            <p className="text-muted-foreground text-xs">{label}</p>
-          </div>
-        </div>
-      </DialogHeader>
-
-      <div className="divide-y">
-        {item.type === "LOGIN" && (
-          <>
-            {item.secret.username && (
-              <div className="py-3">
-                <TextField label="Username" value={item.secret.username} />
-              </div>
-            )}
-            <div className="py-3">
-              <RevealField label="Password" value={item.secret.password} />
-            </div>
-            {item.secret.url && (
-              <div className="py-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Website
-                </p>
-                <div className="flex items-center gap-2 pt-1">
-                  <p className="flex-1 truncate text-sm">{item.secret.url}</p>
-                  <a
-                    href={item.secret.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-                    title="Open website"
-                  >
-                    <ExternalLink className="size-3.5" aria-hidden="true" />
-                  </a>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {item.type === "SECURE_NOTE" && (
-          <div className="py-3">
-            <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-              Content
-            </p>
-            <div className="bg-muted relative rounded-lg p-3">
-              <pre className="max-h-64 overflow-y-auto font-sans text-sm break-words whitespace-pre-wrap">
-                {item.secret.content || "—"}
-              </pre>
-              {item.secret.content && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="absolute top-2 right-2"
-                  onClick={() => void copyToClipboard(item.secret.content)}
-                  title="Copy content"
-                >
-                  <Copy className="size-3.5" aria-hidden="true" />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {item.type === "API_KEY" && (
-          <>
-            <div className="py-3">
-              <RevealField label="API Key" value={item.secret.key} />
-            </div>
-            {item.secret.description && (
-              <div className="py-3">
-                <TextField label="Description" value={item.secret.description} />
-              </div>
-            )}
-          </>
-        )}
-
-        {item.type === "WIFI_PASSWORD" && (
-          <>
-            {item.secret.ssid && (
-              <div className="py-3">
-                <TextField label="Network (SSID)" value={item.secret.ssid} />
-              </div>
-            )}
-            <div className="py-3">
-              <RevealField label="Password" value={item.secret.password} />
-            </div>
-            <div className="py-3">
-              <TextField label="Security" value={item.secret.securityType} />
-            </div>
-          </>
-        )}
-      </div>
-    </>
-  );
-}
-
-function ViewItemDialog({
-  item,
-  onOpenChange,
-}: {
-  item: DecryptedVaultItem | null;
-  onOpenChange: (open: boolean) => void;
-}) {
-  return (
-    <Dialog open={!!item} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        {item && <ViewItemContent item={item} />}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── VaultItemCard ────────────────────────────────────────────────────────────
-
-interface VaultItemCardProps {
-  item: DecryptedVaultItem;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}
-
-function VaultItemCard({ item, onView, onEdit, onDelete }: VaultItemCardProps) {
-  const [pendingFav, startFavTransition] = useTransition();
-  const { Icon, iconBg, iconColor } = TYPE_META[item.type];
-
-  // Derived secondary display text (never secrets directly — shown as metadata)
-  const secondaryText = (() => {
-    if (item.type === "LOGIN") return item.secret.username;
-    if (item.type === "SECURE_NOTE") return null;
-    if (item.type === "API_KEY") return item.secret.description;
-    const { ssid, securityType } = item.secret;
-    return ssid ? `${ssid} · ${securityType}` : securityType;
-  })();
-
-  // Primary copy action (the "sensitive" value for this item type)
-  const primaryCopy = (() => {
-    if (item.type === "LOGIN") return { text: item.secret.password, label: "Password" };
-    if (item.type === "SECURE_NOTE") return { text: item.secret.content, label: "Note" };
-    if (item.type === "API_KEY") return { text: item.secret.key, label: "API key" };
-    return { text: item.secret.password, label: "Password" };
-  })();
-
-  // Secondary dropdown copy items specific to each type
-  const dropdownCopyItems = (() => {
-    if (item.type === "LOGIN" && item.secret.username) {
-      return [{ label: "Copy username", text: item.secret.username }];
-    }
-    if (item.type === "WIFI_PASSWORD" && item.secret.ssid) {
-      return [{ label: "Copy SSID", text: item.secret.ssid }];
-    }
-    if (item.type === "API_KEY" && item.secret.description) {
-      return [{ label: "Copy description", text: item.secret.description }];
-    }
-    return [];
-  })();
-
-  const externalUrl = item.type === "LOGIN" ? item.secret.url : "";
-
-  return (
-    <div className="bg-card hover:bg-card/80 group flex items-center gap-3 rounded-xl border px-4 py-2.5 transition-all duration-150 hover:-translate-y-px hover:shadow-sm">
-      <div
-        className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-150 group-hover:scale-105",
-          iconBg
-        )}
-      >
-        <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
-      </div>
-
-      <button
-        className="min-w-0 flex-1 cursor-pointer text-left"
-        onClick={onView}
-        title="View item"
-      >
-        <div className="flex items-baseline gap-2">
-          <p className="truncate text-sm font-medium">{item.name}</p>
-          <span className="text-muted-foreground shrink-0 text-xs">{timeAgo(item.updatedAt)}</span>
-        </div>
-        {secondaryText && <p className="text-muted-foreground truncate text-xs">{secondaryText}</p>}
-      </button>
-
-      <div className="flex shrink-0 items-center gap-1">
-        {/* Primary copy */}
-        {primaryCopy.text && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => void copyToClipboard(primaryCopy.text)}
-            title={`Copy ${primaryCopy.label.toLowerCase()}`}
-          >
-            <Copy className="size-3.5" aria-hidden="true" />
-            <span className="sr-only">Copy {primaryCopy.label}</span>
-          </Button>
-        )}
-
-        {/* Open URL (Login only) */}
-        {externalUrl && (
-          <a
-            href={externalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-            title="Open website"
-          >
-            <ExternalLink className="size-3.5" aria-hidden="true" />
-            <span className="sr-only">Open website</span>
-          </a>
-        )}
-
-        {/* Favorite */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() =>
-            startFavTransition(async () => {
-              const result = await toggleFavoriteAction(item.id, !item.favorite);
-              if (result.error) toast.error(result.error);
-            })
-          }
-          disabled={pendingFav}
-          title={item.favorite ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Star
-            className={cn(
-              "size-3.5",
-              item.favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
-            )}
-            aria-hidden="true"
-          />
-          <span className="sr-only">
-            {item.favorite ? "Remove from favorites" : "Add to favorites"}
-          </span>
-        </Button>
-
-        {/* ⋮ More */}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
-          >
-            <MoreHorizontal className="size-4" aria-hidden="true" />
-            <span className="sr-only">More actions</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onView}>
-              <Eye className="size-3.5" aria-hidden="true" />
-              View
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit}>
-              <Pencil className="size-3.5" aria-hidden="true" />
-              Edit
-            </DropdownMenuItem>
-            {dropdownCopyItems.map(({ label, text }) => (
-              <DropdownMenuItem key={label} onClick={() => void copyToClipboard(text)}>
-                <Copy className="size-3.5" aria-hidden="true" />
-                {label}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={onDelete}>
-              <Trash2 className="size-3.5" aria-hidden="true" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
-}
 
 // ─── VaultList ────────────────────────────────────────────────────────────────
 
 interface VaultListProps {
-  items: VaultItemRow[];
+  items: VaultItemRowData[];
   initialOpenId?: string;
   initialNewType?: VaultItemType;
 }
@@ -495,44 +41,14 @@ type CreateType = VaultItemType | null;
 
 export function VaultList({ items, initialOpenId, initialNewType }: VaultListProps) {
   const router = useRouter();
-  const [decrypted, setDecrypted] = useState<DecryptedVaultItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { decrypted, loading } = useDecryptedItems(items);
   const [search, setSearch] = useState("");
-  const searchRef = useRef<HTMLInputElement>(null);
   const [createType, setCreateType] = useState<CreateType>(initialNewType ?? null);
   const [favOnly, setFavOnly] = useState(false);
   const [viewItem, setViewItem] = useState<DecryptedVaultItem | null>(null);
   const [editItem, setEditItem] = useState<DecryptedVaultItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isPendingDelete, startDeleteTransition] = useTransition();
-
-  useEffect(() => {
-    const key = getVaultKey();
-    if (!key) return;
-
-    void Promise.all(
-      items.map(async (row) => {
-        try {
-          return await decryptVaultItem(key, row);
-        } catch {
-          // Decryption errors surface as empty secrets so one bad item
-          // doesn't hide the rest of the vault.
-          return {
-            id: row.id,
-            type: row.type,
-            name: row.name,
-            favorite: row.favorite,
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt,
-            secret: {},
-          } as DecryptedVaultItem;
-        }
-      })
-    ).then((results) => {
-      setDecrypted(results);
-      setLoading(false);
-    });
-  }, [items]);
 
   // Deep-link support for the command palette and vault health score links
   // (/vault?open=<id>, /vault?new=<type>) — consume once, then strip from the URL.
@@ -550,37 +66,7 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialOpenId, initialNewType, decrypted, loading]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (
-        e.key === "/" &&
-        document.activeElement?.tagName !== "INPUT" &&
-        document.activeElement?.tagName !== "TEXTAREA"
-      ) {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-      if (e.key === "Escape" && document.activeElement === searchRef.current) {
-        setSearch("");
-        searchRef.current?.blur();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  const filtered = decrypted.filter((item) => {
-    if (favOnly && !item.favorite) return false;
-    const q = search.toLowerCase();
-    if (!q) return true;
-    if (item.name.toLowerCase().includes(q)) return true;
-    if (item.type === "LOGIN")
-      return (
-        item.secret.username.toLowerCase().includes(q) || item.secret.url.toLowerCase().includes(q)
-      );
-    if (item.type === "WIFI_PASSWORD") return item.secret.ssid.toLowerCase().includes(q);
-    return false;
-  });
+  const filtered = filterVaultItems(decrypted, search, favOnly);
 
   function handleConfirmDelete() {
     if (!deleteTarget) return;
@@ -595,66 +81,16 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant={favOnly ? "default" : "outline"}
-          size="icon-sm"
-          onClick={() => setFavOnly((f) => !f)}
-          title={favOnly ? "Show all items" : "Show favorites only"}
-        >
-          <Star className={cn("size-3.5", favOnly && "fill-current")} aria-hidden="true" />
-          <span className="sr-only">Filter favorites</span>
-        </Button>
-        <div className="group relative max-w-xs flex-1">
-          <Input
-            ref={searchRef}
-            placeholder="Search items…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pr-8"
-            aria-label="Search vault items"
-          />
-          {search ? (
-            <button
-              onClick={() => setSearch("")}
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
-              aria-label="Clear search"
-            >
-              <X className="size-3.5" />
-            </button>
-          ) : (
-            <kbd className="bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 hidden h-5 -translate-y-1/2 items-center rounded border px-1.5 font-mono text-[10px] opacity-100 transition-opacity duration-150 select-none group-focus-within:opacity-0 sm:flex">
-              /
-            </kbd>
-          )}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger className={cn(buttonVariants({ size: "sm" }))}>
-            <Plus className="size-4" aria-hidden="true" />
-            New item
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {(
-              Object.entries(TYPE_META) as [VaultItemType, (typeof TYPE_META)[VaultItemType]][]
-            ).map(([type, { Icon, label }]) => (
-              <DropdownMenuItem key={type} onClick={() => setCreateType(type)}>
-                <Icon className="size-3.5" aria-hidden="true" />
-                {label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Item count */}
-      {!loading && filtered.length > 0 && (
-        <p className="text-muted-foreground px-0.5 text-xs">
-          {filtered.length === decrypted.length
-            ? `${decrypted.length} ${decrypted.length === 1 ? "item" : "items"}`
-            : `${filtered.length} of ${decrypted.length} items`}
-        </p>
-      )}
+      <VaultToolbar
+        search={search}
+        onSearchChange={setSearch}
+        favOnly={favOnly}
+        onFavOnlyChange={setFavOnly}
+        onCreate={setCreateType}
+        loading={loading}
+        filteredCount={filtered.length}
+        totalCount={decrypted.length}
+      />
 
       {/* List */}
       {loading ? (
@@ -712,7 +148,7 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
               className="animate-fade-in-up"
               style={{ animationDelay: `${Math.min(i * 35, 210)}ms` }}
             >
-              <VaultItemCard
+              <VaultItemRow
                 item={item}
                 onView={() => setViewItem(item)}
                 onEdit={() => setEditItem(item)}
