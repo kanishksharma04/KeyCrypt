@@ -76,6 +76,8 @@ describe("server action input validation", () => {
 
   it("rejects a malformed vault setup and writes nothing", async () => {
     const result = await setupVaultAction({
+      kdf: "argon2id",
+      kdfParams: { memoryKiB: 65_536, iterations: 3, parallelism: 1, hashLength: 32 },
       salt: "short", // not 16 bytes
       wrappedVaultKey: "W".repeat(64),
       wrapIv: VALID.iv,

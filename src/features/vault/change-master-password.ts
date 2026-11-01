@@ -1,4 +1,7 @@
 import {
+  DEFAULT_ARGON2ID_PARAMS,
+  DEFAULT_KDF_CONFIG,
+  parseKdfConfig,
   deriveKek,
   fromBase64,
   generateSalt,
@@ -49,7 +52,11 @@ async function attemptChange(
   //    needed to re-wrap; it is dropped when this function returns.
   let extractableCopy: CryptoKey;
   try {
-    const currentKek = await deriveKek(currentPassword, fromBase64(meta.salt));
+    const currentKek = await deriveKek(
+      currentPassword,
+      fromBase64(meta.salt),
+      parseKdfConfig(meta.kdf, meta.kdfParams)
+    );
     extractableCopy = await unwrapVaultKey(current, currentKek, { extractable: true });
   } catch (e) {
     if (e instanceof VaultKeyUnwrapError) {
@@ -60,13 +67,15 @@ async function attemptChange(
 
   // 2. Re-wrap under a KEK from the new password and a fresh salt.
   const newSalt = generateSalt();
-  const newKek = await deriveKek(newPassword, newSalt);
+  const newKek = await deriveKek(newPassword, newSalt, DEFAULT_KDF_CONFIG); // Argon2id
   const rewrapped = await wrapVaultKey(extractableCopy, newKek);
 
   // 3. Persist. The server checks we read the current wrapped key.
   const result = await changeMasterPasswordAction({
     currentWrappedVaultKey: current.wrappedKey,
     currentWrapIv: current.iv,
+    kdf: "argon2id",
+    kdfParams: DEFAULT_ARGON2ID_PARAMS,
     newSalt: toBase64(newSalt),
     newWrappedVaultKey: rewrapped.wrappedKey,
     newWrapIv: rewrapped.iv,

@@ -11,6 +11,8 @@ export default async function VaultUnlockPage() {
     where: { userId: session.user.id },
     select: {
       cryptoVersion: true,
+      kdf: true,
+      kdfParams: true,
       salt: true,
       verificationBlob: true,
       verificationIv: true,
@@ -28,6 +30,8 @@ export default async function VaultUnlockPage() {
     <UnlockForm
       meta={{
         cryptoVersion: vaultMeta.cryptoVersion,
+        kdf: vaultMeta.kdf,
+        kdfParams: vaultMeta.kdfParams,
         salt: vaultMeta.salt,
         verificationBlob: vaultMeta.verificationBlob,
         verificationIv: vaultMeta.verificationIv,

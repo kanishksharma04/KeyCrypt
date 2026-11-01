@@ -10,6 +10,9 @@ import { INVALID_INPUT, setupVaultInput, upgradeVaultInput } from "@/schemas/ser
 /** Everything the browser needs to unlock (all opaque to the server). */
 export interface VaultMetaForUnlock {
   cryptoVersion: number;
+  /** "pbkdf2" | "argon2id"; validated in the browser by parseKdfConfig(). */
+  kdf: string;
+  kdfParams: unknown;
   salt: string;
   verificationBlob: string;
   verificationIv: string;
@@ -19,6 +22,8 @@ export interface VaultMetaForUnlock {
 
 /** Create a new vault (always crypto v2). */
 export async function setupVaultAction(input: {
+  kdf: "argon2id";
+  kdfParams: { memoryKiB: number; iterations: number; parallelism: number; hashLength: 32 };
   salt: string;
   wrappedVaultKey: string;
   wrapIv: string;
@@ -44,6 +49,8 @@ export async function setupVaultAction(input: {
     data: {
       userId,
       cryptoVersion: 2,
+      kdf: data.kdf,
+      kdfParams: data.kdfParams,
       salt: data.salt,
       wrappedVaultKey: data.wrappedVaultKey,
       wrapIv: data.wrapIv,
@@ -67,6 +74,8 @@ export async function getVaultMetaAction(): Promise<VaultMetaForUnlock | null> {
     where: { userId: session.user.id },
     select: {
       cryptoVersion: true,
+      kdf: true,
+      kdfParams: true,
       salt: true,
       verificationBlob: true,
       verificationIv: true,
@@ -79,6 +88,8 @@ export async function getVaultMetaAction(): Promise<VaultMetaForUnlock | null> {
 
   return {
     cryptoVersion: meta.cryptoVersion,
+    kdf: meta.kdf,
+    kdfParams: meta.kdfParams,
     salt: meta.salt,
     verificationBlob: meta.verificationBlob,
     verificationIv: meta.verificationIv,
@@ -102,6 +113,8 @@ class VaultChangedError extends Error {}
 export async function upgradeVaultAction(input: {
   currentVerificationBlob: string;
   currentVerificationIv: string;
+  kdf: "argon2id";
+  kdfParams: { memoryKiB: number; iterations: number; parallelism: number; hashLength: 32 };
   newSalt: string;
   wrappedVaultKey: string;
   wrapIv: string;
@@ -156,6 +169,8 @@ export async function upgradeVaultAction(input: {
           where: { userId },
           data: {
             cryptoVersion: 2,
+            kdf: data.kdf,
+            kdfParams: data.kdfParams,
             salt: data.newSalt,
             wrappedVaultKey: data.wrappedVaultKey,
             wrapIv: data.wrapIv,

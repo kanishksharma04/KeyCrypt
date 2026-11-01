@@ -106,6 +106,14 @@ test("a v1 vault is upgraded to v2 on unlock and keeps every item", async ({ pag
   // The database now holds a v2 vault with every item re-encrypted.
   const meta = await db.vaultMeta.findUniqueOrThrow({ where: { userId } });
   expect(meta.cryptoVersion).toBe(2);
+  // The upgrade switches the key derivation to Argon2id.
+  expect(meta.kdf).toBe("argon2id");
+  expect(meta.kdfParams).toEqual({
+    memoryKiB: 65536,
+    iterations: 3,
+    parallelism: 1,
+    hashLength: 32,
+  });
   expect(meta.wrappedVaultKey).toHaveLength(64);
   expect(meta.wrapIv).toBeTruthy();
   const itemsAfter = await db.vaultItem.findMany({ where: { userId }, orderBy: { id: "asc" } });
@@ -113,8 +121,21 @@ test("a v1 vault is upgraded to v2 on unlock and keeps every item", async ({ pag
   itemsAfter.forEach((item, i) => expect(item.ciphertext).not.toBe(itemsBefore[i]!.ciphertext));
 
   // Next unlock takes the v2 path: no upgrade prompt, same master password.
+  // Argon2id must run in a Web Worker and trip no CSP violation.
+  const workers: string[] = [];
+  const cspViolations: string[] = [];
+  page.on("worker", (w) => workers.push(w.url()));
+  page.on("console", (m) => {
+    if (/Content Security Policy/i.test(m.text())) cspViolations.push(m.text());
+  });
   await page.reload();
-  await unlock(page);
+  await expect(page).toHaveURL(/\/vault\/unlock$/);
+  await page.locator("#masterPassword").fill(MASTER);
+  const started = Date.now();
+  await page.getByRole("button", { name: "Unlock vault" }).click();
   await expect(page).toHaveURL(/\/vault$/);
+  console.log(`v2 unlock (Argon2id 64 MiB, t=3) took ${Date.now() - started} ms in Chromium`);
+  expect(workers.length, "Argon2id ran in a Web Worker").toBeGreaterThan(0);
+  expect(cspViolations).toEqual([]);
   await expectItemsIntact(page);
 });

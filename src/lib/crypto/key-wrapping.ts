@@ -1,10 +1,10 @@
-import { generateIv, PBKDF2_ITERATIONS } from "./key-derivation";
-import { stringToBytes, toBase64, fromBase64, bufferToBase64 } from "./utils";
+import { generateIv } from "./key-derivation";
+import { toBase64, fromBase64, bufferToBase64 } from "./utils";
 
 // Crypto v2: a random vault key, stored wrapped under a key-encryption key (KEK).
 //
 //   vaultKey   = random AES-256-GCM key (encrypts items)
-//   kek        = KDF(masterPassword, salt)         (wraps the vault key only)
+//   kek        = Argon2id(masterPassword, salt)    (wraps the vault key only; kdf.ts)
 //   wrappedKey = AES-GCM(kek, iv, raw vaultKey)
 //
 // Changing the master password re-wraps the same vault key; items are untouched.
@@ -33,31 +33,6 @@ export class VaultKeyUnwrapError extends Error {
  */
 export async function generateVaultKey(): Promise<CryptoKey> {
   return globalThis.crypto.subtle.generateKey(AES_GCM_256, true, ITEM_USAGES);
-}
-
-/**
- * Derive the key-encryption key from the master password. Non-extractable and
- * limited to wrapKey/unwrapKey, so it can never encrypt item data directly.
- */
-export async function deriveKek(
-  masterPassword: string,
-  salt: Uint8Array<ArrayBuffer>,
-  iterations = PBKDF2_ITERATIONS
-): Promise<CryptoKey> {
-  const material = await globalThis.crypto.subtle.importKey(
-    "raw",
-    stringToBytes(masterPassword),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-  return globalThis.crypto.subtle.deriveKey(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
-    material,
-    AES_GCM_256,
-    false,
-    ["wrapKey", "unwrapKey"]
-  );
 }
 
 /** Wrap an (extractable) vault key under a KEK with a fresh random IV. */

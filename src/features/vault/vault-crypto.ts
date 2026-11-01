@@ -1,4 +1,7 @@
 import {
+  DEFAULT_ARGON2ID_PARAMS,
+  DEFAULT_KDF_CONFIG,
+  parseKdfConfig,
   createVerificationBlob,
   decryptItem,
   deriveKek,
@@ -34,7 +37,7 @@ import { getAllItemsForReEncryptionAction } from "@/server/settings-actions";
  */
 export async function createVaultKeys(masterPassword: string) {
   const salt = generateSalt();
-  const kek = await deriveKek(masterPassword, salt);
+  const kek = await deriveKek(masterPassword, salt, DEFAULT_KDF_CONFIG); // Argon2id
   const generated = await generateVaultKey(); // extractable: used once, to wrap
   const wrapped = await wrapVaultKey(generated, kek);
   // Keep only a non-extractable copy in memory.
@@ -44,6 +47,8 @@ export async function createVaultKeys(masterPassword: string) {
   return {
     vaultKey,
     setup: {
+      kdf: "argon2id" as const,
+      kdfParams: DEFAULT_ARGON2ID_PARAMS,
       salt: toBase64(salt),
       wrappedVaultKey: wrapped.wrappedKey,
       wrapIv: wrapped.iv,
@@ -70,7 +75,8 @@ export async function unlockVault(
 
   if (meta.cryptoVersion === 2) {
     if (!meta.wrappedVaultKey || !meta.wrapIv) throw new Error("Vault key material is missing.");
-    const kek = await deriveKek(masterPassword, salt);
+    // Validated before use, so a tampered row can't make the browser hang or OOM.
+    const kek = await deriveKek(masterPassword, salt, parseKdfConfig(meta.kdf, meta.kdfParams));
     let vaultKey: CryptoKey;
     try {
       vaultKey = await unwrapVaultKey({ wrappedKey: meta.wrappedVaultKey, iv: meta.wrapIv }, kek);
@@ -117,7 +123,7 @@ async function attemptUpgrade(masterPassword: string, v1Key: CryptoKey): Promise
   if ("error" in rows) return { ok: false, error: rows.error };
 
   const salt = generateSalt();
-  const kek = await deriveKek(masterPassword, salt);
+  const kek = await deriveKek(masterPassword, salt, DEFAULT_KDF_CONFIG); // upgrade → Argon2id
   const newKey = await generateVaultKey();
 
   const items = await Promise.all(
@@ -138,6 +144,8 @@ async function attemptUpgrade(masterPassword: string, v1Key: CryptoKey): Promise
   const result = await upgradeVaultAction({
     currentVerificationBlob: meta.verificationBlob,
     currentVerificationIv: meta.verificationIv,
+    kdf: "argon2id",
+    kdfParams: DEFAULT_ARGON2ID_PARAMS,
     newSalt: toBase64(salt),
     wrappedVaultKey: wrapped.wrappedKey,
     wrapIv: wrapped.iv,

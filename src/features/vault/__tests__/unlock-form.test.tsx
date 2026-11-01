@@ -22,12 +22,13 @@ import { createVaultKeys } from "../vault-crypto";
 const TEST_ITERATIONS = 1_000;
 vi.mock("@/lib/crypto", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/crypto")>();
+  const { FAST_TEST_KDF } = await import("@/test/fast-kdf");
   return {
     ...actual,
     deriveVaultKey: (password: string, salt: Uint8Array<ArrayBuffer>) =>
       actual.deriveVaultKey(password, salt, TEST_ITERATIONS),
     deriveKek: (password: string, salt: Uint8Array<ArrayBuffer>) =>
-      actual.deriveKek(password, salt, TEST_ITERATIONS),
+      actual.deriveKek(password, salt, FAST_TEST_KDF),
   };
 });
 
@@ -67,6 +68,8 @@ beforeAll(async () => {
   const blob = await createVerificationBlob(v1Key);
   v1Meta = {
     cryptoVersion: 1,
+    kdf: "pbkdf2",
+    kdfParams: null,
     salt: toBase64(salt),
     verificationBlob: blob.ciphertext,
     verificationIv: blob.iv,

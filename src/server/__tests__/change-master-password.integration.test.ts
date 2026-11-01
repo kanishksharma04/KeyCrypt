@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clearVaultKey, decryptItem, encryptItem, setVaultKey } from "@/lib/crypto";
+import {
+  clearVaultKey,
+  decryptItem,
+  DEFAULT_ARGON2ID_PARAMS,
+  encryptItem,
+  setVaultKey,
+} from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import { changeMasterPasswordAction } from "@/server/settings-actions";
@@ -11,11 +17,13 @@ import { createTestUser, grantRecentReauth, signInAs } from "@/test/integration/
 // Fast KDFs for tests (1,000 iterations); all other crypto is real.
 vi.mock("@/lib/crypto", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/crypto")>();
+  const { FAST_TEST_KDF } = await import("@/test/fast-kdf");
   return {
     ...actual,
     deriveVaultKey: (pw: string, salt: Uint8Array<ArrayBuffer>) =>
       actual.deriveVaultKey(pw, salt, 1_000),
-    deriveKek: (pw: string, salt: Uint8Array<ArrayBuffer>) => actual.deriveKek(pw, salt, 1_000),
+    deriveKek: (pw: string, salt: Uint8Array<ArrayBuffer>) =>
+      actual.deriveKek(pw, salt, FAST_TEST_KDF),
   };
 });
 
@@ -35,6 +43,8 @@ async function metaForUnlock(): Promise<VaultMetaForUnlock> {
   const m = await db.vaultMeta.findUniqueOrThrow({ where: { userId } });
   return {
     cryptoVersion: m.cryptoVersion,
+    kdf: m.kdf,
+    kdfParams: m.kdfParams,
     salt: m.salt,
     verificationBlob: m.verificationBlob!,
     verificationIv: m.verificationIv!,
@@ -96,6 +106,8 @@ describe("changeMasterPasswordAction", () => {
     changeMasterPasswordAction({
       currentWrappedVaultKey: current,
       currentWrapIv: "AAAAAAAAAAAAAAAA",
+      kdf: "argon2id",
+      kdfParams: DEFAULT_ARGON2ID_PARAMS,
       newSalt: "AAAAAAAAAAAAAAAAAAAAAA==",
       newWrappedVaultKey: "N".repeat(64),
       newWrapIv: "AAAAAAAAAAAAAAAA",

@@ -16,11 +16,20 @@ export { encryptItem, decryptItem } from "./encryption";
 
 export {
   generateVaultKey,
-  deriveKek,
   wrapVaultKey,
   unwrapVaultKey,
   VaultKeyUnwrapError,
 } from "./key-wrapping";
+
+export {
+  deriveKek,
+  parseKdfConfig,
+  KdfConfigError,
+  DEFAULT_ARGON2ID_PARAMS,
+  DEFAULT_KDF_CONFIG,
+  KDF_LIMITS,
+} from "./kdf";
+export type { KdfConfig, Argon2idParams, Pbkdf2Params } from "./kdf";
 export type { WrappedVaultKey } from "./key-wrapping";
 
 export { createVerificationBlob, verifyVaultKey } from "./verification";

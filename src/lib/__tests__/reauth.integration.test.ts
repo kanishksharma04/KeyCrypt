@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { DEFAULT_ARGON2ID_PARAMS } from "@/lib/crypto";
 import { REAUTH_REQUIRED_ERROR } from "@/lib/action-errors";
 import {
   createReauthCookieValue,
@@ -32,6 +33,8 @@ function validChange() {
   return changeMasterPasswordAction({
     currentWrappedVaultKey: WRAPPED,
     currentWrapIv: IV,
+    kdf: "argon2id",
+    kdfParams: DEFAULT_ARGON2ID_PARAMS,
     newSalt: "BBBBBBBBBBBBBBBBBBBBBA==",
     newWrappedVaultKey: NEW_WRAPPED,
     newWrapIv: "CCCCCCCCCCCCCCCC",

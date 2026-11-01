@@ -111,6 +111,11 @@ model VaultMeta {
   id               String   @id @default(cuid())
   userId           String   @unique
   cryptoVersion    Int      @default(1)
+  // Password KDF for `salt`: "pbkdf2" (v1 vault key) or "argon2id" (v2 KEK; all
+  // new and upgraded vaults). kdfParams holds its cost parameters; null means the
+  // historical PBKDF2-SHA-256 default of 600,000 iterations.
+  kdf              String   @default("pbkdf2")
+  kdfParams        Json?
   // Base64 random salt for the password-based key derivation
   salt             String
   // AES-256-GCM encrypted known-plaintext blob (under the vault key); used to

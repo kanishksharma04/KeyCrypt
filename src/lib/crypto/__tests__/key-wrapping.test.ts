@@ -10,12 +10,17 @@ import {
   VaultKeyUnwrapError,
   wrapVaultKey,
 } from "../index";
+import type { KdfConfig } from "../index";
 
-const ITERATIONS = 1_000; // fast for tests
+// Cheap Argon2id for tests (real vaults: 64 MiB, 3 iterations).
+const FAST: KdfConfig = {
+  kdf: "argon2id",
+  params: { memoryKiB: 8_192, iterations: 1, parallelism: 1, hashLength: 32 },
+};
 
 async function setup(password = "Master-Pass-1!") {
   const salt = generateSalt();
-  const kek = await deriveKek(password, salt, ITERATIONS);
+  const kek = await deriveKek(password, salt, FAST);
   const vaultKey = await generateVaultKey();
   const wrapped = await wrapVaultKey(vaultKey, kek);
   return { salt, kek, vaultKey, wrapped };
@@ -32,7 +37,7 @@ describe("vault key wrapping", () => {
 
   it("re-derives the same KEK from the same password and salt", async () => {
     const { salt, vaultKey, wrapped } = await setup("Master-Pass-1!");
-    const kekAgain = await deriveKek("Master-Pass-1!", salt, ITERATIONS);
+    const kekAgain = await deriveKek("Master-Pass-1!", salt, FAST);
     const unwrapped = await unwrapVaultKey(wrapped, kekAgain);
     const payload = await encryptItem(unwrapped, "x");
     expect(await decryptItem(vaultKey, payload)).toBe("x");
@@ -40,7 +45,7 @@ describe("vault key wrapping", () => {
 
   it("fails with a wrong master password", async () => {
     const { salt, wrapped } = await setup("Master-Pass-1!");
-    const wrongKek = await deriveKek("Wrong-Pass-2!", salt, ITERATIONS);
+    const wrongKek = await deriveKek("Wrong-Pass-2!", salt, FAST);
     await expect(unwrapVaultKey(wrapped, wrongKek)).rejects.toBeInstanceOf(VaultKeyUnwrapError);
   });
 
@@ -66,7 +71,7 @@ describe("vault key wrapping", () => {
   it("can unwrap a short-lived extractable copy for re-wrapping", async () => {
     const { kek, wrapped } = await setup();
     const copy = await unwrapVaultKey(wrapped, kek, { extractable: true });
-    const newKek = await deriveKek("New-Master-Pass-3!", generateSalt(), ITERATIONS);
+    const newKek = await deriveKek("New-Master-Pass-3!", generateSalt(), FAST);
     const rewrapped = await wrapVaultKey(copy, newKek);
     await expect(unwrapVaultKey(rewrapped, newKek)).resolves.toBeDefined();
   });

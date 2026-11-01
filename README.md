@@ -29,7 +29,7 @@ large each one is. The audit log has a user-agent column, but nothing records it
 
 ```
 vaultKey   = random 256-bit AES-GCM key (generated in the browser)
-kek        = PBKDF2(masterPassword, salt, 600_000 iterations, SHA-256)
+kek        = Argon2id(masterPassword, salt, 64 MiB, 3 iterations, parallelism 1)
 wrapped    = AES-256-GCM(kek, randomIV, vaultKey)      # what the server stores
 ciphertext = AES-256-GCM(vaultKey, randomIV, plaintext)
 ```
@@ -51,7 +51,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 
 - Zero-knowledge architecture — master password never transmitted
 - AES-256-GCM encryption with a unique random IV per item
-- PBKDF2-SHA-256 key derivation at 600,000 iterations
+- Argon2id key derivation (64 MiB, 3 iterations) in a Web Worker, wrapping a random 256-bit vault key
 - Nonce-based Content Security Policy (CSP) + HSTS in production
 - Auto-lock after 15 minutes of inactivity or 5 minutes in a hidden tab (also checked on wake from sleep)
 - Master password change with full client-side re-encryption of every item

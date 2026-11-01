@@ -10,8 +10,8 @@ import { SignOutButton } from "@/components/shared/sign-out-button";
 
 const TRUST_ITEMS = [
   "AES-256-GCM encryption",
-  "PBKDF2-SHA-256 key derivation",
-  "600,000 PBKDF2 rounds",
+  "Argon2id key derivation",
+  "64 MiB memory-hard KDF",
   "Zero-knowledge architecture",
   "In-browser crypto only",
   "No master password transmitted",
@@ -150,7 +150,7 @@ export default async function HomePage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-60" />
                 <span className="relative inline-flex size-2 rounded-full bg-green-500" />
               </span>
-              Zero-knowledge · AES-256-GCM · PBKDF2-SHA-256
+              Zero-knowledge · AES-256-GCM · Argon2id
             </div>
 
             <h1 className="mb-5 text-4xl font-black tracking-tight md:text-6xl md:tracking-[-0.04em]">
@@ -309,9 +309,9 @@ export default async function HomePage() {
               {[
                 { label: "Master Password", sub: "what you type" },
                 null,
-                { label: "PBKDF2-SHA-256", sub: "600,000 rounds" },
+                { label: "Argon2id", sub: "64 MiB, memory-hard" },
                 null,
-                { label: "256-bit Vault Key", sub: "never leaves device" },
+                { label: "256-bit Vault Key", sub: "random, unwrapped locally" },
                 null,
                 { label: "AES-256-GCM", sub: "random IV per item" },
                 null,
@@ -342,7 +342,7 @@ export default async function HomePage() {
               <Step
                 number="1"
                 title="Choose a master password"
-                description="Your browser derives a 256-bit AES key using PBKDF2-SHA-256 at 600,000 iterations. The master password itself is never sent anywhere — only the derived key is used locally."
+                description="Your browser runs Argon2id (64 MiB of memory per guess) on your master password and uses the result to unlock your random 256-bit vault key. The master password itself is never sent anywhere."
               />
               <Step
                 number="2"

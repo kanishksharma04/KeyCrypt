@@ -19,7 +19,14 @@ function buildCsp(nonce: string): string {
 
   // 'unsafe-eval' is required in dev for Next.js Turbopack HMR; removed in production.
   // 'unsafe-inline' is intentionally absent from script-src — nonce replaces it.
-  const scriptSrc = ["'self'", `'nonce-${nonce}'`, ...(isProd ? [] : ["'unsafe-eval'"])].join(" ");
+  // 'wasm-unsafe-eval' lets the Argon2id KDF (hash-wasm) compile WebAssembly. It
+  // allows WebAssembly compilation only, not eval() or new Function().
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'wasm-unsafe-eval'",
+    ...(isProd ? [] : ["'unsafe-eval'"]),
+  ].join(" ");
 
   return [
     "default-src 'self'",

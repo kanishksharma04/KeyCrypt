@@ -1,4 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { PrismaClient } from "@prisma/client";
+
+const db = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
+test.afterAll(() => db.$disconnect());
 
 // Core vault flow against a production build:
 // sign up → set master password → create one item of each type → reload (locks)
@@ -104,6 +108,11 @@ test("sign up, store four items, change master password, and read them all back"
   await page.getByRole("button", { name: "Create vault" }).click();
   await confirmAccountPassword(page, "Create vault");
   await expect(page).toHaveURL(/\/vault$/);
+
+  // New vaults are crypto v2 with an Argon2id key-encryption key.
+  const meta = await db.vaultMeta.findFirstOrThrow({ where: { user: { email: ACCOUNT.email } } });
+  expect(meta).toMatchObject({ cryptoVersion: 2, kdf: "argon2id" });
+  expect(meta.wrappedVaultKey).toHaveLength(64);
 
   // One item of each type.
   await createItem(page, "Login", async (d) => {

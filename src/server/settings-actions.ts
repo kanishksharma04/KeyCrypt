@@ -97,6 +97,8 @@ class VaultChangedError extends Error {}
 export async function changeMasterPasswordAction(input: {
   currentWrappedVaultKey: string;
   currentWrapIv: string;
+  kdf: "argon2id";
+  kdfParams: { memoryKiB: number; iterations: number; parallelism: number; hashLength: 32 };
   newSalt: string;
   newWrappedVaultKey: string;
   newWrapIv: string;
@@ -132,6 +134,8 @@ export async function changeMasterPasswordAction(input: {
         await tx.vaultMeta.update({
           where: { userId },
           data: {
+            kdf: data.kdf,
+            kdfParams: data.kdfParams,
             salt: data.newSalt,
             wrappedVaultKey: data.newWrappedVaultKey,
             wrapIv: data.newWrapIv,

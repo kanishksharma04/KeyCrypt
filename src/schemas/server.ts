@@ -68,8 +68,25 @@ export const toggleFavoriteInput = z.object({ id: idSchema, favorite: z.boolean(
 /** A 256-bit vault key wrapped with AES-GCM: 32 bytes + 16-byte tag = 64 base64 chars. */
 export const wrappedVaultKeySchema = base64({ length: 64 });
 
+/**
+ * KDF for the v2 key-encryption key. New writes must use Argon2id; the bounds
+ * match KDF_LIMITS in src/lib/crypto/kdf.ts, which the browser re-checks.
+ */
+const kdfFields = {
+  kdf: z.literal("argon2id"),
+  kdfParams: z
+    .object({
+      memoryKiB: z.number().int().min(8_192).max(1_048_576),
+      iterations: z.number().int().min(1).max(10),
+      parallelism: z.number().int().min(1).max(4),
+      hashLength: z.literal(32),
+    })
+    .strict(),
+};
+
 /** New vaults are crypto v2: a random vault key wrapped under the master-password KEK. */
 export const setupVaultInput = z.object({
+  ...kdfFields,
   salt: saltSchema,
   wrappedVaultKey: wrappedVaultKeySchema,
   wrapIv: ivSchema,
@@ -84,6 +101,7 @@ export const upgradeVaultInput = z.object({
   // The v1 verifier the client read and unlocked against.
   currentVerificationBlob: verificationBlobSchema,
   currentVerificationIv: ivSchema,
+  ...kdfFields,
   newSalt: saltSchema,
   wrappedVaultKey: wrappedVaultKeySchema,
   wrapIv: ivSchema,
@@ -99,6 +117,7 @@ export const changeMasterPasswordInput = z.object({
   // The wrapped key the client read and unwrapped with the current password.
   currentWrappedVaultKey: wrappedVaultKeySchema,
   currentWrapIv: ivSchema,
+  ...kdfFields,
   newSalt: saltSchema,
   newWrappedVaultKey: wrappedVaultKeySchema,
   newWrapIv: ivSchema,

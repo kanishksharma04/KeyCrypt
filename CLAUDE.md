@@ -10,7 +10,8 @@ decryption happens in the browser.
 - Tailwind CSS v4 + shadcn/ui (`src/components/ui`)
 - Prisma 6 + PostgreSQL (`prisma/schema.prisma`)
 - Auth.js v5 beta (`next-auth`), Credentials provider, JWT sessions, Prisma adapter
-- Web Crypto API for vault crypto; `@node-rs/argon2` for account password hashing
+- Web Crypto API for vault crypto, `hash-wasm` (Argon2id, browser) for the vault KEK;
+  `@node-rs/argon2` for account password hashing on the server
 - Zod 3 + react-hook-form for validation; Vitest 4 for tests; pnpm as package manager
 
 ## Security model
@@ -23,7 +24,11 @@ decryption happens in the browser.
 - **Master password** (vault): never leaves the browser and is never sent to the server.
 - **Vault key (crypto v2)**: a random AES-256-GCM key, stored on the server only
   **wrapped** (AES-GCM) under a key-encryption key derived in the browser from the master
-  password and a 16-byte salt (`src/lib/crypto/key-wrapping.ts`). In memory it is always
+  password and a 16-byte salt with **Argon2id** (64 MiB, 3 iterations, parallelism 1;
+  `hash-wasm` in a Web Worker, `src/lib/crypto/kdf.ts`) (`src/lib/crypto/key-wrapping.ts`).
+  `VaultMeta.kdf`/`kdfParams` record the KDF; the server only accepts Argon2id for new
+  writes, and the browser bounds-checks stored params before deriving. The CSP allows
+  `'wasm-unsafe-eval'` (WebAssembly only) for this. In memory it is always
   **non-extractable**; a short-lived extractable copy is unwrapped only to re-wrap it.
   Changing the master password re-wraps the key; items are untouched. `VaultMeta.cryptoVersion`
   1 vaults (vaultKey = PBKDF2(master, salt)) are upgraded on unlock (`upgradeVaultAction`,

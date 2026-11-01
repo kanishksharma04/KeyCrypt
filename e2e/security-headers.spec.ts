@@ -17,8 +17,10 @@ test("the home page sends a nonce-based CSP without unsafe-inline scripts", asyn
   expect(scriptSrc, "script-src directive").toBeDefined();
   expect(scriptSrc!.some((v) => /^'nonce-[A-Za-z0-9+/=_-]{16,}'$/.test(v))).toBe(true);
   expect(scriptSrc).not.toContain("'unsafe-inline'");
-  // Production build: no eval either.
+  // Production build: no eval either. WebAssembly compilation alone is allowed
+  // for the Argon2id KDF.
   expect(scriptSrc).not.toContain("'unsafe-eval'");
+  expect(scriptSrc).toContain("'wasm-unsafe-eval'");
 
   expect(response.headers()["strict-transport-security"]).toContain("max-age=");
 });
