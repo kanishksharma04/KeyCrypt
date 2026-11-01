@@ -3,6 +3,10 @@ import {
   DEFAULT_KDF_CONFIG,
   parseKdfConfig,
   createVerificationBlob,
+  deriveRecoveryKek,
+  generateRecoveryKey,
+  parseRecoveryKey,
+  RecoveryKeyFormatError,
   decryptItem,
   deriveKek,
   deriveVaultKey,
@@ -18,6 +22,8 @@ import {
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import {
   getVaultMetaAction,
+  recoverVaultAction,
+  setRecoveryKeyAction,
   upgradeVaultAction,
   type VaultMetaForUnlock,
 } from "@/server/vault-actions";
@@ -31,21 +37,30 @@ import { sealItem } from "./item-payload";
 // ─── Create (setup) ──────────────────────────────────────────────────────────
 
 /**
- * Create a v2 vault: a random vault key wrapped under the master-password KEK.
- * Returns what setupVaultAction stores, and the NON-extractable vault key to
- * keep in memory.
+ * Create a v2 vault: a random vault key wrapped under the master-password KEK
+ * (Argon2id), and again under a recovery-key KEK (recovery kit). Returns what
+ * setupVaultAction stores, the recovery key to show the user ONCE, and the
+ * NON-extractable vault key to keep in memory.
  */
-export async function createVaultKeys(masterPassword: string) {
+export async function createVaultKeys(masterPassword: string, userId: string) {
   const salt = generateSalt();
   const kek = await deriveKek(masterPassword, salt, DEFAULT_KDF_CONFIG); // Argon2id
-  const generated = await generateVaultKey(); // extractable: used once, to wrap
+  const generated = await generateVaultKey(); // extractable: used only to wrap
   const wrapped = await wrapVaultKey(generated, kek);
+
+  const recoveryKey = generateRecoveryKey();
+  const recoveryWrapped = await wrapVaultKey(
+    generated,
+    await deriveRecoveryKek(recoveryKey.bytes, userId)
+  );
+
   // Keep only a non-extractable copy in memory.
   const vaultKey = await unwrapVaultKey(wrapped, kek);
   const verifier = await createVerificationBlob(vaultKey);
 
   return {
     vaultKey,
+    recoveryKeyText: recoveryKey.text,
     setup: {
       kdf: "argon2id" as const,
       kdfParams: DEFAULT_ARGON2ID_PARAMS,
@@ -54,6 +69,8 @@ export async function createVaultKeys(masterPassword: string) {
       wrapIv: wrapped.iv,
       verificationBlob: verifier.ciphertext,
       verificationIv: verifier.iv,
+      recoveryWrappedKey: recoveryWrapped.wrappedKey,
+      recoveryIv: recoveryWrapped.iv,
     },
   };
 }
@@ -167,4 +184,122 @@ async function attemptUpgrade(
   });
   if (result.error) return { ok: false, error: result.error };
   return { ok: true, vaultKey };
+}
+
+// ─── Recovery kit ────────────────────────────────────────────────────────────
+
+export type RecoveryResult<T = object> = ({ ok: true } & T) | { ok: false; error: string };
+
+/**
+ * Create (or replace) the recovery kit from Settings. Needs the master password
+ * to unwrap a short-lived extractable copy of the vault key; the server needs a
+ * recent account-password confirmation. Returns the new key to show ONCE.
+ */
+export async function createRecoveryKit(
+  masterPassword: string,
+  userId: string
+): Promise<RecoveryResult<{ recoveryKeyText: string }>> {
+  const meta = await getVaultMetaAction();
+  if (!meta || meta.cryptoVersion !== 2 || !meta.wrappedVaultKey || !meta.wrapIv) {
+    return { ok: false, error: "Lock and unlock your vault to finish its upgrade first." };
+  }
+  const current = { wrappedKey: meta.wrappedVaultKey, iv: meta.wrapIv };
+
+  let extractableCopy: CryptoKey;
+  try {
+    const kek = await deriveKek(
+      masterPassword,
+      fromBase64(meta.salt),
+      parseKdfConfig(meta.kdf, meta.kdfParams)
+    );
+    extractableCopy = await unwrapVaultKey(current, kek, { extractable: true });
+  } catch (e) {
+    if (e instanceof VaultKeyUnwrapError) return { ok: false, error: "Incorrect master password." };
+    throw e;
+  }
+
+  const recoveryKey = generateRecoveryKey();
+  const wrapped = await wrapVaultKey(
+    extractableCopy,
+    await deriveRecoveryKek(recoveryKey.bytes, userId)
+  );
+  const result = await setRecoveryKeyAction({
+    currentWrappedVaultKey: current.wrappedKey,
+    currentWrapIv: current.iv,
+    recoveryWrappedKey: wrapped.wrappedKey,
+    recoveryIv: wrapped.iv,
+  });
+  if (result.error) return { ok: false, error: result.error };
+  return { ok: true, recoveryKeyText: recoveryKey.text };
+}
+
+const WRONG_RECOVERY_KEY = "That recovery key doesn't unlock this vault.";
+
+async function unwrapWithRecoveryKey(
+  recoveryKeyText: string,
+  meta: VaultMetaForUnlock,
+  userId: string,
+  extractable: boolean
+): Promise<CryptoKey | string> {
+  if (!meta.recoveryWrappedKey || !meta.recoveryIv) {
+    return "This vault has no recovery key.";
+  }
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = parseRecoveryKey(recoveryKeyText);
+  } catch (e) {
+    if (e instanceof RecoveryKeyFormatError) return e.message;
+    throw e;
+  }
+  try {
+    return await unwrapVaultKey(
+      { wrappedKey: meta.recoveryWrappedKey, iv: meta.recoveryIv },
+      await deriveRecoveryKek(bytes, userId),
+      { extractable }
+    );
+  } catch (e) {
+    if (e instanceof VaultKeyUnwrapError) return WRONG_RECOVERY_KEY;
+    throw e;
+  }
+}
+
+/** Step 1 on the unlock page: does this recovery key open the vault? */
+export async function checkRecoveryKey(
+  recoveryKeyText: string,
+  meta: VaultMetaForUnlock,
+  userId: string
+): Promise<RecoveryResult> {
+  const key = await unwrapWithRecoveryKey(recoveryKeyText, meta, userId, false);
+  return typeof key === "string" ? { ok: false, error: key } : { ok: true };
+}
+
+/**
+ * Step 2: unwrap with the recovery key and re-wrap the same vault key under a
+ * KEK from the NEW master password. Saved by recoverVaultAction (needs a recent
+ * account-password confirmation). Returns the non-extractable key for memory.
+ */
+export async function resetMasterPasswordWithRecoveryKey(
+  recoveryKeyText: string,
+  newMasterPassword: string,
+  meta: VaultMetaForUnlock,
+  userId: string
+): Promise<RecoveryResult<{ vaultKey: CryptoKey }>> {
+  const extractableCopy = await unwrapWithRecoveryKey(recoveryKeyText, meta, userId, true);
+  if (typeof extractableCopy === "string") return { ok: false, error: extractableCopy };
+
+  const salt = generateSalt();
+  const kek = await deriveKek(newMasterPassword, salt, DEFAULT_KDF_CONFIG); // Argon2id
+  const wrapped = await wrapVaultKey(extractableCopy, kek);
+
+  const result = await recoverVaultAction({
+    currentRecoveryWrappedKey: meta.recoveryWrappedKey!,
+    currentRecoveryIv: meta.recoveryIv!,
+    kdf: "argon2id",
+    kdfParams: DEFAULT_ARGON2ID_PARAMS,
+    newSalt: toBase64(salt),
+    newWrappedVaultKey: wrapped.wrappedKey,
+    newWrapIv: wrapped.iv,
+  });
+  if (result.error) return { ok: false, error: result.error };
+  return { ok: true, vaultKey: await unwrapVaultKey(wrapped, kek) };
 }

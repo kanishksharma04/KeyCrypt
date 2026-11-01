@@ -4,10 +4,17 @@ import { SignOutButton } from "@/components/shared/sign-out-button";
 import { ChangeMasterPasswordForm } from "@/features/vault/change-master-password-form";
 import { SignOutAllDevicesButton } from "@/features/vault/sign-out-all-devices-button";
 import { ExportVault } from "@/features/vault/export-vault";
+import { RecoveryKitSettings } from "@/features/vault/recovery-kit-settings";
+import { db } from "@/lib/db";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session) redirect("/auth/signin");
+
+  const vaultMeta = await db.vaultMeta.findUnique({
+    where: { userId: session.user.id },
+    select: { recoveryCreatedAt: true },
+  });
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
@@ -35,11 +42,27 @@ export default async function SettingsPage() {
           Master password
         </h2>
         <p className="text-muted-foreground mb-4 text-sm">
-          Changing your master password re-encrypts every vault item in the browser. The server
-          never sees your passwords.
+          Changing your master password re-wraps your vault key in the browser; your items are not
+          touched. The server never sees your passwords.
         </p>
         <div className="bg-card rounded-xl border p-4 shadow-xs">
           <ChangeMasterPasswordForm />
+        </div>
+      </section>
+
+      {/* Recovery kit */}
+      <section aria-labelledby="recovery-heading" className="mb-10">
+        <h2 id="recovery-heading" className="mb-1 text-base font-semibold">
+          Recovery kit
+        </h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          A recovery key lets you unlock your vault and set a new master password if you forget it.
+          Store it offline; anyone with it and access to your account can open your vault.
+        </p>
+        <div className="bg-card rounded-xl border p-4 shadow-xs">
+          <RecoveryKitSettings
+            recoveryCreatedAt={vaultMeta?.recoveryCreatedAt?.toISOString() ?? null}
+          />
         </div>
       </section>
 

@@ -15,6 +15,15 @@ export {
 export { encryptItem, decryptItem } from "./encryption";
 
 export { itemAad, generateItemId } from "./aad";
+
+export {
+  generateRecoveryKey,
+  parseRecoveryKey,
+  formatRecoveryKey,
+  deriveRecoveryKek,
+  RecoveryKeyFormatError,
+  RECOVERY_KEY_BYTES,
+} from "./recovery";
 export type { ItemAadContext } from "./aad";
 
 export {

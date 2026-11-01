@@ -37,6 +37,12 @@ and decryption happens in the browser.
 - The vault key is held only in memory (`src/lib/crypto/vault-key.ts`) and cleared on lock.
   It is never persisted or sent anywhere.
 - Every encryption uses a fresh random 96-bit IV; payloads are `{ ciphertext, iv }` in base64.
+- **Recovery kit (v2)**: a random 128-bit recovery key (grouped base32, shown once at setup
+  and from Settings) derives a second KEK with HKDF-SHA-256 bound to the user id
+  (`src/lib/crypto/recovery.ts`); `VaultMeta.recoveryWrappedKey`/`recoveryIv` hold the same
+  vault key wrapped under it. "Use recovery key" on the unlock page sets a new master password
+  (`recoverVaultAction`); creating/replacing a key uses `setRecoveryKeyAction`. Both need a
+  recent account-password confirmation; audit `vault.recovery.created` / `vault.recovery.used`.
 - **Item AAD (v2)**: every item is encrypted with associated data
   `"kc:v2|" + userId + "|" + itemId + "|" + type` (`itemAad()` in `src/lib/crypto/aad.ts`), so
   a ciphertext only decrypts in its own row. Item ids are generated in the browser

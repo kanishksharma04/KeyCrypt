@@ -14,5 +14,5 @@ export default async function VaultSetupPage() {
   });
   if (existing) redirect("/vault/unlock");
 
-  return <SetupMasterPasswordForm />;
+  return <SetupMasterPasswordForm userId={session.user.id} />;
 }

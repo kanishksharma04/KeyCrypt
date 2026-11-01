@@ -15,6 +15,7 @@ import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dial
 import { FieldError } from "@/features/auth/field-error";
 import type { VaultMetaForUnlock } from "@/server/vault-actions";
 import { unlockVault, upgradeVaultToV2 } from "./vault-crypto";
+import { RecoveryUnlock } from "./recovery-unlock";
 
 interface UnlockFormProps {
   meta: VaultMetaForUnlock;
@@ -28,6 +29,7 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
   const [notice, setNotice] = useState<string>();
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [useRecovery, setUseRecovery] = useState(false);
   // A v1 vault unlocked but not yet upgraded. Held only until the upgrade
   // finishes or is cancelled; never rendered or sent anywhere. While set, the
   // upgrade confirmation dialog is open.
@@ -91,6 +93,11 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
       setPendingUpgrade(null);
       setNotice("Your vault needs a one-time upgrade before it can be opened.");
     }
+  }
+
+  const canRecover = meta.cryptoVersion === 2 && !!meta.recoveryWrappedKey;
+  if (useRecovery && canRecover) {
+    return <RecoveryUnlock meta={meta} userId={userId} onCancel={() => setUseRecovery(false)} />;
   }
 
   return (
@@ -165,6 +172,19 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
           {isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
           {isPending ? "Unlocking…" : "Unlock vault"}
         </Button>
+
+        {canRecover && (
+          <p className="text-muted-foreground text-center text-sm">
+            Forgot your master password?{" "}
+            <button
+              type="button"
+              onClick={() => setUseRecovery(true)}
+              className="text-primary font-medium underline-offset-4 hover:underline"
+            >
+              Use recovery key
+            </button>
+          </p>
+        )}
 
         <p className="text-muted-foreground text-center text-sm">
           Not you? <SignOutButton variant="link" className="h-auto p-0 align-baseline" />

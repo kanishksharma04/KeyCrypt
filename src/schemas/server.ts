@@ -87,8 +87,18 @@ const kdfFields = {
     .strict(),
 };
 
-/** New vaults are crypto v2: a random vault key wrapped under the master-password KEK. */
+/** The vault key wrapped under the recovery-key KEK (HKDF). */
+const recoveryWrapFields = {
+  recoveryWrappedKey: wrappedVaultKeySchema,
+  recoveryIv: ivSchema,
+};
+
+/**
+ * New vaults are crypto v2: a random vault key wrapped under the master-password
+ * KEK, and again under the recovery-key KEK (recovery kit).
+ */
 export const setupVaultInput = z.object({
+  ...recoveryWrapFields,
   ...kdfFields,
   salt: saltSchema,
   wrappedVaultKey: wrappedVaultKeySchema,
@@ -120,6 +130,23 @@ export const changeMasterPasswordInput = z.object({
   // The wrapped key the client read and unwrapped with the current password.
   currentWrappedVaultKey: wrappedVaultKeySchema,
   currentWrapIv: ivSchema,
+  ...kdfFields,
+  newSalt: saltSchema,
+  newWrappedVaultKey: wrappedVaultKeySchema,
+  newWrapIv: ivSchema,
+});
+
+/** Create or replace the recovery kit (needs the current master-password wrap as proof). */
+export const setRecoveryKeyInput = z.object({
+  currentWrappedVaultKey: wrappedVaultKeySchema,
+  currentWrapIv: ivSchema,
+  ...recoveryWrapFields,
+});
+
+/** Forgotten master password: set a new one, proven by unwrapping with the recovery key. */
+export const recoverVaultInput = z.object({
+  currentRecoveryWrappedKey: wrappedVaultKeySchema,
+  currentRecoveryIv: ivSchema,
   ...kdfFields,
   newSalt: saltSchema,
   newWrappedVaultKey: wrappedVaultKeySchema,

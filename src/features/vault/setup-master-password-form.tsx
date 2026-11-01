@@ -10,6 +10,7 @@ import { masterPasswordSchema, type MasterPasswordInput } from "@/schemas/vault"
 import { setupVaultAction } from "@/server/vault-actions";
 import { setVaultKey } from "@/lib/crypto";
 import { createVaultKeys } from "./vault-crypto";
+import { RecoveryKitDisplay } from "./recovery-kit-display";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/features/auth/field-error";
@@ -67,8 +68,10 @@ function StrengthMeter({ password }: { password: string }) {
   );
 }
 
-export function SetupMasterPasswordForm() {
+export function SetupMasterPasswordForm({ userId }: { userId: string }) {
   const router = useRouter();
+  // Shown once after the vault is created; never stored by the app.
+  const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string>();
   const [isPending, startTransition] = useTransition();
   const [masterPassword, setMasterPassword] = useState("");
@@ -110,7 +113,10 @@ export function SetupMasterPasswordForm() {
         // Crypto v2: a random vault key, wrapped under a key derived from the
         // master password. The server only receives the salt, the wrapped key
         // and the verification blob.
-        const { vaultKey, setup } = await createVaultKeys(data.masterPassword);
+        const { vaultKey, setup, recoveryKeyText } = await createVaultKeys(
+          data.masterPassword,
+          userId
+        );
 
         const err = await setupVaultAction(setup);
         if (err) {
@@ -118,13 +124,24 @@ export function SetupMasterPasswordForm() {
           return;
         }
 
-        // Keep the (non-extractable) vault key in browser memory only.
+        // Keep the (non-extractable) vault key in browser memory only, then
+        // show the recovery kit before entering the vault.
         setVaultKey(vaultKey);
-        router.push("/vault");
+        setRecoveryKey(recoveryKeyText);
       } catch {
         toast.error("Vault creation failed. Please try again.");
       }
     });
+  }
+
+  if (recoveryKey) {
+    return (
+      <RecoveryKitDisplay
+        recoveryKey={recoveryKey}
+        doneLabel="Open my vault"
+        onDone={() => router.push("/vault")}
+      />
+    );
   }
 
   return (

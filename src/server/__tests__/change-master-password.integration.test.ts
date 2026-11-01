@@ -50,6 +50,9 @@ async function metaForUnlock(): Promise<VaultMetaForUnlock> {
     verificationIv: m.verificationIv!,
     wrappedVaultKey: m.wrappedVaultKey,
     wrapIv: m.wrapIv,
+    recoveryWrappedKey: m.recoveryWrappedKey,
+    recoveryIv: m.recoveryIv,
+    recoveryCreatedAt: m.recoveryCreatedAt?.toISOString() ?? null,
   };
 }
 
@@ -61,7 +64,7 @@ beforeEach(async () => {
   await grantRecentReauth(user.id);
 
   // A real v2 vault with two items.
-  const { vaultKey, setup } = await createVaultKeys(OLD_PASSWORD);
+  const { vaultKey, setup } = await createVaultKeys(OLD_PASSWORD, userId);
   await db.vaultMeta.create({ data: { userId, cryptoVersion: 2, ...setup } });
   for (const secret of ["alpha", "bravo"]) {
     const { ciphertext, iv } = await encryptItem(vaultKey, { secret });

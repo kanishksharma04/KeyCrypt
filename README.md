@@ -17,8 +17,8 @@ KeyCrypt encrypts the contents of every vault item in your browser before it rea
 | --------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Ciphertext of each item's name and contents (AES-256-GCM)                         | Master password                                                   |
 | Random IV per item                                                                | Vault key                                                         |
-| Salt, wrapped vault key, verifier                                                 | Item names and contents (usernames, passwords, URLs, notes, keys) |
-| Argon2id hash of the account password                                             |                                                                   |
+| Salt, wrapped vault key (master password + recovery key), verifier                | Item names and contents (usernames, passwords, URLs, notes, keys) |
+| Argon2id hash of the account password                                             | Recovery key                                                      |
 | **Plain-text metadata:** item types, favourite flags, created/updated times       |                                                                   |
 | **Audit log:** account events with timestamps, IP at sign-up, item type on create |                                                                   |
 
@@ -62,6 +62,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Vault health score** — client-side detection of weak, reused, and stale passwords; decrypted data never leaves the browser
 - **View dialog** — reveal fields with eye toggle, one-click copy with ✓ checkmark feedback
 - **Password generator** — configurable length, character sets, live entropy score
+- **Recovery kit** — a one-time recovery key (shown at setup, regenerable in Settings) that unlocks the vault and lets you set a new master password if you forget it
 - **Export** — Settings → Export, built in the browser: an encrypted JSON file (`keycrypt-export` v1, PBKDF2 600k + AES-256-GCM under a separate export password), or a plain Bitwarden-format CSV after re-entering your account password
 - **Favorites filter** — star items and filter to pinned items only
 - **Search** — live filter across name, username, URL, SSID; press `/` to focus, `Escape` to clear

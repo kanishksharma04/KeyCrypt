@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { decryptExport } from "../src/lib/crypto";
 import type { VaultExportPayload } from "../src/lib/vault-export";
+import { saveRecoveryKit } from "./recovery-kit";
 
 // Settings → Export: both formats download, and the encrypted file decrypts
 // (outside the app, with only the export password) back to identical items.
@@ -43,7 +44,7 @@ async function signUpAndCreateVault(page: Page) {
   await page.locator("#confirmPassword").fill(MASTER);
   await page.getByRole("button", { name: "Create vault" }).click();
   await confirmAccountPassword(page, "Create vault");
-  await expect(page).toHaveURL(/\/vault$/);
+  await saveRecoveryKit(page);
 }
 
 async function addItem(page: Page, menuLabel: string, fields: Record<string, string>) {

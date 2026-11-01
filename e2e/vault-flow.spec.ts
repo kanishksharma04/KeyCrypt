@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { saveRecoveryKit } from "./recovery-kit";
 
 const db = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 test.afterAll(() => db.$disconnect());
@@ -109,7 +110,7 @@ test("sign up, store four items, change master password, and read them all back"
   await page.locator("#confirmPassword").fill(MASTER_1);
   await page.getByRole("button", { name: "Create vault" }).click();
   await confirmAccountPassword(page, "Create vault");
-  await expect(page).toHaveURL(/\/vault$/);
+  await saveRecoveryKit(page);
 
   // New vaults are crypto v2 with an Argon2id key-encryption key.
   const meta = await db.vaultMeta.findFirstOrThrow({ where: { user: { email: ACCOUNT.email } } });

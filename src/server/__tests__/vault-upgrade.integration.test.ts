@@ -89,6 +89,9 @@ async function metaForUnlock(): Promise<VaultMetaForUnlock> {
     verificationIv: m.verificationIv!,
     wrappedVaultKey: m.wrappedVaultKey,
     wrapIv: m.wrapIv,
+    recoveryWrappedKey: m.recoveryWrappedKey,
+    recoveryIv: m.recoveryIv,
+    recoveryCreatedAt: m.recoveryCreatedAt?.toISOString() ?? null,
   };
 }
 

@@ -18,6 +18,9 @@ export default async function VaultUnlockPage() {
       verificationIv: true,
       wrappedVaultKey: true,
       wrapIv: true,
+      recoveryWrappedKey: true,
+      recoveryIv: true,
+      recoveryCreatedAt: true,
     },
   });
 
@@ -38,6 +41,9 @@ export default async function VaultUnlockPage() {
         verificationIv: vaultMeta.verificationIv,
         wrappedVaultKey: vaultMeta.wrappedVaultKey,
         wrapIv: vaultMeta.wrapIv,
+        recoveryWrappedKey: vaultMeta.recoveryWrappedKey,
+        recoveryIv: vaultMeta.recoveryIv,
+        recoveryCreatedAt: vaultMeta.recoveryCreatedAt?.toISOString() ?? null,
       }}
     />
   );

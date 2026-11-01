@@ -63,8 +63,8 @@ let v1Meta: VaultMetaForUnlock;
 let v1Key: CryptoKey;
 
 beforeAll(async () => {
-  const { setup } = await createVaultKeys(MASTER);
-  v2Meta = { cryptoVersion: 2, ...setup };
+  const { setup } = await createVaultKeys(MASTER, USER_ID);
+  v2Meta = { cryptoVersion: 2, ...setup, recoveryCreatedAt: new Date().toISOString() };
 
   const salt = generateSalt();
   v1Key = await deriveVaultKey(MASTER, salt); // mocked: 1,000 iterations
@@ -78,6 +78,9 @@ beforeAll(async () => {
     verificationIv: blob.iv,
     wrappedVaultKey: null,
     wrapIv: null,
+    recoveryWrappedKey: null,
+    recoveryIv: null,
+    recoveryCreatedAt: null,
   };
 });
 

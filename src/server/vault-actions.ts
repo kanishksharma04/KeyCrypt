@@ -5,7 +5,13 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireRecentReauth } from "@/lib/reauth";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
-import { INVALID_INPUT, setupVaultInput, upgradeVaultInput } from "@/schemas/server";
+import {
+  INVALID_INPUT,
+  recoverVaultInput,
+  setRecoveryKeyInput,
+  setupVaultInput,
+  upgradeVaultInput,
+} from "@/schemas/server";
 
 /** Everything the browser needs to unlock (all opaque to the server). */
 export interface VaultMetaForUnlock {
@@ -18,10 +24,16 @@ export interface VaultMetaForUnlock {
   verificationIv: string;
   wrappedVaultKey: string | null;
   wrapIv: string | null;
+  recoveryWrappedKey: string | null;
+  recoveryIv: string | null;
+  /** ISO date the current recovery key was created, or null if there is none. */
+  recoveryCreatedAt: string | null;
 }
 
 /** Create a new vault (always crypto v2). */
 export async function setupVaultAction(input: {
+  recoveryWrappedKey: string;
+  recoveryIv: string;
   kdf: "argon2id";
   kdfParams: { memoryKiB: number; iterations: number; parallelism: number; hashLength: 32 };
   salt: string;
@@ -56,11 +68,17 @@ export async function setupVaultAction(input: {
       wrapIv: data.wrapIv,
       verificationBlob: data.verificationBlob,
       verificationIv: data.verificationIv,
+      recoveryWrappedKey: data.recoveryWrappedKey,
+      recoveryIv: data.recoveryIv,
+      recoveryCreatedAt: new Date(),
     },
   });
 
-  await db.auditLog.create({
-    data: { userId, action: "vault.setup", metadata: { cryptoVersion: 2 } },
+  await db.auditLog.createMany({
+    data: [
+      { userId, action: "vault.setup", metadata: { cryptoVersion: 2 } },
+      { userId, action: "vault.recovery.created" },
+    ],
   });
 
   return null;
@@ -81,6 +99,9 @@ export async function getVaultMetaAction(): Promise<VaultMetaForUnlock | null> {
       verificationIv: true,
       wrappedVaultKey: true,
       wrapIv: true,
+      recoveryWrappedKey: true,
+      recoveryIv: true,
+      recoveryCreatedAt: true,
     },
   });
 
@@ -95,6 +116,9 @@ export async function getVaultMetaAction(): Promise<VaultMetaForUnlock | null> {
     verificationIv: meta.verificationIv,
     wrappedVaultKey: meta.wrappedVaultKey,
     wrapIv: meta.wrapIv,
+    recoveryWrappedKey: meta.recoveryWrappedKey,
+    recoveryIv: meta.recoveryIv,
+    recoveryCreatedAt: meta.recoveryCreatedAt?.toISOString() ?? null,
   };
 }
 
@@ -195,5 +219,133 @@ export async function upgradeVaultAction(input: {
   await db.auditLog.create({
     data: { userId, action: "vault.upgraded", metadata: { cryptoVersion: 2 } },
   });
+  return {};
+}
+
+// ─── Recovery kit ────────────────────────────────────────────────────────────
+
+/** Run `work` in a Serializable transaction; map conflicts to VAULT_CHANGED_ERROR. */
+async function rewriteKeyMaterial(
+  work: (tx: Prisma.TransactionClient) => Promise<void>
+): Promise<{ error?: string }> {
+  try {
+    await db.$transaction(work, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    return {};
+  } catch (err) {
+    const serializationFailure =
+      err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
+    if (err instanceof VaultChangedError || serializationFailure) {
+      return { error: VAULT_CHANGED_ERROR };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Create or replace the recovery kit: the vault key wrapped under a new
+ * recovery-key KEK. The old recovery key stops working. The client must prove
+ * it unwrapped the current master-password wrap, and the account password must
+ * have been confirmed recently.
+ */
+export async function setRecoveryKeyAction(input: {
+  currentWrappedVaultKey: string;
+  currentWrapIv: string;
+  recoveryWrappedKey: string;
+  recoveryIv: string;
+}): Promise<{ error?: string }> {
+  const parsed = setRecoveryKeyInput.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const data = parsed.data;
+
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const reauth = await requireRecentReauth(userId);
+  if (!reauth.ok) return { error: reauth.error };
+
+  const result = await rewriteKeyMaterial(async (tx) => {
+    const meta = await tx.vaultMeta.findUnique({
+      where: { userId },
+      select: { cryptoVersion: true, wrappedVaultKey: true, wrapIv: true },
+    });
+    if (
+      !meta ||
+      meta.cryptoVersion !== 2 ||
+      meta.wrappedVaultKey !== data.currentWrappedVaultKey ||
+      meta.wrapIv !== data.currentWrapIv
+    ) {
+      throw new VaultChangedError();
+    }
+    await tx.vaultMeta.update({
+      where: { userId },
+      data: {
+        recoveryWrappedKey: data.recoveryWrappedKey,
+        recoveryIv: data.recoveryIv,
+        recoveryCreatedAt: new Date(),
+      },
+    });
+  });
+  if (result.error) return result;
+
+  await db.auditLog.create({ data: { userId, action: "vault.recovery.created" } });
+  return {};
+}
+
+/**
+ * Forgotten master password: store the vault key re-wrapped under a KEK from a
+ * NEW master password. The client unwrapped the vault key with the recovery
+ * key and must present the recovery wrap it used; the account password must
+ * have been confirmed recently. Items are untouched; the recovery key keeps
+ * working.
+ */
+export async function recoverVaultAction(input: {
+  currentRecoveryWrappedKey: string;
+  currentRecoveryIv: string;
+  kdf: "argon2id";
+  kdfParams: { memoryKiB: number; iterations: number; parallelism: number; hashLength: 32 };
+  newSalt: string;
+  newWrappedVaultKey: string;
+  newWrapIv: string;
+}): Promise<{ error?: string }> {
+  const parsed = recoverVaultInput.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const data = parsed.data;
+
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+  const userId = session.user.id;
+
+  const reauth = await requireRecentReauth(userId);
+  if (!reauth.ok) return { error: reauth.error };
+
+  const result = await rewriteKeyMaterial(async (tx) => {
+    const meta = await tx.vaultMeta.findUnique({
+      where: { userId },
+      select: { cryptoVersion: true, recoveryWrappedKey: true, recoveryIv: true },
+    });
+    if (
+      !meta ||
+      meta.cryptoVersion !== 2 ||
+      !meta.recoveryWrappedKey ||
+      meta.recoveryWrappedKey !== data.currentRecoveryWrappedKey ||
+      meta.recoveryIv !== data.currentRecoveryIv
+    ) {
+      throw new VaultChangedError();
+    }
+    await tx.vaultMeta.update({
+      where: { userId },
+      data: {
+        kdf: data.kdf,
+        kdfParams: data.kdfParams,
+        salt: data.newSalt,
+        wrappedVaultKey: data.newWrappedVaultKey,
+        wrapIv: data.newWrapIv,
+      },
+    });
+  });
+  if (result.error) return result;
+
+  await db.auditLog.create({ data: { userId, action: "vault.recovery.used" } });
   return {};
 }
