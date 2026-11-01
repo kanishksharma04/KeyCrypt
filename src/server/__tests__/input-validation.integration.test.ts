@@ -76,7 +76,9 @@ describe("server action input validation", () => {
 
   it("rejects a malformed vault setup and writes nothing", async () => {
     const result = await setupVaultAction({
-      salt: "short",
+      salt: "short", // not 16 bytes
+      wrappedVaultKey: "W".repeat(64),
+      wrapIv: VALID.iv,
       verificationBlob: "Y2lwaGVydGV4dA==",
       verificationIv: VALID.iv,
     });

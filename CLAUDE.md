@@ -21,9 +21,14 @@ decryption happens in the browser.
   (checked at most every 60 s in the jwt callback, `src/lib/session-version.ts`).
   "Sign out of all devices" and password reset both bump it.
 - **Master password** (vault): never leaves the browser and is never sent to the server.
-- **Vault key**: derived in the browser with PBKDF2-SHA-256, 600,000 iterations,
-  16-byte random salt, into an AES-256-GCM `CryptoKey` that is **non-extractable**
-  (`src/lib/crypto/key-derivation.ts`).
+- **Vault key (crypto v2)**: a random AES-256-GCM key, stored on the server only
+  **wrapped** (AES-GCM) under a key-encryption key derived in the browser from the master
+  password and a 16-byte salt (`src/lib/crypto/key-wrapping.ts`). In memory it is always
+  **non-extractable**; a short-lived extractable copy is unwrapped only to re-wrap it.
+  Changing the master password re-wraps the key; items are untouched. `VaultMeta.cryptoVersion`
+  1 vaults (vaultKey = PBKDF2(master, salt)) are upgraded on unlock (`upgradeVaultAction`,
+  needs a recent account-password confirmation); an unlocked vault is always v2.
+  Browser-side flows live in `src/features/vault/vault-crypto.ts`.
 - The vault key is held only in memory (`src/lib/crypto/vault-key.ts`) and cleared on lock.
   It is never persisted or sent anywhere.
 - Every encryption uses a fresh random 96-bit IV; payloads are `{ ciphertext, iv }` in base64.

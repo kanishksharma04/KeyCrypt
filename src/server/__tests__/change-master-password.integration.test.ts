@@ -1,191 +1,83 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  clearVaultKey,
-  createVerificationBlob,
-  decryptItem,
-  deriveVaultKey,
-  encryptItem,
-  fromBase64,
-  generateSalt,
-  setVaultKey,
-  toBase64,
-} from "@/lib/crypto";
+import { clearVaultKey, decryptItem, encryptItem, setVaultKey } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import { changeMasterPasswordAction } from "@/server/settings-actions";
 import { changeMasterPassword } from "@/features/vault/change-master-password";
+import { createVaultKeys, unlockVault } from "@/features/vault/vault-crypto";
+import type { VaultMetaForUnlock } from "@/server/vault-actions";
 import { createTestUser, grantRecentReauth, signInAs } from "@/test/integration/helpers";
 
-// Lets a test simulate "another tab added an item" right after the client
-// fetched the item list for re-encryption.
-const afterItemsFetched = vi.hoisted(() => ({ hook: null as null | (() => Promise<void>) }));
-vi.mock("@/server/settings-actions", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/server/settings-actions")>();
+// Fast KDFs for tests (1,000 iterations); all other crypto is real.
+vi.mock("@/lib/crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/crypto")>();
   return {
     ...actual,
-    getAllItemsForReEncryptionAction: async () => {
-      const items = await actual.getAllItemsForReEncryptionAction();
-      const hook = afterItemsFetched.hook;
-      afterItemsFetched.hook = null;
-      if (hook) await hook();
-      return items;
-    },
+    deriveVaultKey: (pw: string, salt: Uint8Array<ArrayBuffer>) =>
+      actual.deriveVaultKey(pw, salt, 1_000),
+    deriveKek: (pw: string, salt: Uint8Array<ArrayBuffer>) => actual.deriveKek(pw, salt, 1_000),
   };
 });
 
 const OLD_PASSWORD = "Old-Master-Password-1!";
 const NEW_PASSWORD = "New-Master-Password-2!";
-const JUNK_SALT = "AAAAAAAAAAAAAAAAAAAAAA==";
-const JUNK_BLOB = "anVuaw==";
-const JUNK_IV = "AAAAAAAAAAAAAAAA";
 
 let userId: string;
-let oldKey: CryptoKey;
-let itemIds: string[];
 
 async function snapshot() {
   return {
-    meta: await db.vaultMeta.findUnique({ where: { userId } }),
+    meta: await db.vaultMeta.findUniqueOrThrow({ where: { userId } }),
     items: await db.vaultItem.findMany({ where: { userId }, orderBy: { id: "asc" } }),
   };
 }
 
-async function currentVerifier() {
-  const meta = await db.vaultMeta.findUniqueOrThrow({ where: { userId } });
+async function metaForUnlock(): Promise<VaultMetaForUnlock> {
+  const m = await db.vaultMeta.findUniqueOrThrow({ where: { userId } });
   return {
-    currentVerificationBlob: meta.verificationBlob!,
-    currentVerificationIv: meta.verificationIv!,
+    cryptoVersion: m.cryptoVersion,
+    salt: m.salt,
+    verificationBlob: m.verificationBlob!,
+    verificationIv: m.verificationIv!,
+    wrappedVaultKey: m.wrappedVaultKey,
+    wrapIv: m.wrapIv,
   };
 }
 
-/** Opaque re-encrypted payloads for the given ids (server can't tell them apart). */
-function reEncrypted(ids: string[]) {
-  return ids.map((id) => ({ id, ciphertext: "bmV3LWNpcGhlcnRleHQ=", iv: "BBBBBBBBBBBBBBBB" }));
-}
-
 beforeEach(async () => {
-  afterItemsFetched.hook = null;
   clearVaultKey();
-
   const user = await createTestUser();
   userId = user.id;
   signInAs(user);
   await grantRecentReauth(user.id);
 
-  // A real vault: salt + verifier + items, all under the old master password.
-  const salt = generateSalt();
-  oldKey = await deriveVaultKey(OLD_PASSWORD, salt);
-  const blob = await createVerificationBlob(oldKey);
-  await db.vaultMeta.create({
-    data: {
-      userId,
-      salt: toBase64(salt),
-      verificationBlob: blob.ciphertext,
-      verificationIv: blob.iv,
-    },
-  });
-
-  itemIds = [];
+  // A real v2 vault with two items.
+  const { vaultKey, setup } = await createVaultKeys(OLD_PASSWORD);
+  await db.vaultMeta.create({ data: { userId, cryptoVersion: 2, ...setup } });
   for (const secret of ["alpha", "bravo"]) {
-    const { ciphertext, iv } = await encryptItem(oldKey, { secret });
-    const item = await db.vaultItem.create({
-      data: { userId, type: "LOGIN", name: secret, ciphertext, iv },
-      select: { id: true },
-    });
-    itemIds.push(item.id);
+    const { ciphertext, iv } = await encryptItem(vaultKey, { secret });
+    await db.vaultItem.create({ data: { userId, type: "LOGIN", name: secret, ciphertext, iv } });
   }
-  setVaultKey(oldKey);
+  setVaultKey(vaultKey);
 });
 
-describe("changeMasterPasswordAction: rejects incomplete or forged re-keys", () => {
-  it("rejects a missing item and changes nothing", async () => {
+describe("changeMasterPassword (crypto v2)", () => {
+  it("re-wraps the vault key only: items are untouched and stay readable", async () => {
     const before = await snapshot();
-    const result = await changeMasterPasswordAction({
-      ...(await currentVerifier()),
-      newSalt: JUNK_SALT,
-      newVerificationBlob: JUNK_BLOB,
-      newVerificationIv: JUNK_IV,
-      items: reEncrypted([itemIds[0]!]),
-    });
-    expect(result).toEqual({ error: VAULT_CHANGED_ERROR });
-    expect(await snapshot()).toEqual(before);
-  });
 
-  it("rejects an extra item (another user's) and changes nothing", async () => {
-    const other = await createTestUser();
-    const foreign = await db.vaultItem.create({
-      data: { userId: other.id, type: "LOGIN", name: "x", ciphertext: "eA==", iv: JUNK_IV },
-      select: { id: true },
-    });
-    const before = await snapshot();
-    const foreignBefore = await db.vaultItem.findUnique({ where: { id: foreign.id } });
-
-    const result = await changeMasterPasswordAction({
-      ...(await currentVerifier()),
-      newSalt: JUNK_SALT,
-      newVerificationBlob: JUNK_BLOB,
-      newVerificationIv: JUNK_IV,
-      items: reEncrypted([...itemIds, foreign.id]),
-    });
-    expect(result).toEqual({ error: VAULT_CHANGED_ERROR });
-    expect(await snapshot()).toEqual(before);
-    expect(await db.vaultItem.findUnique({ where: { id: foreign.id } })).toEqual(foreignBefore);
-  });
-
-  it("rejects duplicate ids that hide a missing item", async () => {
-    const before = await snapshot();
-    const result = await changeMasterPasswordAction({
-      ...(await currentVerifier()),
-      newSalt: JUNK_SALT,
-      newVerificationBlob: JUNK_BLOB,
-      newVerificationIv: JUNK_IV,
-      items: reEncrypted([itemIds[0]!, itemIds[0]!]),
-    });
-    expect(result).toEqual({ error: VAULT_CHANGED_ERROR });
-    expect(await snapshot()).toEqual(before);
-  });
-
-  it("rejects a wrong current verifier and changes nothing", async () => {
-    const before = await snapshot();
-    const result = await changeMasterPasswordAction({
-      currentVerificationBlob: JUNK_BLOB,
-      currentVerificationIv: JUNK_IV,
-      newSalt: JUNK_SALT,
-      newVerificationBlob: JUNK_BLOB,
-      newVerificationIv: JUNK_IV,
-      items: reEncrypted(itemIds),
-    });
-    expect(result).toEqual({ error: VAULT_CHANGED_ERROR });
-    expect(await snapshot()).toEqual(before);
-  });
-
-  it("rejects the stolen-session wipe (no items, junk salt)", async () => {
-    const before = await snapshot();
-    const result = await changeMasterPasswordAction({
-      ...(await currentVerifier()),
-      newSalt: JUNK_SALT,
-      newVerificationBlob: JUNK_BLOB,
-      newVerificationIv: JUNK_IV,
-      items: [],
-    });
-    expect(result).toEqual({ error: VAULT_CHANGED_ERROR });
-    expect(await snapshot()).toEqual(before);
-  });
-});
-
-describe("changeMasterPassword: browser flow end to end", () => {
-  async function decryptAllWith(password: string) {
-    const meta = await db.vaultMeta.findUniqueOrThrow({ where: { userId } });
-    const key = await deriveVaultKey(password, fromBase64(meta.salt));
-    const items = await db.vaultItem.findMany({ where: { userId }, orderBy: { name: "asc" } });
-    return Promise.all(items.map((i) => decryptItem(key, { ciphertext: i.ciphertext, iv: i.iv })));
-  }
-
-  it("re-keys every item so only the new password opens the vault (happy path)", async () => {
     expect(await changeMasterPassword(OLD_PASSWORD, NEW_PASSWORD)).toEqual({ ok: true });
 
-    expect(await decryptAllWith(NEW_PASSWORD)).toEqual([{ secret: "alpha" }, { secret: "bravo" }]);
-    await expect(decryptAllWith(OLD_PASSWORD)).rejects.toThrow();
+    const after = await snapshot();
+    expect(after.items).toEqual(before.items); // not a single item rewritten
+    expect(after.meta.salt).not.toBe(before.meta.salt);
+    expect(after.meta.wrappedVaultKey).not.toBe(before.meta.wrappedVaultKey);
+    expect(after.meta.verificationBlob).toBe(before.meta.verificationBlob);
+
+    const meta = await metaForUnlock();
+    expect((await unlockVault(OLD_PASSWORD, meta)).status).toBe("wrong-password");
+    const unlocked = await unlockVault(NEW_PASSWORD, meta);
+    if (unlocked.status !== "unlocked") throw new Error(`unexpected ${unlocked.status}`);
+    const secrets = await Promise.all(after.items.map((i) => decryptItem(unlocked.vaultKey, i)));
+    expect(secrets).toEqual(expect.arrayContaining([{ secret: "alpha" }, { secret: "bravo" }]));
     expect(await db.auditLog.count({ where: { action: "vault.master_password.changed" } })).toBe(1);
   });
 
@@ -197,20 +89,31 @@ describe("changeMasterPassword: browser flow end to end", () => {
     });
     expect(await snapshot()).toEqual(before);
   });
+});
 
-  it("retries once when an item is added mid-change, and keeps the new item readable", async () => {
-    afterItemsFetched.hook = async () => {
-      const { ciphertext, iv } = await encryptItem(oldKey, { secret: "charlie" });
-      await db.vaultItem.create({
-        data: { userId, type: "LOGIN", name: "charlie", ciphertext, iv },
-      });
-    };
+describe("changeMasterPasswordAction", () => {
+  const rewrap = (current: string) =>
+    changeMasterPasswordAction({
+      currentWrappedVaultKey: current,
+      currentWrapIv: "AAAAAAAAAAAAAAAA",
+      newSalt: "AAAAAAAAAAAAAAAAAAAAAA==",
+      newWrappedVaultKey: "N".repeat(64),
+      newWrapIv: "AAAAAAAAAAAAAAAA",
+    });
 
-    expect(await changeMasterPassword(OLD_PASSWORD, NEW_PASSWORD)).toEqual({ ok: true });
-    expect(await decryptAllWith(NEW_PASSWORD)).toEqual([
-      { secret: "alpha" },
-      { secret: "bravo" },
-      { secret: "charlie" },
-    ]);
+  it("rejects a stale current wrapped key (e.g. changed in another tab)", async () => {
+    const before = await snapshot();
+    expect(await rewrap("S".repeat(64))).toEqual({ error: VAULT_CHANGED_ERROR });
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it("refuses to re-wrap a v1 vault", async () => {
+    await db.vaultMeta.update({
+      where: { userId },
+      data: { cryptoVersion: 1, wrappedVaultKey: null, wrapIv: null },
+    });
+    const before = await snapshot();
+    expect(await rewrap("W".repeat(64))).toEqual({ error: VAULT_CHANGED_ERROR });
+    expect(await snapshot()).toEqual(before);
   });
 });

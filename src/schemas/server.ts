@@ -65,24 +65,43 @@ export const itemIdInput = z.object({ id: idSchema });
 
 export const toggleFavoriteInput = z.object({ id: idSchema, favorite: z.boolean() });
 
+/** A 256-bit vault key wrapped with AES-GCM: 32 bytes + 16-byte tag = 64 base64 chars. */
+export const wrappedVaultKeySchema = base64({ length: 64 });
+
+/** New vaults are crypto v2: a random vault key wrapped under the master-password KEK. */
 export const setupVaultInput = z.object({
   salt: saltSchema,
+  wrappedVaultKey: wrappedVaultKeySchema,
+  wrapIv: ivSchema,
   verificationBlob: verificationBlobSchema,
   verificationIv: ivSchema,
 });
 
-export const MAX_ITEMS_PER_MASTER_PASSWORD_CHANGE = 5_000;
+export const MAX_ITEMS_PER_REKEY = 5_000;
 
-export const changeMasterPasswordInput = z.object({
-  // The verifier the client read and checked the current master password against.
+/** One-time v1 → v2 upgrade: every item re-encrypted under the new random vault key. */
+export const upgradeVaultInput = z.object({
+  // The v1 verifier the client read and unlocked against.
   currentVerificationBlob: verificationBlobSchema,
   currentVerificationIv: ivSchema,
   newSalt: saltSchema,
+  wrappedVaultKey: wrappedVaultKeySchema,
+  wrapIv: ivSchema,
   newVerificationBlob: verificationBlobSchema,
   newVerificationIv: ivSchema,
   items: z
     .array(z.object({ id: idSchema, ciphertext: ciphertextSchema, iv: ivSchema }))
-    .max(MAX_ITEMS_PER_MASTER_PASSWORD_CHANGE),
+    .max(MAX_ITEMS_PER_REKEY),
+});
+
+/** v2 master-password change: re-wrap the same vault key; items are untouched. */
+export const changeMasterPasswordInput = z.object({
+  // The wrapped key the client read and unwrapped with the current password.
+  currentWrappedVaultKey: wrappedVaultKeySchema,
+  currentWrapIv: ivSchema,
+  newSalt: saltSchema,
+  newWrappedVaultKey: wrappedVaultKeySchema,
+  newWrapIv: ivSchema,
 });
 
 export const recordVaultExportInput = z.object({

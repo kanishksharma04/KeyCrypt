@@ -8,13 +8,8 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { masterPasswordSchema, type MasterPasswordInput } from "@/schemas/vault";
 import { setupVaultAction } from "@/server/vault-actions";
-import {
-  generateSalt,
-  deriveVaultKey,
-  createVerificationBlob,
-  setVaultKey,
-  toBase64,
-} from "@/lib/crypto";
+import { setVaultKey } from "@/lib/crypto";
+import { createVaultKeys } from "./vault-crypto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/features/auth/field-error";
@@ -112,26 +107,18 @@ export function SetupMasterPasswordForm() {
     }
     startTransition(async () => {
       try {
-        const salt = generateSalt();
-        // PBKDF2-SHA-256 at 600 k iterations: ~300 ms on a modern device.
-        // This is intentional — the cost applies equally to attackers.
-        const vaultKey = await deriveVaultKey(data.masterPassword, salt);
-        const blob = await createVerificationBlob(vaultKey);
+        // Crypto v2: a random vault key, wrapped under a key derived from the
+        // master password. The server only receives the salt, the wrapped key
+        // and the verification blob.
+        const { vaultKey, setup } = await createVaultKeys(data.masterPassword);
 
-        const err = await setupVaultAction({
-          salt: toBase64(salt),
-          verificationBlob: blob.ciphertext,
-          verificationIv: blob.iv,
-        });
-
+        const err = await setupVaultAction(setup);
         if (err) {
           setServerError(err.error);
           return;
         }
 
-        // Store the derived key in browser memory before navigating.
-        // The key never leaves the client — the server only receives
-        // the salt and verification blob.
+        // Keep the (non-extractable) vault key in browser memory only.
         setVaultKey(vaultKey);
         router.push("/vault");
       } catch {

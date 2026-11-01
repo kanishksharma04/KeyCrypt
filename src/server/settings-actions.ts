@@ -83,16 +83,23 @@ export async function getAllItemsForReEncryptionAction(): Promise<
   return items;
 }
 
-/** Thrown inside the transaction to roll back after writes have started. */
+/** Thrown inside the transaction to roll back. */
 class VaultChangedError extends Error {}
 
+/**
+ * Change the master password (crypto v2): store the SAME vault key re-wrapped
+ * under a key-encryption key from the new password. Items are untouched.
+ *
+ * The client must prove it read the current wrapped key (it unwrapped it with
+ * the current password), and the change needs a recent account-password
+ * confirmation. Serializable isolation aborts if the key changed meanwhile.
+ */
 export async function changeMasterPasswordAction(input: {
-  currentVerificationBlob: string;
-  currentVerificationIv: string;
+  currentWrappedVaultKey: string;
+  currentWrapIv: string;
   newSalt: string;
-  newVerificationBlob: string;
-  newVerificationIv: string;
-  items: { id: string; ciphertext: string; iv: string }[];
+  newWrappedVaultKey: string;
+  newWrapIv: string;
 }): Promise<{ error?: string }> {
   const parsed = changeMasterPasswordInput.safeParse(input);
   if (!parsed.success) return { error: INVALID_INPUT };
@@ -106,57 +113,32 @@ export async function changeMasterPasswordAction(input: {
   const reauth = await requireRecentReauth(userId);
   if (!reauth.ok) return { error: reauth.error };
 
-  // Re-keying is all-or-nothing. Any item left under the old key would be
-  // unreadable forever (its salt is about to be replaced), so the client must
-  // prove it read the current verifier and must submit EVERY item, exactly once.
-  //
-  // Serializable isolation makes Postgres abort this transaction if another
-  // request adds, removes or rewrites this user's items or VaultMeta meanwhile.
   try {
     await db.$transaction(
       async (tx) => {
         const meta = await tx.vaultMeta.findUnique({
           where: { userId },
-          select: { verificationBlob: true, verificationIv: true },
+          select: { cryptoVersion: true, wrappedVaultKey: true, wrapIv: true },
         });
         if (
           !meta ||
-          meta.verificationBlob !== data.currentVerificationBlob ||
-          meta.verificationIv !== data.currentVerificationIv
+          meta.cryptoVersion !== 2 ||
+          meta.wrappedVaultKey !== data.currentWrappedVaultKey ||
+          meta.wrapIv !== data.currentWrapIv
         ) {
           throw new VaultChangedError();
-        }
-
-        const existing = await tx.vaultItem.findMany({ where: { userId }, select: { id: true } });
-        const submitted = new Set(data.items.map((i) => i.id));
-        const exactMatch =
-          submitted.size === data.items.length && // no duplicates
-          submitted.size === existing.length && // nothing missing or extra…
-          existing.every((e) => submitted.has(e.id)); // …and the same ids
-        if (!exactMatch) throw new VaultChangedError();
-
-        for (const item of data.items) {
-          const { count } = await tx.vaultItem.updateMany({
-            where: { id: item.id, userId },
-            data: { ciphertext: item.ciphertext, iv: item.iv },
-          });
-          if (count !== 1) throw new VaultChangedError();
         }
 
         await tx.vaultMeta.update({
           where: { userId },
           data: {
             salt: data.newSalt,
-            verificationBlob: data.newVerificationBlob,
-            verificationIv: data.newVerificationIv,
+            wrappedVaultKey: data.newWrappedVaultKey,
+            wrapIv: data.newWrapIv,
           },
         });
       },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        // Up to 5,000 sequential item updates.
-        timeout: 60_000,
-      }
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
   } catch (err) {
     const serializationFailure =

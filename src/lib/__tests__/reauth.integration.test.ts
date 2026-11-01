@@ -21,18 +21,20 @@ import {
 const ACCOUNT_PASSWORD = "Account-Password-1!";
 const BLOB = "dmVyaWZpZXI=";
 const IV = "AAAAAAAAAAAAAAAA";
+// Opaque v2 key material: wrapped keys are 64 base64 characters.
+const WRAPPED = "W".repeat(64);
+const NEW_WRAPPED = "N".repeat(64);
 
 let user: { id: string; email: string };
 
-/** A complete, valid master-password change for a vault with no items. */
+/** A complete, valid (v2) master-password change: re-wrap the vault key. */
 function validChange() {
   return changeMasterPasswordAction({
-    currentVerificationBlob: BLOB,
-    currentVerificationIv: IV,
+    currentWrappedVaultKey: WRAPPED,
+    currentWrapIv: IV,
     newSalt: "BBBBBBBBBBBBBBBBBBBBBA==",
-    newVerificationBlob: "bmV3LXZlcmlmaWVy",
-    newVerificationIv: "CCCCCCCCCCCCCCCC",
-    items: [],
+    newWrappedVaultKey: NEW_WRAPPED,
+    newWrapIv: "CCCCCCCCCCCCCCCC",
   });
 }
 
@@ -41,7 +43,7 @@ async function nothingChanged() {
     tokenVersion: 0,
   });
   expect(await db.vaultMeta.findUniqueOrThrow({ where: { userId: user.id } })).toMatchObject({
-    verificationBlob: BLOB,
+    wrappedVaultKey: WRAPPED,
   });
 }
 
@@ -61,9 +63,12 @@ beforeEach(async () => {
   await db.vaultMeta.create({
     data: {
       userId: user.id,
+      cryptoVersion: 2,
       salt: "AAAAAAAAAAAAAAAAAAAAAA==",
       verificationBlob: BLOB,
       verificationIv: IV,
+      wrappedVaultKey: WRAPPED,
+      wrapIv: IV,
     },
   });
   signInAs(user);
@@ -138,7 +143,7 @@ describe("confirmAccountPasswordAction", () => {
     await confirmAccountPasswordAction(ACCOUNT_PASSWORD);
     expect(await validChange()).toEqual({});
     expect(await db.vaultMeta.findUniqueOrThrow({ where: { userId: user.id } })).toMatchObject({
-      verificationBlob: "bmV3LXZlcmlmaWVy",
+      wrappedVaultKey: NEW_WRAPPED,
     });
   });
 

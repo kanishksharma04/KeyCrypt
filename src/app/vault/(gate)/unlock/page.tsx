@@ -9,7 +9,14 @@ export default async function VaultUnlockPage() {
 
   const vaultMeta = await db.vaultMeta.findUnique({
     where: { userId: session.user.id },
-    select: { salt: true, verificationBlob: true, verificationIv: true },
+    select: {
+      cryptoVersion: true,
+      salt: true,
+      verificationBlob: true,
+      verificationIv: true,
+      wrappedVaultKey: true,
+      wrapIv: true,
+    },
   });
 
   // No vault configured yet — redirect to setup
@@ -19,9 +26,14 @@ export default async function VaultUnlockPage() {
 
   return (
     <UnlockForm
-      salt={vaultMeta.salt}
-      verificationBlob={vaultMeta.verificationBlob}
-      verificationIv={vaultMeta.verificationIv}
+      meta={{
+        cryptoVersion: vaultMeta.cryptoVersion,
+        salt: vaultMeta.salt,
+        verificationBlob: vaultMeta.verificationBlob,
+        verificationIv: vaultMeta.verificationIv,
+        wrappedVaultKey: vaultMeta.wrappedVaultKey,
+        wrapIv: vaultMeta.wrapIv,
+      }}
     />
   );
 }

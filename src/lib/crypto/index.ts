@@ -14,6 +14,15 @@ export {
 
 export { encryptItem, decryptItem } from "./encryption";
 
+export {
+  generateVaultKey,
+  deriveKek,
+  wrapVaultKey,
+  unwrapVaultKey,
+  VaultKeyUnwrapError,
+} from "./key-wrapping";
+export type { WrappedVaultKey } from "./key-wrapping";
+
 export { createVerificationBlob, verifyVaultKey } from "./verification";
 
 export { setVaultKey, getVaultKey, clearVaultKey, isVaultUnlocked } from "./vault-key";

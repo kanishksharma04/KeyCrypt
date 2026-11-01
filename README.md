@@ -17,7 +17,7 @@ KeyCrypt encrypts the contents of every vault item in your browser before it rea
 | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Ciphertext of each item's contents (AES-256-GCM)                                        | Master password                                                   |
 | Random IV per item                                                                      | Vault key                                                         |
-| PBKDF2 salt and encrypted verifier                                                      | Decrypted item contents (usernames, passwords, URLs, notes, keys) |
+| Salt, wrapped vault key, verifier                                                       | Decrypted item contents (usernames, passwords, URLs, notes, keys) |
 | Argon2id hash of the account password                                                   |                                                                   |
 | **Plain-text metadata:** item names, item types, favourite flags, created/updated times |                                                                   |
 | **Audit log:** account events with timestamps, IP at sign-up, item type on create       |                                                                   |
@@ -28,7 +28,9 @@ emails for rate limiting. From the ciphertext it can tell how many items you hav
 large each one is. The audit log has a user-agent column, but nothing records it today.
 
 ```
-vaultKey   = PBKDF2(masterPassword, salt, 600_000 iterations, SHA-256, 256-bit)
+vaultKey   = random 256-bit AES-GCM key (generated in the browser)
+kek        = PBKDF2(masterPassword, salt, 600_000 iterations, SHA-256)
+wrapped    = AES-256-GCM(kek, randomIV, vaultKey)      # what the server stores
 ciphertext = AES-256-GCM(vaultKey, randomIV, plaintext)
 ```
 

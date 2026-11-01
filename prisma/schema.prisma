@@ -100,19 +100,29 @@ model Authenticator {
 
 // ─── Vault models ─────────────────────────────────────────────────────────────
 
-// Stores per-user salt and encrypted verification blob.
-// The server never has enough info here to decrypt the vault.
+// Stores per-user key material. The server never has enough info here to
+// decrypt the vault.
+//
+// cryptoVersion 1: vaultKey = PBKDF2(masterPassword, salt).
+// cryptoVersion 2: vaultKey is random; it is stored wrapped (AES-GCM) under a
+//   key-encryption key derived from the master password and `salt`. Changing
+//   the master password only re-wraps it. v1 vaults upgrade on unlock.
 model VaultMeta {
   id               String   @id @default(cuid())
   userId           String   @unique
-  // Base64-encoded random salt for PBKDF2-SHA-256 key derivation
+  cryptoVersion    Int      @default(1)
+  // Base64 random salt for the password-based key derivation
   salt             String
-  // AES-256-GCM encrypted known-plaintext blob; used to verify the master
-  // password in the browser without comparing anything server-side. Written at
-  // vault setup; a row without it is treated as "vault not set up".
+  // AES-256-GCM encrypted known-plaintext blob (under the vault key); used to
+  // verify the key in the browser without comparing anything server-side.
+  // Written at vault setup; a row without it is treated as "vault not set up".
   verificationBlob String?  @db.Text
   // IV for the verification blob encryption
   verificationIv   String?
+  // v2: the vault key wrapped with AES-GCM under the key-encryption key (base64)
+  wrappedVaultKey  String?  @db.Text
+  // v2: IV for wrappedVaultKey (base64, 12 bytes)
+  wrapIv           String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

@@ -1,30 +1,27 @@
 import {
+  deriveKek,
+  fromBase64,
+  generateSalt,
   getVaultKey,
   setVaultKey,
-  deriveVaultKey,
-  generateSalt,
-  createVerificationBlob,
-  verifyVaultKey,
-  encryptItem,
-  decryptItem,
   toBase64,
-  fromBase64,
+  unwrapVaultKey,
+  VaultKeyUnwrapError,
+  wrapVaultKey,
 } from "@/lib/crypto";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import { getVaultMetaAction } from "@/server/vault-actions";
-import {
-  getAllItemsForReEncryptionAction,
-  changeMasterPasswordAction,
-} from "@/server/settings-actions";
+import { changeMasterPasswordAction } from "@/server/settings-actions";
 
 export type ChangeMasterPasswordResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Re-key the whole vault under a new master password. Runs in the browser:
- * the server only ever receives the new salt, verifier and ciphertexts.
+ * Change the master password (crypto v2). Runs in the browser: unwrap the vault
+ * key with the current password, re-wrap the SAME key under a KEK from the new
+ * password. Items are not touched. The server only receives the new salt and
+ * wrapped key.
  *
- * If the vault changes while this runs (an item added in another tab, say),
- * the server rejects the update atomically and the whole flow is retried once.
+ * Retries once if the wrapped key changed meanwhile (e.g. another tab).
  */
 export async function changeMasterPassword(
   currentPassword: string,
@@ -41,54 +38,42 @@ async function attemptChange(
 ): Promise<ChangeMasterPasswordResult> {
   if (!getVaultKey()) return { ok: false, error: "Vault is locked. Please unlock and try again." };
 
-  // 1. Read the current verifier and check the current master password against it.
   const meta = await getVaultMetaAction();
   if (!meta) return { ok: false, error: "Failed to load vault data." };
+  if (meta.cryptoVersion !== 2 || !meta.wrappedVaultKey || !meta.wrapIv) {
+    return { ok: false, error: "Lock and unlock your vault to finish its upgrade first." };
+  }
+  const current = { wrappedKey: meta.wrappedVaultKey, iv: meta.wrapIv };
 
-  const currentKey = await deriveVaultKey(currentPassword, fromBase64(meta.salt));
-  const isValid = await verifyVaultKey(currentKey, {
-    ciphertext: meta.verificationBlob,
-    iv: meta.verificationIv,
-  });
-  if (!isValid) return { ok: false, error: "Current master password is incorrect." };
+  // 1. Unwrap with the current password. A short-lived EXTRACTABLE copy is
+  //    needed to re-wrap; it is dropped when this function returns.
+  let extractableCopy: CryptoKey;
+  try {
+    const currentKek = await deriveKek(currentPassword, fromBase64(meta.salt));
+    extractableCopy = await unwrapVaultKey(current, currentKek, { extractable: true });
+  } catch (e) {
+    if (e instanceof VaultKeyUnwrapError) {
+      return { ok: false, error: "Current master password is incorrect." };
+    }
+    throw e;
+  }
 
-  // 2. Fetch every item (ciphertext only).
-  const itemsResult = await getAllItemsForReEncryptionAction();
-  if ("error" in itemsResult) return { ok: false, error: itemsResult.error };
+  // 2. Re-wrap under a KEK from the new password and a fresh salt.
+  const newSalt = generateSalt();
+  const newKek = await deriveKek(newPassword, newSalt);
+  const rewrapped = await wrapVaultKey(extractableCopy, newKek);
 
-  // 3. Derive the new key from the new password and a fresh salt.
-  const newSaltBytes = generateSalt();
-  const newKey = await deriveVaultKey(newPassword, newSaltBytes);
-
-  // 4. Re-encrypt every item. Decrypt with the key just verified against the
-  //    server's current verifier, not a possibly stale in-memory key.
-  const items = await Promise.all(
-    itemsResult.map(async (item) => {
-      const plaintext = await decryptItem<unknown>(currentKey, {
-        ciphertext: item.ciphertext,
-        iv: item.iv,
-      });
-      const { ciphertext, iv } = await encryptItem(newKey, plaintext);
-      return { id: item.id, ciphertext, iv };
-    })
-  );
-
-  // 5. New verifier under the new key.
-  const newBlob = await createVerificationBlob(newKey);
-
-  // 6. Persist atomically. The server checks the verifier we read in step 1 and
-  //    that `items` is exactly the current item set.
+  // 3. Persist. The server checks we read the current wrapped key.
   const result = await changeMasterPasswordAction({
-    currentVerificationBlob: meta.verificationBlob,
-    currentVerificationIv: meta.verificationIv,
-    newSalt: toBase64(newSaltBytes),
-    newVerificationBlob: newBlob.ciphertext,
-    newVerificationIv: newBlob.iv,
-    items,
+    currentWrappedVaultKey: current.wrappedKey,
+    currentWrapIv: current.iv,
+    newSalt: toBase64(newSalt),
+    newWrappedVaultKey: rewrapped.wrappedKey,
+    newWrapIv: rewrapped.iv,
   });
   if (result.error) return { ok: false, error: result.error };
 
-  // 7. Swap the in-memory key; the user stays unlocked.
-  setVaultKey(newKey);
+  // 4. Same vault key, so items stay readable; keep a non-extractable copy.
+  setVaultKey(await unwrapVaultKey(rewrapped, newKek));
   return { ok: true };
 }
