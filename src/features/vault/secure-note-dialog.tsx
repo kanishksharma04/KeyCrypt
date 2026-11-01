@@ -6,7 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { secureNoteSchema, type SecureNoteInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
-import { getVaultKey, encryptItem, generateItemId, itemAad } from "@/lib/crypto";
+import { getVaultKey, generateItemId } from "@/lib/crypto";
+import { sealItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,17 +56,17 @@ function SecureNoteForm({
         // this ciphertext only decrypts as item `id` of type SECURE_NOTE for this user.
         const id = mode === "create" ? generateItemId() : itemId;
         if (!id) return;
-        const { ciphertext, iv } = await encryptItem(
+        // The name is encrypted together with the secret; the server never sees it.
+        const { ciphertext, iv } = await sealItem(
           key,
-          secret,
-          itemAad({ userId, itemId: id, type: "SECURE_NOTE" })
+          { id, type: "SECURE_NOTE", name: data.name, secret },
+          userId
         );
 
         if (mode === "create") {
           const result = await createVaultItemAction({
             id,
             type: "SECURE_NOTE",
-            name: data.name,
             ciphertext,
             iv,
           });
@@ -77,7 +78,6 @@ function SecureNoteForm({
           if (!itemId) return;
           const result = await updateVaultItemAction({
             id: itemId,
-            name: data.name,
             ciphertext,
             iv,
           });

@@ -12,18 +12,27 @@ import {
   updateVaultItemInput,
 } from "@/schemas/server";
 
-// Lightweight item list for the command palette — names are already stored in
-// plaintext (see VaultItem schema comment), so no decryption is needed to search them.
+/**
+ * Item list for the command palette: ciphertext only. The browser decrypts the
+ * names (crypto v2) and searches and sorts them there.
+ */
 export async function getVaultItemSummariesAction(): Promise<
-  { id: string; type: VaultItemType; name: string }[] | { error: string }
+  | {
+      id: string;
+      type: VaultItemType;
+      name: string | null;
+      ciphertext: string;
+      iv: string;
+      favorite: boolean;
+    }[]
+  | { error: string }
 > {
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
   return db.vaultItem.findMany({
     where: { userId: session.user.id },
-    select: { id: true, type: true, name: true },
-    orderBy: [{ favorite: "desc" }, { updatedAt: "desc" }],
+    select: { id: true, type: true, name: true, ciphertext: true, iv: true, favorite: true },
   });
 }
 
@@ -31,7 +40,7 @@ export async function createVaultItemAction(input: {
   /** Generated in the browser (UUID v4) and bound into the item's AAD. */
   id: string;
   type: VaultItemType;
-  name: string;
+  /** AES-GCM of { name, secret }, bound to (user, id, type). */
   ciphertext: string;
   iv: string;
 }): Promise<{ id: string } | { error: string }> {
@@ -49,7 +58,7 @@ export async function createVaultItemAction(input: {
         id: data.id,
         userId: session.user.id,
         type: data.type,
-        name: data.name,
+        name: null, // encrypted inside the ciphertext
         ciphertext: data.ciphertext,
         iv: data.iv,
       },
@@ -74,7 +83,7 @@ export async function createVaultItemAction(input: {
 
 export async function updateVaultItemAction(input: {
   id: string;
-  name: string;
+  /** AES-GCM of { name, secret }, bound to (user, id, type). */
   ciphertext: string;
   iv: string;
 }): Promise<{ error?: string }> {
@@ -88,7 +97,8 @@ export async function updateVaultItemAction(input: {
   // userId in WHERE prevents IDOR — only the owner can update their items
   const result = await db.vaultItem.updateMany({
     where: { id: data.id, userId: session.user.id },
-    data: { name: data.name, ciphertext: data.ciphertext, iv: data.iv },
+    // The name is re-encrypted with the secret; clear any older plain-text name.
+    data: { name: null, ciphertext: data.ciphertext, iv: data.iv },
   });
 
   if (result.count === 0) return { error: "Item not found" };

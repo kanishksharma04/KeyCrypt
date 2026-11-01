@@ -7,20 +7,20 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-KeyCrypt encrypts the contents of every vault item in your browser before it reaches the server, which stores them as ciphertext it cannot read without your master password. Some metadata is currently stored in plain text so the vault can be listed and searched; the table below lists exactly what.
+KeyCrypt encrypts the contents of every vault item in your browser before it reaches the server, which stores them as ciphertext it cannot read without your master password. Item names are encrypted too, and searched in the browser. A little metadata stays in plain text so the server can store and order your items; the table below lists exactly what.
 
 ---
 
 ## Security model
 
-| What the server stores                                                                  | What the server never sees                                        |
-| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Ciphertext of each item's contents (AES-256-GCM)                                        | Master password                                                   |
-| Random IV per item                                                                      | Vault key                                                         |
-| Salt, wrapped vault key, verifier                                                       | Decrypted item contents (usernames, passwords, URLs, notes, keys) |
-| Argon2id hash of the account password                                                   |                                                                   |
-| **Plain-text metadata:** item names, item types, favourite flags, created/updated times |                                                                   |
-| **Audit log:** account events with timestamps, IP at sign-up, item type on create       |                                                                   |
+| What the server stores                                                            | What the server never sees                                        |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Ciphertext of each item's name and contents (AES-256-GCM)                         | Master password                                                   |
+| Random IV per item                                                                | Vault key                                                         |
+| Salt, wrapped vault key, verifier                                                 | Item names and contents (usernames, passwords, URLs, notes, keys) |
+| Argon2id hash of the account password                                             |                                                                   |
+| **Plain-text metadata:** item types, favourite flags, created/updated times       |                                                                   |
+| **Audit log:** account events with timestamps, IP at sign-up, item type on create |                                                                   |
 
 The server also handles your email and name, your account password while you sign in, sign up,
 reset it or confirm it (it stores only the Argon2id hash), the session cookie, and client IPs and

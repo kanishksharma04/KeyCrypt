@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateIv, generateSalt, toBase64 } from "@/lib/crypto";
-import {
-  ciphertextSchema,
-  idSchema,
-  itemNameSchema,
-  ivSchema,
-  saltSchema,
-  tokenSchema,
-} from "../server";
+import { ciphertextSchema, idSchema, ivSchema, saltSchema, tokenSchema } from "../server";
 
 describe("server input schemas", () => {
   it("accepts IVs and salts exactly as the client encodes them", () => {
@@ -26,12 +19,6 @@ describe("server input schemas", () => {
   it("caps ciphertext at 200,000 characters", () => {
     expect(ciphertextSchema.safeParse("A".repeat(200_000)).success).toBe(true);
     expect(ciphertextSchema.safeParse("A".repeat(200_004)).success).toBe(false);
-  });
-
-  it("trims names and enforces 1 to 100 characters", () => {
-    expect(itemNameSchema.parse("  GitHub  ")).toBe("GitHub");
-    expect(itemNameSchema.safeParse("   ").success).toBe(false);
-    expect(itemNameSchema.safeParse("x".repeat(101)).success).toBe(false);
   });
 
   it("accepts cuid ids and 64-hex tokens only", () => {

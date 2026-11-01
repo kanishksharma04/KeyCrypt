@@ -53,7 +53,7 @@ export async function getVaultStatsAction(): Promise<VaultStats | null> {
 // Returns ciphertext only — decryption and scoring happen entirely client-side.
 
 export async function getLoginItemsForHealthAction(): Promise<
-  | { id: string; name: string; ciphertext: string; iv: string; updatedAt: string }[]
+  | { id: string; name: string | null; ciphertext: string; iv: string; updatedAt: string }[]
   | { error: string }
 > {
   const session = await auth();
@@ -70,15 +70,17 @@ export async function getLoginItemsForHealthAction(): Promise<
 // ─── Re-encryption ─────────────────────────────────────────────────────────────
 
 export async function getAllItemsForReEncryptionAction(): Promise<
-  { id: string; type: VaultItemType; ciphertext: string; iv: string }[] | { error: string }
+  | { id: string; type: VaultItemType; name: string | null; ciphertext: string; iv: string }[]
+  | { error: string }
 > {
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
-  // id + type are needed to bind each re-encrypted item to its row (AAD).
+  // id + type bind each re-encrypted item to its row (AAD); the plain-text
+  // name (v1 rows) moves into the new ciphertext.
   const items = await db.vaultItem.findMany({
     where: { userId: session.user.id },
-    select: { id: true, type: true, ciphertext: true, iv: true },
+    select: { id: true, type: true, name: true, ciphertext: true, iv: true },
   });
 
   return items;

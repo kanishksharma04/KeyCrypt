@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getVaultKey, decryptItem, itemAad } from "@/lib/crypto";
+import { getVaultKey } from "@/lib/crypto";
+import { openItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import type {
   DecryptedVaultItem,
@@ -15,22 +16,18 @@ import type {
 // ─── Decrypt helper ──────────────────────────────────────────────────────────
 
 /**
- * Decrypt one row. The AAD binds the ciphertext to (user, item id, type), so a
- * ciphertext moved to another row, type or user fails to decrypt.
+ * Decrypt one row (name and secret). The AAD binds the ciphertext to (user,
+ * item id, type), so a ciphertext moved to another row, type or user fails.
  */
 export async function decryptVaultItem(
   key: CryptoKey,
   row: VaultItemRow,
   userId: string
 ): Promise<DecryptedVaultItem> {
-  const raw = await decryptItem<unknown>(
-    key,
-    { ciphertext: row.ciphertext, iv: row.iv },
-    itemAad({ userId, itemId: row.id, type: row.type })
-  );
+  const { name, secret } = await openItem<unknown>(key, row, userId);
   const base = {
     id: row.id,
-    name: row.name,
+    name,
     favorite: row.favorite,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -38,15 +35,18 @@ export async function decryptVaultItem(
 
   switch (row.type) {
     case "LOGIN":
-      return { ...base, type: "LOGIN" as const, secret: raw as LoginSecret };
+      return { ...base, type: "LOGIN" as const, secret: secret as LoginSecret };
     case "SECURE_NOTE":
-      return { ...base, type: "SECURE_NOTE" as const, secret: raw as SecureNoteSecret };
+      return { ...base, type: "SECURE_NOTE" as const, secret: secret as SecureNoteSecret };
     case "API_KEY":
-      return { ...base, type: "API_KEY" as const, secret: raw as ApiKeySecret };
+      return { ...base, type: "API_KEY" as const, secret: secret as ApiKeySecret };
     case "WIFI_PASSWORD":
-      return { ...base, type: "WIFI_PASSWORD" as const, secret: raw as WifiPasswordSecret };
+      return { ...base, type: "WIFI_PASSWORD" as const, secret: secret as WifiPasswordSecret };
   }
 }
+
+/** Shown for a row that fails to decrypt (its name is encrypted too). */
+export const UNREADABLE_ITEM_NAME = "Unreadable item";
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ export function useDecryptedItems(items: VaultItemRow[]) {
           return {
             id: row.id,
             type: row.type,
-            name: row.name,
+            name: row.name ?? UNREADABLE_ITEM_NAME,
             favorite: row.favorite,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,

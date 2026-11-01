@@ -28,6 +28,9 @@ import {
 import { useCommandPalette } from "@/providers/command-palette-provider";
 import { useVaultLock } from "@/providers/vault-lock-provider";
 import { getVaultItemSummariesAction } from "@/server/vault-item-actions";
+import { getVaultKey } from "@/lib/crypto";
+import { useVaultUserId } from "@/providers/vault-user-provider";
+import { openItem } from "./item-payload";
 import type { VaultItemType } from "@/types/vault";
 
 const TYPE_META = {
@@ -41,9 +44,17 @@ interface ItemSummary {
   id: string;
   type: VaultItemType;
   name: string;
+  favorite: boolean;
+}
+
+/** Favourites first, then by name (A–Z, case-insensitive). */
+function compareItems(a: ItemSummary, b: ItemSummary): number {
+  if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+  return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 }
 
 export function CommandPalette() {
+  const userId = useVaultUserId();
   const { isOpen, close } = useCommandPalette();
   const { lock } = useVaultLock();
   const { theme, setTheme } = useTheme();
@@ -51,15 +62,30 @@ export function CommandPalette() {
   const [items, setItems] = useState<ItemSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load the item list lazily on first open rather than on every keystroke —
-  // cmdk does the fuzzy filtering locally once the list is in memory.
+  // Load the item list lazily on first open. Names are encrypted (crypto v2):
+  // the server returns ciphertext, and the names are decrypted, sorted and
+  // fuzzy-searched (cmdk) here in the browser.
   useEffect(() => {
     if (!isOpen || loaded) return;
-    void getVaultItemSummariesAction().then((res) => {
-      if (!("error" in res)) setItems(res);
+    const key = getVaultKey();
+    if (!key) return;
+    void getVaultItemSummariesAction().then(async (res) => {
+      if (!("error" in res)) {
+        const opened = await Promise.all(
+          res.map(async (row) => {
+            try {
+              const { name } = await openItem(key, row, userId);
+              return { id: row.id, type: row.type, name, favorite: row.favorite };
+            } catch {
+              return null; // unreadable rows are left out of the palette
+            }
+          })
+        );
+        setItems(opened.filter((i): i is ItemSummary => i !== null).sort(compareItems));
+      }
       setLoaded(true);
     });
-  }, [isOpen, loaded]);
+  }, [isOpen, loaded, userId]);
 
   function run(action: () => void) {
     close();

@@ -134,15 +134,16 @@ model VaultMeta {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Secret content (username, password, URL, notes, ...) is opaque ciphertext.
-// name, type and favorite are plain text and visible to the server.
+// Item contents AND (crypto v2) the item name are opaque ciphertext.
+// type, favorite and the timestamps are plain text and visible to the server.
 model VaultItem {
   id         String        @id @default(cuid())
   userId     String
   type       VaultItemType
-  // Item name/label (e.g. "GitHub"). Stored in PLAIN TEXT and visible to the
-  // server; used for listing and search. Never put secrets in it.
-  name       String
+  // Plain-text item name, only for rows not yet moved to crypto v2. v2 items
+  // store null here: the name lives inside the ciphertext, encrypted in the
+  // browser ({ name, secret }), and is decrypted there for listing and search.
+  name       String?
   // AES-256-GCM ciphertext (base64). Decrypted only in the browser.
   ciphertext String        @db.Text
   // Base64-encoded random 96-bit IV. Unique per encryption operation.

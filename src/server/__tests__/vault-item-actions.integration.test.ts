@@ -9,7 +9,8 @@ import { createTestUser, signInAs } from "@/test/integration/helpers";
 
 // Opaque test values — the server never sees real plaintext.
 const ORIGINAL = { name: "GitHub", ciphertext: "b3JpZ2luYWw=", iv: "aXYtb3JpZ2luYWw=" };
-const TAMPERED = { name: "pwned", ciphertext: "dGFtcGVyZWQ=", iv: "aXYtdGFtcGVyZWQ=" };
+// Names are encrypted inside the ciphertext now; updates never carry a plain-text name.
+const TAMPERED = { ciphertext: "dGFtcGVyZWQ=", iv: "aXYtdGFtcGVyZWQ=" };
 
 type TestUser = Awaited<ReturnType<typeof createTestUser>>;
 
@@ -63,7 +64,8 @@ describe("vault item actions: cross-user access (IDOR)", () => {
     signInAs(alice);
 
     expect(await updateVaultItemAction({ id: aliceItemId, ...TAMPERED })).toEqual({});
-    expect(await aliceItem()).toMatchObject(TAMPERED);
+    // …and an edit clears any older plain-text name.
+    expect(await aliceItem()).toMatchObject({ ...TAMPERED, name: null });
 
     expect(await toggleFavoriteAction(aliceItemId, true)).toEqual({});
     expect(await aliceItem()).toMatchObject({ favorite: true });

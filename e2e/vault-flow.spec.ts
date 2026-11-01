@@ -69,7 +69,9 @@ async function openItem(page: Page, name: string): Promise<Locator> {
 
 async function closeDialog(page: Page) {
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+  // Count rather than toBeHidden(): two dialogs can be animating out at once
+  // (e.g. the palette and the item it opened), which a strict locator rejects.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
 // ─── Flow ────────────────────────────────────────────────────────────────────
@@ -195,4 +197,36 @@ test("sign up, store four items, change master password, and read them all back"
   await expect(d.getByText(WIFI.password, { exact: true })).toBeVisible();
   await expect(d.getByText(WIFI.security, { exact: true })).toBeVisible();
   await closeDialog(page);
+
+  // Names are encrypted: the server stores no plain-text name for any item…
+  const rows = await db.vaultItem.findMany({ where: { user: { email: ACCOUNT.email } } });
+  expect(rows).toHaveLength(4);
+  for (const r of rows) {
+    expect(r.name).toBeNull();
+    for (const n of [LOGIN.name, NOTE.name, API_KEY.name, WIFI.name]) {
+      expect(r.ciphertext).not.toContain(n);
+    }
+  }
+
+  // …yet search works on the names decrypted in the browser,
+  const search = page.getByRole("textbox", { name: "Search vault items" });
+  await search.fill("strip");
+  await expect(page.getByText("1 of 4 items")).toBeVisible();
+  await expect(page.getByTitle("View item").filter({ hasText: API_KEY.name })).toBeVisible();
+  await search.fill("");
+
+  // the command palette finds and opens items by name,
+  await page
+    .getByRole("button", { name: /Search/ })
+    .first()
+    .click();
+  await page.getByPlaceholder("Search items or run a command…").fill("Home Wi");
+  await page.getByRole("option", { name: WIFI.name }).click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: WIFI.name })).toBeVisible();
+  await closeDialog(page);
+
+  // and the dashboard health score still decrypts the logins.
+  await page.getByRole("link", { name: "Dashboard" }).click();
+  await expect(page).toHaveURL(/\/vault\/dashboard$/);
+  await expect(page.getByRole("heading", { name: "Vault health" })).toBeVisible();
 });

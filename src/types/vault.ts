@@ -70,7 +70,8 @@ export type DecryptedVaultItem =
 export interface VaultItemRow {
   id: string;
   type: VaultItemType;
-  name: string;
+  /** Plain-text name for rows not yet on encrypted names; null when encrypted (v2). */
+  name: string | null;
   ciphertext: string;
   iv: string;
   favorite: boolean;

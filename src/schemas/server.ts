@@ -33,9 +33,6 @@ export const idSchema = z
 
 export const itemTypeSchema = z.nativeEnum(VaultItemType);
 
-/** Plain-text item label (visible to the server). */
-export const itemNameSchema = z.string().trim().min(1).max(100);
-
 /** AES-256-GCM ciphertext (+ 16-byte tag), base64. */
 export const ciphertextSchema = base64({ min: 4, max: 200_000 });
 
@@ -53,17 +50,16 @@ export const tokenSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
 // ─── Action inputs ───────────────────────────────────────────────────────────
 
+// Item names are encrypted with the secret (crypto v2); the server never receives them.
 export const createVaultItemInput = z.object({
   id: idSchema,
   type: itemTypeSchema,
-  name: itemNameSchema,
   ciphertext: ciphertextSchema,
   iv: ivSchema,
 });
 
 export const updateVaultItemInput = z.object({
   id: idSchema,
-  name: itemNameSchema,
   ciphertext: ciphertextSchema,
   iv: ivSchema,
 });

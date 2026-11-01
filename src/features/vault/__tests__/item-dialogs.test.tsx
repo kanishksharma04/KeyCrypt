@@ -161,20 +161,20 @@ describe.each(CASES)(
       await vi.waitFor(() => expect(createVaultItemAction).toHaveBeenCalledTimes(1));
       const [args] = createVaultItemAction.mock.calls[0] as [Record<string, unknown>];
 
-      // Exactly these fields reach the server; the name is plain text by design.
-      expect(Object.keys(args).sort()).toEqual(["ciphertext", "id", "iv", "name", "type"]);
-      expect(args).toMatchObject({ type, name });
+      // Exactly these fields reach the server: the name is encrypted too.
+      expect(Object.keys(args).sort()).toEqual(["ciphertext", "id", "iv", "type"]);
+      expect(args).toMatchObject({ type });
       // The id is generated in the browser, before encryption.
       expect(args.id).toMatch(UUID_V4);
 
       const serialized = JSON.stringify(createVaultItemAction.mock.calls);
-      for (const plaintext of sensitive) expect(serialized).not.toContain(plaintext);
+      for (const plaintext of [...sensitive, name]) expect(serialized).not.toContain(plaintext);
 
       // And the ciphertext really is the secret, encrypted under the vault key
       // and bound to this user, item id and type (AAD): only that row opens it.
       const payload = { ciphertext: args.ciphertext as string, iv: args.iv as string };
       const aad = itemAad({ userId: USER_ID, itemId: args.id as string, type });
-      expect(await decryptItem(key, payload, aad)).toEqual(secret);
+      expect(await decryptItem(key, payload, aad)).toEqual({ name, secret });
       await expect(decryptItem(key, payload)).rejects.toThrow();
       await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     });

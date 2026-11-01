@@ -358,9 +358,10 @@ export default async function HomePage() {
 
             <p className="text-muted-foreground mx-auto mt-12 max-w-2xl text-center text-sm leading-relaxed">
               <span className="text-foreground font-medium">What the server can see today:</span>{" "}
-              your email and name, each item&apos;s name and type, which items are favourites, when
-              items were created and changed, and an activity log of account events (with your IP
-              address at sign-up). Usernames, passwords, URLs, notes and keys are always encrypted.
+              your email and name, each item&apos;s type, which items are favourites, when items
+              were created and changed, and an activity log of account events (with your IP address
+              at sign-up). Item names, usernames, passwords, URLs, notes and keys are always
+              encrypted.
             </p>
           </div>
         </section>

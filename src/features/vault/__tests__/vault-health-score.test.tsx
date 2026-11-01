@@ -1,16 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import {
-  clearVaultKey,
-  deriveVaultKey,
-  encryptItem,
-  generateSalt,
-  itemAad,
-  setVaultKey,
-} from "@/lib/crypto";
+import { clearVaultKey, deriveVaultKey, generateSalt, setVaultKey } from "@/lib/crypto";
 import type { LoginSecret } from "@/types/vault";
 import { VaultHealthScore } from "../vault-health-score";
+import { sealItem } from "../item-payload";
 import { VaultUserProvider } from "@/providers/vault-user-provider";
 
 const USER_ID = "cuser000000000000000000001";
@@ -32,14 +26,11 @@ const STRONG_SHARED = "Same-Strong-Passw0rd!xyz";
 
 let key: CryptoKey;
 
+/** A v2 row: the name is encrypted with the secret; the server sends name: null. */
 async function row(id: string, name: string, password: string, updatedAt = NOW) {
   const secret: LoginSecret = { username: "u", password, url: "", notes: "" };
-  const { ciphertext, iv } = await encryptItem(
-    key,
-    secret,
-    itemAad({ userId: USER_ID, itemId: id, type: "LOGIN" })
-  );
-  return { id, name, ciphertext, iv, updatedAt };
+  const { ciphertext, iv } = await sealItem(key, { id, type: "LOGIN", name, secret }, USER_ID);
+  return { id, name: null, ciphertext, iv, updatedAt };
 }
 
 beforeEach(async () => {
@@ -66,6 +57,9 @@ describe("VaultHealthScore", () => {
 
     expect(await screen.findByText("1 weak · 2 reused · 1 stale")).toBeTruthy();
     expect(screen.getByText("Weak password")).toBeTruthy();
+    // Names arrive encrypted (name: null) and are decrypted in the browser.
+    expect(screen.getByText("Forum")).toBeTruthy();
+    expect(screen.getByText("Old bank")).toBeTruthy();
     expect(screen.getAllByText("Reused password")).toHaveLength(2);
     expect(screen.getByText("Not updated in a year")).toBeTruthy();
     // Each issue links to its item.

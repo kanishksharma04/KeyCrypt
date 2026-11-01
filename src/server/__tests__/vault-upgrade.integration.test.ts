@@ -152,10 +152,17 @@ describe("v1 → v2 upgrade (browser flow end to end)", () => {
     // Unlocking now takes the v2 path with the SAME master password.
     const unlocked = await unlockVault(MASTER, await metaForUnlock());
     if (unlocked.status !== "unlocked") throw new Error(`unexpected ${unlocked.status}`);
-    const secrets = await Promise.all(
+    // Names moved into the ciphertext; the plain-text column was cleared.
+    expect(after.items.every((i) => i.name === null)).toBe(true);
+    const opened = await Promise.all(
       after.items.map((i) => decryptItem(unlocked.vaultKey, i, aadOf(i)))
     );
-    expect(secrets).toEqual(expect.arrayContaining([{ secret: "alpha" }, { secret: "bravo" }]));
+    expect(opened).toEqual(
+      expect.arrayContaining([
+        { name: "alpha", secret: { secret: "alpha" } },
+        { name: "bravo", secret: { secret: "bravo" } },
+      ])
+    );
     // The old v1 key no longer opens anything.
     await expect(decryptItem(v1Key, after.items[0]!)).rejects.toThrow();
     expect(await db.auditLog.count({ where: { action: "vault.upgraded" } })).toBe(1);
@@ -172,9 +179,14 @@ describe("v1 → v2 upgrade (browser flow end to end)", () => {
     if (!result.ok) throw new Error(result.error);
 
     const items = await db.vaultItem.findMany({ where: { userId } });
-    const secrets = await Promise.all(items.map((i) => decryptItem(result.vaultKey, i, aadOf(i))));
-    expect(secrets).toEqual(
-      expect.arrayContaining([{ secret: "alpha" }, { secret: "bravo" }, { secret: "charlie" }])
+    expect(items.every((i) => i.name === null)).toBe(true);
+    const opened = await Promise.all(items.map((i) => decryptItem(result.vaultKey, i, aadOf(i))));
+    expect(opened).toEqual(
+      expect.arrayContaining([
+        { name: "alpha", secret: { secret: "alpha" } },
+        { name: "bravo", secret: { secret: "bravo" } },
+        { name: "charlie", secret: { secret: "charlie" } },
+      ])
     );
   });
 });

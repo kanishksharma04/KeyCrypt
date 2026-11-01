@@ -8,7 +8,6 @@ import { createTestUser, signInAs } from "@/test/integration/helpers";
 const VALID = {
   id: "1b4e28ba-2fa1-41d2-883f-0016d3cca427", // generated in the browser in real use
   type: "LOGIN" as VaultItemType,
-  name: "GitHub",
   ciphertext: "Y2lwaGVydGV4dA==",
   iv: "AAAAAAAAAAAAAAAA", // 12 bytes
 };
@@ -55,7 +54,7 @@ describe("server action input validation", () => {
   });
 
   it("does not echo the rejected input back", async () => {
-    const result = await createVaultItemAction({ ...VALID, name: "<script>x</script>".repeat(20) });
+    const result = await createVaultItemAction({ ...VALID, iv: "<script>x</script>".repeat(20) });
     expect(JSON.stringify(result)).toBe('{"error":"Invalid input"}');
   });
 
@@ -65,7 +64,6 @@ describe("server action input validation", () => {
 
     const result = await updateVaultItemAction({
       id: created.id,
-      name: VALID.name,
       ciphertext: OVERSIZED_CIPHERTEXT,
       iv: VALID.iv,
     });

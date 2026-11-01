@@ -6,8 +6,6 @@ import {
   decryptItem,
   deriveKek,
   deriveVaultKey,
-  encryptItem,
-  itemAad,
   fromBase64,
   generateSalt,
   generateVaultKey,
@@ -24,6 +22,7 @@ import {
   type VaultMetaForUnlock,
 } from "@/server/vault-actions";
 import { getAllItemsForReEncryptionAction } from "@/server/settings-actions";
+import { sealItem } from "./item-payload";
 
 // Browser-side vault key flows (crypto v2). The master password, the vault key
 // and decrypted items never leave this code; the server only stores salts,
@@ -134,15 +133,17 @@ async function attemptUpgrade(
 
   const items = await Promise.all(
     rows.map(async (row) => {
-      // v1 items have no AAD; v2 binds each one to its row.
-      const plaintext = await decryptItem<unknown>(v1Key, {
+      // v1 items: secret-only payload, no AAD, plain-text name in the row.
+      const secret = await decryptItem<unknown>(v1Key, {
         ciphertext: row.ciphertext,
         iv: row.iv,
       });
-      const { ciphertext, iv } = await encryptItem(
+      // v2: the name moves inside the ciphertext (the server clears the column
+      // in the same transaction) and the item is bound to its row with AAD.
+      const { ciphertext, iv } = await sealItem(
         newKey,
-        plaintext,
-        itemAad({ userId, itemId: row.id, type: row.type })
+        { id: row.id, type: row.type, name: row.name ?? "", secret },
+        userId
       );
       return { id: row.id, ciphertext, iv };
     })

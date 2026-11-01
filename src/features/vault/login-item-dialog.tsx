@@ -8,7 +8,8 @@ import { PasswordGeneratorPopover } from "./password-generator";
 import { toast } from "sonner";
 import { loginItemSchema, type LoginItemInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
-import { getVaultKey, encryptItem, generateItemId, itemAad } from "@/lib/crypto";
+import { getVaultKey, generateItemId } from "@/lib/crypto";
+import { sealItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,17 +74,17 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
         // this ciphertext only decrypts as item `id` of type LOGIN for this user.
         const id = mode === "create" ? generateItemId() : itemId;
         if (!id) return;
-        const { ciphertext, iv } = await encryptItem(
+        // The name is encrypted together with the secret; the server never sees it.
+        const { ciphertext, iv } = await sealItem(
           key,
-          secret,
-          itemAad({ userId, itemId: id, type: "LOGIN" })
+          { id, type: "LOGIN", name: data.name, secret },
+          userId
         );
 
         if (mode === "create") {
           const result = await createVaultItemAction({
             id,
             type: "LOGIN",
-            name: data.name,
             ciphertext,
             iv,
           });
@@ -95,7 +96,6 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
           if (!itemId) return;
           const result = await updateVaultItemAction({
             id: itemId,
-            name: data.name,
             ciphertext,
             iv,
           });

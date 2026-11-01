@@ -158,9 +158,11 @@ export async function upgradeVaultAction(input: {
         if (!exactMatch) throw new VaultChangedError();
 
         for (const item of data.items) {
+          // The name now lives inside the ciphertext: clear the plain-text
+          // column in the same transaction.
           const { count } = await tx.vaultItem.updateMany({
             where: { id: item.id, userId },
-            data: { ciphertext: item.ciphertext, iv: item.iv },
+            data: { ciphertext: item.ciphertext, iv: item.iv, name: null },
           });
           if (count !== 1) throw new VaultChangedError();
         }

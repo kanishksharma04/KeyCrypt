@@ -133,7 +133,7 @@ describe("UnlockForm (v2 vault)", () => {
 describe("UnlockForm (v1 vault)", () => {
   it("upgrades to v2 after the account password is confirmed", async () => {
     const item = await encryptItem(v1Key, { password: "old-secret" });
-    server.getAllItems.mockResolvedValue([{ id: ITEM_ID, type: "LOGIN", ...item }]);
+    server.getAllItems.mockResolvedValue([{ id: ITEM_ID, type: "LOGIN", name: "GitHub", ...item }]);
 
     const user = await submit(v1Meta, MASTER);
     const dialog = await screen.findByRole("dialog");
@@ -153,7 +153,11 @@ describe("UnlockForm (v1 vault)", () => {
     const [reencrypted] = input.items as { ciphertext: string; iv: string }[];
     const key = getVaultKey()!;
     const aad = itemAad({ userId: USER_ID, itemId: ITEM_ID, type: "LOGIN" });
-    expect(await decryptItem(key, reencrypted!, aad)).toEqual({ password: "old-secret" });
+    // The plain-text name moved inside the new ciphertext.
+    expect(await decryptItem(key, reencrypted!, aad)).toEqual({
+      name: "GitHub",
+      secret: { password: "old-secret" },
+    });
     // Bound to its row: without the AAD it does not decrypt.
     await expect(decryptItem(key, reencrypted!)).rejects.toThrow();
     await expect(decryptItem(v1Key, reencrypted!)).rejects.toThrow();

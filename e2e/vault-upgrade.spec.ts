@@ -118,6 +118,9 @@ test("a v1 vault is upgraded to v2 on unlock and keeps every item", async ({ pag
   expect(meta.wrapIv).toBeTruthy();
   const itemsAfter = await db.vaultItem.findMany({ where: { userId }, orderBy: { id: "asc" } });
   expect(itemsAfter.map((i) => i.id)).toEqual(itemsBefore.map((i) => i.id));
+  // Names moved into the ciphertext and the plain-text column was cleared.
+  expect(itemsBefore.map((i) => i.name).sort()).toEqual([LOGIN.name, NOTE.name].sort());
+  expect(itemsAfter.every((i) => i.name === null)).toBe(true);
   itemsAfter.forEach((item, i) => expect(item.ciphertext).not.toBe(itemsBefore[i]!.ciphertext));
 
   // Next unlock takes the v2 path: no upgrade prompt, same master password.

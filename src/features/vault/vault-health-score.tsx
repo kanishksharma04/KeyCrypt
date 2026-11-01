@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Clock, RefreshCw, ShieldCheck } from "lucide-react";
-import { getVaultKey, isVaultUnlocked, decryptItem, itemAad } from "@/lib/crypto";
+import { getVaultKey, isVaultUnlocked } from "@/lib/crypto";
+import { openItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import { computeVaultHealth, type VaultHealth } from "@/lib/vault-health";
 import { getLoginItemsForHealthAction } from "@/server/settings-actions";
@@ -71,14 +72,15 @@ export function VaultHealthScore() {
         await Promise.all(
           res.map(async (row) => {
             try {
-              const secret = await decryptItem<LoginSecret>(
+              // Name and password are decrypted here, in the browser.
+              const { name, secret } = await openItem<LoginSecret>(
                 key,
-                { ciphertext: row.ciphertext, iv: row.iv },
-                itemAad({ userId, itemId: row.id, type: "LOGIN" })
+                { ...row, type: "LOGIN" },
+                userId
               );
               return {
                 id: row.id,
-                name: row.name,
+                name,
                 password: secret.password,
                 updatedAt: row.updatedAt,
               };
