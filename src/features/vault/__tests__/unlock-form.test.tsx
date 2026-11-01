@@ -11,6 +11,7 @@ import {
   generateSalt,
   getVaultKey,
   isVaultUnlocked,
+  itemAad,
   toBase64,
 } from "@/lib/crypto";
 import type { VaultMetaForUnlock } from "@/server/vault-actions";
@@ -55,6 +56,8 @@ vi.mock("@/server/reauth-actions", () => ({
 }));
 
 const MASTER = "Correct-Master-Pass-1!";
+const USER_ID = "cuser000000000000000000001";
+const ITEM_ID = "citem00000000000000000001";
 let v2Meta: VaultMetaForUnlock;
 let v1Meta: VaultMetaForUnlock;
 let v1Key: CryptoKey;
@@ -93,7 +96,7 @@ afterEach(() => {
 
 async function submit(meta: VaultMetaForUnlock, password: string) {
   const user = userEvent.setup();
-  render(<UnlockForm meta={meta} />);
+  render(<UnlockForm meta={meta} userId={USER_ID} />);
   await user.type(screen.getByLabelText("Master password"), password);
   await user.click(screen.getByRole("button", { name: "Unlock vault" }));
   return user;
@@ -119,7 +122,7 @@ describe("UnlockForm (v2 vault)", () => {
 
   it("requires a password before trying anything", async () => {
     const user = userEvent.setup();
-    render(<UnlockForm meta={v2Meta} />);
+    render(<UnlockForm meta={v2Meta} userId={USER_ID} />);
     await user.click(screen.getByRole("button", { name: "Unlock vault" }));
 
     expect(await screen.findByText("Required")).toBeTruthy();
@@ -130,7 +133,7 @@ describe("UnlockForm (v2 vault)", () => {
 describe("UnlockForm (v1 vault)", () => {
   it("upgrades to v2 after the account password is confirmed", async () => {
     const item = await encryptItem(v1Key, { password: "old-secret" });
-    server.getAllItems.mockResolvedValue([{ id: "citem00000000000000000001", ...item }]);
+    server.getAllItems.mockResolvedValue([{ id: ITEM_ID, type: "LOGIN", ...item }]);
 
     const user = await submit(v1Meta, MASTER);
     const dialog = await screen.findByRole("dialog");
@@ -149,7 +152,10 @@ describe("UnlockForm (v1 vault)", () => {
     // The item was re-encrypted under the NEW vault key now in memory.
     const [reencrypted] = input.items as { ciphertext: string; iv: string }[];
     const key = getVaultKey()!;
-    expect(await decryptItem(key, reencrypted!)).toEqual({ password: "old-secret" });
+    const aad = itemAad({ userId: USER_ID, itemId: ITEM_ID, type: "LOGIN" });
+    expect(await decryptItem(key, reencrypted!, aad)).toEqual({ password: "old-secret" });
+    // Bound to its row: without the AAD it does not decrypt.
+    await expect(decryptItem(key, reencrypted!)).rejects.toThrow();
     await expect(decryptItem(v1Key, reencrypted!)).rejects.toThrow();
     expect(JSON.stringify(input)).not.toContain("old-secret");
     expect(JSON.stringify(input)).not.toContain(MASTER);

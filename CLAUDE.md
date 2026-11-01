@@ -37,6 +37,12 @@ decryption happens in the browser.
 - The vault key is held only in memory (`src/lib/crypto/vault-key.ts`) and cleared on lock.
   It is never persisted or sent anywhere.
 - Every encryption uses a fresh random 96-bit IV; payloads are `{ ciphertext, iv }` in base64.
+- **Item AAD (v2)**: every item is encrypted with associated data
+  `"kc:v2|" + userId + "|" + itemId + "|" + type` (`itemAad()` in `src/lib/crypto/aad.ts`), so
+  a ciphertext only decrypts in its own row. Item ids are generated in the browser
+  (`generateItemId()`, UUID v4) before encryption; the server validates the format and
+  rejects duplicates. Client code gets the user id from `useVaultUserId()`
+  (`src/providers/vault-user-provider.tsx`).
 - **Verification blob**: a known plaintext encrypted with the vault key and stored in
   `VaultMeta` (`verificationBlob` + `verificationIv`) alongside the salt. Unlock decrypts
   it client-side to check the master password (`src/lib/crypto/verification.ts`);

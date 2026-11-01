@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { VaultItemType } from "@prisma/client";
+import { Prisma, type VaultItemType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -28,6 +28,8 @@ export async function getVaultItemSummariesAction(): Promise<
 }
 
 export async function createVaultItemAction(input: {
+  /** Generated in the browser (UUID v4) and bound into the item's AAD. */
+  id: string;
   type: VaultItemType;
   name: string;
   ciphertext: string;
@@ -40,16 +42,27 @@ export async function createVaultItemAction(input: {
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
-  const item = await db.vaultItem.create({
-    data: {
-      userId: session.user.id,
-      type: data.type,
-      name: data.name,
-      ciphertext: data.ciphertext,
-      iv: data.iv,
-    },
-    select: { id: true },
-  });
+  let item: { id: string };
+  try {
+    item = await db.vaultItem.create({
+      data: {
+        id: data.id,
+        userId: session.user.id,
+        type: data.type,
+        name: data.name,
+        ciphertext: data.ciphertext,
+        iv: data.iv,
+      },
+      select: { id: true },
+    });
+  } catch (err) {
+    // The id is chosen by the client: refuse to reuse one that already exists
+    // (whoever owns it), never overwrite.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { error: "An item with this id already exists." };
+    }
+    throw err;
+  }
 
   await db.auditLog.create({
     data: { userId: session.user.id, action: "vault.item.create", metadata: { type: data.type } },

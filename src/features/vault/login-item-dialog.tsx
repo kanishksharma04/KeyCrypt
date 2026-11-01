@@ -8,7 +8,8 @@ import { PasswordGeneratorPopover } from "./password-generator";
 import { toast } from "sonner";
 import { loginItemSchema, type LoginItemInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
-import { getVaultKey, encryptItem } from "@/lib/crypto";
+import { getVaultKey, encryptItem, generateItemId, itemAad } from "@/lib/crypto";
+import { useVaultUserId } from "@/providers/vault-user-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string>();
   const [isPending, startTransition] = useTransition();
+  const userId = useVaultUserId();
 
   const {
     register,
@@ -67,10 +69,19 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
           notes: data.notes,
         };
 
-        const { ciphertext, iv } = await encryptItem(key, secret);
+        // The id exists before encryption so it can be bound into the AAD:
+        // this ciphertext only decrypts as item `id` of type LOGIN for this user.
+        const id = mode === "create" ? generateItemId() : itemId;
+        if (!id) return;
+        const { ciphertext, iv } = await encryptItem(
+          key,
+          secret,
+          itemAad({ userId, itemId: id, type: "LOGIN" })
+        );
 
         if (mode === "create") {
           const result = await createVaultItemAction({
+            id,
             type: "LOGIN",
             name: data.name,
             ciphertext,

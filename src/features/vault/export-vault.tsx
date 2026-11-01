@@ -21,9 +21,10 @@ import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dial
 import { FieldError } from "@/features/auth/field-error";
 import type { DecryptedVaultItem } from "@/types/vault";
 import { decryptVaultItem } from "./use-decrypted-items";
+import { useVaultUserId } from "@/providers/vault-user-provider";
 
 /** Fetch every item and decrypt it in the browser. Fails if any item can't be read. */
-async function loadDecryptedVault(): Promise<DecryptedVaultItem[]> {
+async function loadDecryptedVault(userId: string): Promise<DecryptedVaultItem[]> {
   const key = getVaultKey();
   if (!key) throw new Error("Vault is locked. Unlock it and try again.");
 
@@ -31,7 +32,7 @@ async function loadDecryptedVault(): Promise<DecryptedVaultItem[]> {
   if ("error" in rows) throw new Error(rows.error);
 
   try {
-    return await Promise.all(rows.map((row) => decryptVaultItem(key, row)));
+    return await Promise.all(rows.map((row) => decryptVaultItem(key, row, userId)));
   } catch {
     // Never produce a silently incomplete export.
     throw new Error("Some items could not be decrypted, so nothing was exported.");
@@ -44,6 +45,7 @@ async function recordExport(format: ExportFormat) {
 }
 
 export function ExportVault() {
+  const userId = useVaultUserId();
   const [error, setError] = useState<string>();
   const [confirmCsv, setConfirmCsv] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -75,7 +77,7 @@ export function ExportVault() {
 
   const exportEncrypted = handleSubmit(({ exportPassword }) =>
     run("encrypted-json", async () => {
-      const items = await loadDecryptedVault();
+      const items = await loadDecryptedVault(userId);
       // PBKDF2 (600k) + AES-256-GCM under the export password, with a fresh salt.
       const file = await encryptExport(buildExportPayload(items), exportPassword);
       await recordExport("encrypted-json");
@@ -94,7 +96,7 @@ export function ExportVault() {
     setConfirmCsv(false);
     run("csv", async () => {
       await recordExport("csv"); // server requires the recent confirmation
-      const items = await loadDecryptedVault();
+      const items = await loadDecryptedVault(userId);
       downloadFile(exportFilename("csv"), toBitwardenCsv(items), "text/csv;charset=utf-8");
       toast.success(`Unencrypted CSV of ${items.length} items downloaded.`);
     });

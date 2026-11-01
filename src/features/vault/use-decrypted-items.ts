@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getVaultKey, decryptItem } from "@/lib/crypto";
+import { getVaultKey, decryptItem, itemAad } from "@/lib/crypto";
+import { useVaultUserId } from "@/providers/vault-user-provider";
 import type {
   DecryptedVaultItem,
   LoginSecret,
@@ -13,11 +14,20 @@ import type {
 
 // ─── Decrypt helper ──────────────────────────────────────────────────────────
 
+/**
+ * Decrypt one row. The AAD binds the ciphertext to (user, item id, type), so a
+ * ciphertext moved to another row, type or user fails to decrypt.
+ */
 export async function decryptVaultItem(
   key: CryptoKey,
-  row: VaultItemRow
+  row: VaultItemRow,
+  userId: string
 ): Promise<DecryptedVaultItem> {
-  const raw = await decryptItem<unknown>(key, { ciphertext: row.ciphertext, iv: row.iv });
+  const raw = await decryptItem<unknown>(
+    key,
+    { ciphertext: row.ciphertext, iv: row.iv },
+    itemAad({ userId, itemId: row.id, type: row.type })
+  );
   const base = {
     id: row.id,
     name: row.name,
@@ -45,6 +55,7 @@ export async function decryptVaultItem(
  * until the first decryption pass finishes (or while the vault is locked).
  */
 export function useDecryptedItems(items: VaultItemRow[]) {
+  const userId = useVaultUserId();
   const [decrypted, setDecrypted] = useState<DecryptedVaultItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +66,7 @@ export function useDecryptedItems(items: VaultItemRow[]) {
     void Promise.all(
       items.map(async (row) => {
         try {
-          return await decryptVaultItem(key, row);
+          return await decryptVaultItem(key, row, userId);
         } catch {
           // Decryption errors surface as empty secrets so one bad item
           // doesn't hide the rest of the vault.
@@ -74,7 +85,7 @@ export function useDecryptedItems(items: VaultItemRow[]) {
       setDecrypted(results);
       setLoading(false);
     });
-  }, [items]);
+  }, [items, userId]);
 
   return { decrypted, loading };
 }

@@ -14,6 +14,9 @@ export {
 
 export { encryptItem, decryptItem } from "./encryption";
 
+export { itemAad, generateItemId } from "./aad";
+export type { ItemAadContext } from "./aad";
+
 export {
   generateVaultKey,
   wrapVaultKey,

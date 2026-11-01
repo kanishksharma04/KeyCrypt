@@ -18,9 +18,11 @@ import { unlockVault, upgradeVaultToV2 } from "./vault-crypto";
 
 interface UnlockFormProps {
   meta: VaultMetaForUnlock;
+  /** Binds re-encrypted items to their owner during the v1 → v2 upgrade (AAD). */
+  userId: string;
 }
 
-export function UnlockForm({ meta }: UnlockFormProps) {
+export function UnlockForm({ meta, userId }: UnlockFormProps) {
   const router = useRouter();
   const [wrongPassword, setWrongPassword] = useState(false);
   const [notice, setNotice] = useState<string>();
@@ -69,7 +71,7 @@ export function UnlockForm({ meta }: UnlockFormProps) {
     if (!pending) return;
     startTransition(async () => {
       try {
-        const result = await upgradeVaultToV2(pending.masterPassword, pending.v1Key);
+        const result = await upgradeVaultToV2(pending.masterPassword, pending.v1Key, userId);
         if (!result.ok) {
           setNotice(result.error);
           return;

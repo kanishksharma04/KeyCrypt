@@ -6,6 +6,7 @@ import { setupVaultAction } from "@/server/vault-actions";
 import { createTestUser, signInAs } from "@/test/integration/helpers";
 
 const VALID = {
+  id: "1b4e28ba-2fa1-41d2-883f-0016d3cca427", // generated in the browser in real use
   type: "LOGIN" as VaultItemType,
   name: "GitHub",
   ciphertext: "Y2lwaGVydGV4dA==",

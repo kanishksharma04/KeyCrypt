@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Clock, RefreshCw, ShieldCheck } from "lucide-react";
-import { getVaultKey, isVaultUnlocked, decryptItem } from "@/lib/crypto";
+import { getVaultKey, isVaultUnlocked, decryptItem, itemAad } from "@/lib/crypto";
+import { useVaultUserId } from "@/providers/vault-user-provider";
 import { computeVaultHealth, type VaultHealth } from "@/lib/vault-health";
 import { getLoginItemsForHealthAction } from "@/server/settings-actions";
 import type { LoginSecret } from "@/types/vault";
@@ -50,6 +51,7 @@ interface HealthState {
 }
 
 export function VaultHealthScore() {
+  const userId = useVaultUserId();
   const [state, setState] = useState<HealthState | null>(null);
   // Derive the initial value synchronously — avoids a setState call inside the
   // effect body for the "vault locked, nothing to fetch" branch.
@@ -69,10 +71,11 @@ export function VaultHealthScore() {
         await Promise.all(
           res.map(async (row) => {
             try {
-              const secret = await decryptItem<LoginSecret>(key, {
-                ciphertext: row.ciphertext,
-                iv: row.iv,
-              });
+              const secret = await decryptItem<LoginSecret>(
+                key,
+                { ciphertext: row.ciphertext, iv: row.iv },
+                itemAad({ userId, itemId: row.id, type: "LOGIN" })
+              );
               return {
                 id: row.id,
                 name: row.name,
@@ -90,7 +93,7 @@ export function VaultHealthScore() {
       setState({ health: computeVaultHealth(decrypted) });
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   if (loading) {
     return <div className="bg-card h-32 animate-pulse rounded-xl border" aria-hidden="true" />;

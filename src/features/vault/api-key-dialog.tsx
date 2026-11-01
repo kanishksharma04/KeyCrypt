@@ -7,7 +7,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { apiKeySchema, type ApiKeyInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
-import { getVaultKey, encryptItem } from "@/lib/crypto";
+import { getVaultKey, encryptItem, generateItemId, itemAad } from "@/lib/crypto";
+import { useVaultUserId } from "@/providers/vault-user-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +32,7 @@ function ApiKeyForm({
   const [showKey, setShowKey] = useState(false);
   const [serverError, setServerError] = useState<string>();
   const [isPending, startTransition] = useTransition();
+  const userId = useVaultUserId();
 
   const {
     register,
@@ -56,10 +58,19 @@ function ApiKeyForm({
           description: data.description,
           notes: data.notes,
         };
-        const { ciphertext, iv } = await encryptItem(key, secret);
+        // The id exists before encryption so it can be bound into the AAD:
+        // this ciphertext only decrypts as item `id` of type API_KEY for this user.
+        const id = mode === "create" ? generateItemId() : itemId;
+        if (!id) return;
+        const { ciphertext, iv } = await encryptItem(
+          key,
+          secret,
+          itemAad({ userId, itemId: id, type: "API_KEY" })
+        );
 
         if (mode === "create") {
           const result = await createVaultItemAction({
+            id,
             type: "API_KEY",
             name: data.name,
             ciphertext,

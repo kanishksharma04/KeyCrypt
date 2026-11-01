@@ -7,6 +7,7 @@ import {
   deriveKek,
   deriveVaultKey,
   encryptItem,
+  itemAad,
   fromBase64,
   generateSalt,
   generateVaultKey,
@@ -107,14 +108,19 @@ export type UpgradeResult = { ok: true; vaultKey: CryptoKey } | { ok: false; err
  */
 export async function upgradeVaultToV2(
   masterPassword: string,
-  v1Key: CryptoKey
+  v1Key: CryptoKey,
+  userId: string
 ): Promise<UpgradeResult> {
-  const first = await attemptUpgrade(masterPassword, v1Key);
+  const first = await attemptUpgrade(masterPassword, v1Key, userId);
   if (first.ok || first.error !== VAULT_CHANGED_ERROR) return first;
-  return attemptUpgrade(masterPassword, v1Key);
+  return attemptUpgrade(masterPassword, v1Key, userId);
 }
 
-async function attemptUpgrade(masterPassword: string, v1Key: CryptoKey): Promise<UpgradeResult> {
+async function attemptUpgrade(
+  masterPassword: string,
+  v1Key: CryptoKey,
+  userId: string
+): Promise<UpgradeResult> {
   const meta = await getVaultMetaAction();
   if (!meta) return { ok: false, error: "Failed to load vault data." };
   if (meta.cryptoVersion !== 1) return { ok: false, error: "This vault is already upgraded." };
@@ -128,11 +134,16 @@ async function attemptUpgrade(masterPassword: string, v1Key: CryptoKey): Promise
 
   const items = await Promise.all(
     rows.map(async (row) => {
+      // v1 items have no AAD; v2 binds each one to its row.
       const plaintext = await decryptItem<unknown>(v1Key, {
         ciphertext: row.ciphertext,
         iv: row.iv,
       });
-      const { ciphertext, iv } = await encryptItem(newKey, plaintext);
+      const { ciphertext, iv } = await encryptItem(
+        newKey,
+        plaintext,
+        itemAad({ userId, itemId: row.id, type: row.type })
+      );
       return { id: row.id, ciphertext, iv };
     })
   );

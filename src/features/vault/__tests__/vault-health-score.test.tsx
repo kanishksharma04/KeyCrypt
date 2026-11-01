@@ -6,10 +6,20 @@ import {
   deriveVaultKey,
   encryptItem,
   generateSalt,
+  itemAad,
   setVaultKey,
 } from "@/lib/crypto";
 import type { LoginSecret } from "@/types/vault";
 import { VaultHealthScore } from "../vault-health-score";
+import { VaultUserProvider } from "@/providers/vault-user-provider";
+
+const USER_ID = "cuser000000000000000000001";
+const renderScore = () =>
+  render(
+    <VaultUserProvider userId={USER_ID}>
+      <VaultHealthScore />
+    </VaultUserProvider>
+  );
 
 const getLoginItems = vi.fn();
 vi.mock("@/server/settings-actions", () => ({
@@ -24,7 +34,11 @@ let key: CryptoKey;
 
 async function row(id: string, name: string, password: string, updatedAt = NOW) {
   const secret: LoginSecret = { username: "u", password, url: "", notes: "" };
-  const { ciphertext, iv } = await encryptItem(key, secret);
+  const { ciphertext, iv } = await encryptItem(
+    key,
+    secret,
+    itemAad({ userId: USER_ID, itemId: id, type: "LOGIN" })
+  );
   return { id, name, ciphertext, iv, updatedAt };
 }
 
@@ -48,7 +62,7 @@ describe("VaultHealthScore", () => {
       await row("c4", "Old bank", "Unique-Strong-Passw0rd!42", TWO_YEARS_AGO), // stale
     ]);
 
-    render(<VaultHealthScore />);
+    renderScore();
 
     expect(await screen.findByText("1 weak · 2 reused · 1 stale")).toBeTruthy();
     expect(screen.getByText("Weak password")).toBeTruthy();
@@ -72,7 +86,7 @@ describe("VaultHealthScore", () => {
       await row("c2", "B", "Another-Strong-Passw0rd!2"),
     ]);
 
-    render(<VaultHealthScore />);
+    renderScore();
 
     expect(await screen.findByText("No issues found — your logins look strong.")).toBeTruthy();
     expect(screen.getByText("100")).toBeTruthy();
@@ -80,7 +94,7 @@ describe("VaultHealthScore", () => {
 
   it("prompts to add a login when there are none", async () => {
     getLoginItems.mockResolvedValue([]);
-    render(<VaultHealthScore />);
+    renderScore();
     expect(
       await screen.findByText("Add a login item to see your vault health score.")
     ).toBeTruthy();
@@ -88,7 +102,7 @@ describe("VaultHealthScore", () => {
 
   it("renders nothing while the vault is locked", () => {
     clearVaultKey();
-    const { container } = render(<VaultHealthScore />);
+    const { container } = renderScore();
     expect(container.textContent).toBe("");
     expect(getLoginItems).not.toHaveBeenCalled();
   });

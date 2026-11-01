@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth, signOut } from "@/lib/auth";
 import { revokeAllSessions } from "@/lib/session-version";
 import { requireRecentReauth } from "@/lib/reauth";
-import { Prisma } from "@prisma/client";
+import { Prisma, type VaultItemType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import { INVALID_INPUT, changeMasterPasswordInput } from "@/schemas/server";
@@ -70,14 +70,15 @@ export async function getLoginItemsForHealthAction(): Promise<
 // ─── Re-encryption ─────────────────────────────────────────────────────────────
 
 export async function getAllItemsForReEncryptionAction(): Promise<
-  { id: string; ciphertext: string; iv: string }[] | { error: string }
+  { id: string; type: VaultItemType; ciphertext: string; iv: string }[] | { error: string }
 > {
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
+  // id + type are needed to bind each re-encrypted item to its row (AAD).
   const items = await db.vaultItem.findMany({
     where: { userId: session.user.id },
-    select: { id: true, ciphertext: true, iv: true },
+    select: { id: true, type: true, ciphertext: true, iv: true },
   });
 
   return items;

@@ -22,8 +22,14 @@ const base64 = (opts: { min?: number; max?: number; length?: number }) => {
   return s.regex(BASE64_RE);
 };
 
-/** Prisma @default(cuid()) ids: "c" + 24 lowercase alphanumerics. */
-export const idSchema = z.string().regex(/^c[a-z0-9]{24}$/);
+/**
+ * Item ids: server-generated cuids ("c" + 24 lowercase alphanumerics) for older
+ * rows, or UUID v4 generated in the browser (crypto v2 binds the id into the
+ * item's AAD, so it must exist before encryption).
+ */
+export const idSchema = z
+  .string()
+  .regex(/^(c[a-z0-9]{24}|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/);
 
 export const itemTypeSchema = z.nativeEnum(VaultItemType);
 
@@ -48,6 +54,7 @@ export const tokenSchema = z.string().regex(/^[0-9a-f]{64}$/);
 // ─── Action inputs ───────────────────────────────────────────────────────────
 
 export const createVaultItemInput = z.object({
+  id: idSchema,
   type: itemTypeSchema,
   name: itemNameSchema,
   ciphertext: ciphertextSchema,

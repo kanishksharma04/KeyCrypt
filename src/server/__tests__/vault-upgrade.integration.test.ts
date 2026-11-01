@@ -7,6 +7,7 @@ import {
   deriveVaultKey,
   encryptItem,
   generateSalt,
+  itemAad,
   toBase64,
 } from "@/lib/crypto";
 import { db } from "@/lib/db";
@@ -91,6 +92,9 @@ async function metaForUnlock(): Promise<VaultMetaForUnlock> {
   };
 }
 
+/** The v2 AAD binding an item to its row. */
+const aadOf = (i: { id: string; type: string }) => itemAad({ userId, itemId: i.id, type: i.type });
+
 /** Opaque re-encrypted payloads for the given ids. */
 const reencrypted = (ids: string[]) =>
   ids.map((id) => ({ id, ciphertext: "bmV3LWNpcGhlcnRleHQ=", iv: "BBBBBBBBBBBBBBBB" }));
@@ -135,7 +139,7 @@ describe("v1 → v2 upgrade (browser flow end to end)", () => {
 
   it("re-encrypts every item under a wrapped random key, keeping all items intact", async () => {
     const before = await snapshot();
-    const result = await upgradeVaultToV2(MASTER, v1Key);
+    const result = await upgradeVaultToV2(MASTER, v1Key, userId);
     if (!result.ok) throw new Error(result.error);
     expect(result.vaultKey.extractable).toBe(false);
 
@@ -148,7 +152,9 @@ describe("v1 → v2 upgrade (browser flow end to end)", () => {
     // Unlocking now takes the v2 path with the SAME master password.
     const unlocked = await unlockVault(MASTER, await metaForUnlock());
     if (unlocked.status !== "unlocked") throw new Error(`unexpected ${unlocked.status}`);
-    const secrets = await Promise.all(after.items.map((i) => decryptItem(unlocked.vaultKey, i)));
+    const secrets = await Promise.all(
+      after.items.map((i) => decryptItem(unlocked.vaultKey, i, aadOf(i)))
+    );
     expect(secrets).toEqual(expect.arrayContaining([{ secret: "alpha" }, { secret: "bravo" }]));
     // The old v1 key no longer opens anything.
     await expect(decryptItem(v1Key, after.items[0]!)).rejects.toThrow();
@@ -162,11 +168,11 @@ describe("v1 → v2 upgrade (browser flow end to end)", () => {
         data: { userId, type: "LOGIN", name: "charlie", ciphertext, iv },
       });
     };
-    const result = await upgradeVaultToV2(MASTER, v1Key);
+    const result = await upgradeVaultToV2(MASTER, v1Key, userId);
     if (!result.ok) throw new Error(result.error);
 
     const items = await db.vaultItem.findMany({ where: { userId } });
-    const secrets = await Promise.all(items.map((i) => decryptItem(result.vaultKey, i)));
+    const secrets = await Promise.all(items.map((i) => decryptItem(result.vaultKey, i, aadOf(i))));
     expect(secrets).toEqual(
       expect.arrayContaining([{ secret: "alpha" }, { secret: "bravo" }, { secret: "charlie" }])
     );
@@ -230,7 +236,7 @@ describe("upgradeVaultAction rejects incomplete or forged upgrades (KC-18 checks
   });
 
   it("refuses to upgrade a vault that is already v2", async () => {
-    const ok = await upgradeVaultToV2(MASTER, v1Key);
+    const ok = await upgradeVaultToV2(MASTER, v1Key, userId);
     if (!ok.ok) throw new Error(ok.error);
     const before = await snapshot();
     const result = await upgradeVaultAction({

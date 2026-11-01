@@ -28,6 +28,7 @@ export default async function VaultUnlockPage() {
 
   return (
     <UnlockForm
+      userId={session.user.id}
       meta={{
         cryptoVersion: vaultMeta.cryptoVersion,
         kdf: vaultMeta.kdf,

@@ -8,12 +8,17 @@ import {
   decryptItem,
   deriveVaultKey,
   generateSalt,
+  itemAad,
   setVaultKey,
 } from "@/lib/crypto";
+import { VaultUserProvider } from "@/providers/vault-user-provider";
 import { LoginItemDialog } from "../login-item-dialog";
 import { SecureNoteDialog } from "../secure-note-dialog";
 import { ApiKeyDialog } from "../api-key-dialog";
 import { WifiPasswordDialog } from "../wifi-password-dialog";
+
+const USER_ID = "cuser000000000000000000001";
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 const createVaultItemAction = vi.fn();
 vi.mock("@/server/vault-item-actions", () => ({
@@ -131,7 +136,11 @@ describe.each(CASES)(
   ({ type, Dialog, nameField, name, fields, secret, sensitive }) => {
     function renderDialog() {
       const onOpenChange = vi.fn();
-      render(<Dialog open onOpenChange={onOpenChange} mode="create" />);
+      render(
+        <VaultUserProvider userId={USER_ID}>
+          <Dialog open onOpenChange={onOpenChange} mode="create" />
+        </VaultUserProvider>
+      );
       return { user: userEvent.setup(), onOpenChange };
     }
 
@@ -153,18 +162,20 @@ describe.each(CASES)(
       const [args] = createVaultItemAction.mock.calls[0] as [Record<string, unknown>];
 
       // Exactly these fields reach the server; the name is plain text by design.
-      expect(Object.keys(args).sort()).toEqual(["ciphertext", "iv", "name", "type"]);
+      expect(Object.keys(args).sort()).toEqual(["ciphertext", "id", "iv", "name", "type"]);
       expect(args).toMatchObject({ type, name });
+      // The id is generated in the browser, before encryption.
+      expect(args.id).toMatch(UUID_V4);
 
       const serialized = JSON.stringify(createVaultItemAction.mock.calls);
       for (const plaintext of sensitive) expect(serialized).not.toContain(plaintext);
 
-      // And the ciphertext really is the secret, encrypted under the vault key.
-      const decrypted = await decryptItem(key, {
-        ciphertext: args.ciphertext as string,
-        iv: args.iv as string,
-      });
-      expect(decrypted).toEqual(secret);
+      // And the ciphertext really is the secret, encrypted under the vault key
+      // and bound to this user, item id and type (AAD): only that row opens it.
+      const payload = { ciphertext: args.ciphertext as string, iv: args.iv as string };
+      const aad = itemAad({ userId: USER_ID, itemId: args.id as string, type });
+      expect(await decryptItem(key, payload, aad)).toEqual(secret);
+      await expect(decryptItem(key, payload)).rejects.toThrow();
       await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     });
   }

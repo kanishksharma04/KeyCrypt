@@ -6,7 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { secureNoteSchema, type SecureNoteInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
-import { getVaultKey, encryptItem } from "@/lib/crypto";
+import { getVaultKey, encryptItem, generateItemId, itemAad } from "@/lib/crypto";
+import { useVaultUserId } from "@/providers/vault-user-provider";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/features/auth/field-error";
@@ -28,6 +29,7 @@ function SecureNoteForm({
 }) {
   const [serverError, setServerError] = useState<string>();
   const [isPending, startTransition] = useTransition();
+  const userId = useVaultUserId();
 
   const {
     register,
@@ -49,10 +51,19 @@ function SecureNoteForm({
         }
 
         const secret: SecureNoteSecret = { content: data.content };
-        const { ciphertext, iv } = await encryptItem(key, secret);
+        // The id exists before encryption so it can be bound into the AAD:
+        // this ciphertext only decrypts as item `id` of type SECURE_NOTE for this user.
+        const id = mode === "create" ? generateItemId() : itemId;
+        if (!id) return;
+        const { ciphertext, iv } = await encryptItem(
+          key,
+          secret,
+          itemAad({ userId, itemId: id, type: "SECURE_NOTE" })
+        );
 
         if (mode === "create") {
           const result = await createVaultItemAction({
+            id,
             type: "SECURE_NOTE",
             name: data.name,
             ciphertext,
