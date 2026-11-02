@@ -36,8 +36,9 @@ function buildCsp(nonce: string): string {
     // Self-hosted fonts via next/font; data: for inline SVG backgrounds.
     "img-src 'self' data:",
     "font-src 'self'",
-    // Server Actions POST to the same origin; no external API calls.
-    "connect-src 'self'",
+    // Server Actions POST to the same origin. The only external call is the
+    // opt-in breached-password check (5-char SHA-1 prefixes, src/lib/crypto/breach.ts).
+    "connect-src 'self' https://api.pwnedpasswords.com",
     "object-src 'none'",
     "base-uri 'self'",
     // Restricts form submission targets; defence against phishing via form hijack.

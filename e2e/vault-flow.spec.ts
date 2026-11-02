@@ -238,4 +238,29 @@ test("sign up, store four items, change master password, and read them all back"
   await page.getByRole("link", { name: "Dashboard" }).click();
   await expect(page).toHaveURL(/\/vault\/dashboard$/);
   await expect(page.getByRole("heading", { name: "Vault health" })).toBeVisible();
+
+  // Opt-in breached-password check: the CSP lets the browser call the range API,
+  // and only 5-hex-char prefixes go out. (Stubbed here: no real network call.)
+  const { createHash } = await import("crypto");
+  const loginHash = createHash("sha1").update(LOGIN.password).digest("hex").toUpperCase();
+  const rangeRequests: string[] = [];
+  await page.route("https://api.pwnedpasswords.com/range/*", async (route) => {
+    const request = route.request();
+    rangeRequests.push(request.url());
+    expect(request.headers()["add-padding"]).toBe("true");
+    const prefix = request.url().slice(-5);
+    const body = prefix === loginHash.slice(0, 5) ? `${loginHash.slice(5)}:7\r\n` : "";
+    await route.fulfill({
+      status: 200,
+      contentType: "text/plain",
+      headers: { "access-control-allow-origin": "*" },
+      body: `${body}${"0".repeat(35)}:0`,
+    });
+  });
+  await page.getByRole("button", { name: "Check for breached passwords" }).click();
+  await expect(
+    page.getByText("1 of your passwords appeared in known data breaches. Change them.")
+  ).toBeVisible();
+  await expect(page.getByText("Found in a data breach")).toBeVisible();
+  expect(rangeRequests).toEqual([`https://api.pwnedpasswords.com/range/${loginHash.slice(0, 5)}`]);
 });

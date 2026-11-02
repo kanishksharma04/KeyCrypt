@@ -41,6 +41,12 @@ and decryption happens in the browser.
   1 vaults (vaultKey = PBKDF2(master, salt)) are upgraded on unlock (`upgradeVaultAction`,
   needs a recent account-password confirmation); an unlocked vault is always v2.
   Browser-side flows live in `src/features/vault/vault-crypto.ts`.
+- **Password strength / breaches**: `estimatePasswordStrength` (`@/lib/crypto`) is the one
+  strength function for typed passwords; it uses zxcvbn (`@zxcvbn-ts/*`, lazy-loaded via
+  `loadPasswordStrengthEstimator()`) and a character-class estimate until it loads. The opt-in
+  breached-password check (`countPasswordBreaches`, `src/lib/crypto/breach.ts`) sends only the
+  first 5 hex chars of each SHA-1 to `api.pwnedpasswords.com/range/` (with `Add-Padding`) from
+  the browser, the only external origin in the CSP `connect-src`.
 - The vault key is held only in memory (`src/lib/crypto/vault-key.ts`) and cleared on lock.
   It is never persisted or sent anywhere.
 - Every encryption uses a fresh random 96-bit IV; payloads are `{ ciphertext, iv }` in base64.

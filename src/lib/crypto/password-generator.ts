@@ -1,5 +1,7 @@
 // All password generation uses crypto.getRandomValues — never Math.random.
 
+import { zxcvbnStrength } from "./password-strength";
+
 const CHARSETS = {
   lowercase: "abcdefghijklmnopqrstuvwxyz",
   uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -92,11 +94,16 @@ export function getPasswordStrength(options: PasswordOptions): PasswordStrength 
 /**
  * Estimate the strength of an existing (possibly human-chosen) password
  * string, as opposed to getPasswordStrength which scores generator options
- * before generation. Detects which character classes are present and reuses
- * the same length × log2(poolSize) approximation — not a full strength
- * library like zxcvbn, but enough to flag genuinely weak vault entries.
+ * before generation. The one strength function for typed passwords: master
+ * password forms and vault health use it.
+ *
+ * Backed by zxcvbn once loadPasswordStrengthEstimator() has resolved (it is
+ * lazy-loaded); before that, a character-class estimate (length ×
+ * log2(poolSize)) is used. The return shape is the same either way.
  */
 export function estimatePasswordStrength(password: string): PasswordStrength {
+  const zxcvbn = zxcvbnStrength(password);
+  if (zxcvbn) return zxcvbn;
   if (!password) return bitsToStrength(0);
 
   let poolSize = 0;

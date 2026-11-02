@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Clock, RefreshCw, ShieldCheck } from "lucide-react";
-import { getVaultKey, isVaultUnlocked } from "@/lib/crypto";
+import { AlertTriangle, Clock, Loader2, RefreshCw, ShieldCheck, ShieldX } from "lucide-react";
+import {
+  countPasswordBreaches,
+  getVaultKey,
+  isVaultUnlocked,
+  loadPasswordStrengthEstimator,
+} from "@/lib/crypto";
+import { Button } from "@/components/ui/button";
 import { openItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import { computeVaultHealth, type VaultHealth } from "@/lib/vault-health";
@@ -12,6 +18,7 @@ import type { LoginSecret } from "@/types/vault";
 import { cn } from "@/lib/utils";
 
 const REASON_META = {
+  breached: { label: "Found in a data breach", Icon: ShieldX, color: "text-red-600" },
   weak: { label: "Weak password", Icon: AlertTriangle, color: "text-red-500" },
   reused: { label: "Reused password", Icon: RefreshCw, color: "text-amber-500" },
   old: { label: "Not updated in a year", Icon: Clock, color: "text-muted-foreground" },
@@ -51,6 +58,39 @@ interface HealthState {
   health: VaultHealth;
 }
 
+type BreachCheck =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "done" }
+  | { status: "error"; message: string };
+
+/** Fetch and decrypt every login's name and password, in the browser. */
+async function loadLoginSecrets(key: CryptoKey, userId: string) {
+  const res = await getLoginItemsForHealthAction();
+  if ("error" in res) return null;
+  const decrypted = await Promise.all(
+    res.map(async (row) => {
+      try {
+        const { name, secret } = await openItem<LoginSecret>(
+          key,
+          { ...row, type: "LOGIN" },
+          userId
+        );
+        return { id: row.id, name, password: secret.password, updatedAt: row.updatedAt };
+      } catch {
+        // Skip items that fail to decrypt rather than let one bad item block the score.
+        return null;
+      }
+    })
+  );
+  return decrypted.filter((d): d is NonNullable<typeof d> => d !== null);
+}
+
+/** zxcvbn is lazy-loaded; if it can't load, the built-in estimate is used. */
+function loadStrengthEstimator(): Promise<void> {
+  return loadPasswordStrengthEstimator().catch(() => undefined);
+}
+
 export function VaultHealthScore() {
   const userId = useVaultUserId();
   const [state, setState] = useState<HealthState | null>(null);
@@ -58,44 +98,37 @@ export function VaultHealthScore() {
   // effect body for the "vault locked, nothing to fetch" branch.
   const [loading, setLoading] = useState(() => isVaultUnlocked());
 
+  const [breachCheck, setBreachCheck] = useState<BreachCheck>({ status: "idle" });
+
   useEffect(() => {
     const key = getVaultKey();
     if (!key) return;
 
-    void getLoginItemsForHealthAction().then(async (res) => {
-      if ("error" in res) {
-        setLoading(false);
-        return;
-      }
-
-      const decrypted = (
-        await Promise.all(
-          res.map(async (row) => {
-            try {
-              // Name and password are decrypted here, in the browser.
-              const { name, secret } = await openItem<LoginSecret>(
-                key,
-                { ...row, type: "LOGIN" },
-                userId
-              );
-              return {
-                id: row.id,
-                name,
-                password: secret.password,
-                updatedAt: row.updatedAt,
-              };
-            } catch {
-              // Skip items that fail to decrypt rather than let one bad item block the score.
-              return null;
-            }
-          })
-        )
-      ).filter((d): d is NonNullable<typeof d> => d !== null);
-
-      setState({ health: computeVaultHealth(decrypted) });
+    void Promise.all([loadLoginSecrets(key, userId), loadStrengthEstimator()]).then(([logins]) => {
+      if (logins) setState({ health: computeVaultHealth(logins) });
       setLoading(false);
     });
   }, [userId]);
+
+  // Opt-in: only 5-character SHA-1 prefixes leave the browser (see breach.ts).
+  async function checkBreaches() {
+    const key = getVaultKey();
+    if (!key) return;
+    setBreachCheck({ status: "checking" });
+    try {
+      const logins = await loadLoginSecrets(key, userId);
+      if (!logins) throw new Error("load failed");
+      const counts = await countPasswordBreaches(logins.map((l) => l.password));
+      const breaches = new Map(logins.map((l, i) => [l.id, counts[i] ?? 0]));
+      setState({ health: computeVaultHealth(logins, breaches) });
+      setBreachCheck({ status: "done" });
+    } catch {
+      setBreachCheck({
+        status: "error",
+        message: "Couldn't check right now. Try again later.",
+      });
+    }
+  }
 
   if (loading) {
     return <div className="bg-card h-32 animate-pulse rounded-xl border" aria-hidden="true" />;
@@ -126,7 +159,12 @@ export function VaultHealthScore() {
           <p className="text-muted-foreground mt-0.5 text-xs">
             {health.issues.length === 0
               ? "No issues found — your logins look strong."
-              : `${health.weakCount} weak · ${health.reusedCount} reused · ${health.oldCount} stale`}
+              : [
+                  ...(health.breachedCount ? [`${health.breachedCount} breached`] : []),
+                  `${health.weakCount} weak`,
+                  `${health.reusedCount} reused`,
+                  `${health.oldCount} stale`,
+                ].join(" · ")}
           </p>
         </div>
         {health.score === 100 && (
@@ -158,6 +196,40 @@ export function VaultHealthScore() {
           )}
         </ul>
       )}
+
+      <div className="mt-4 space-y-2 border-t pt-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void checkBreaches()}
+            disabled={breachCheck.status === "checking"}
+          >
+            {breachCheck.status === "checking" ? (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <ShieldX className="size-3.5" aria-hidden="true" />
+            )}
+            Check for breached passwords
+          </Button>
+          <p role="status" className="text-xs">
+            {breachCheck.status === "done" &&
+              (health.breachedCount
+                ? `${health.breachedCount} of your passwords appeared in known data breaches. Change them.`
+                : "None of your passwords appear in known data breaches.")}
+            {breachCheck.status === "error" && (
+              <span className="text-destructive">{breachCheck.message}</span>
+            )}
+          </p>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Checks your passwords against Have I Been Pwned&apos;s Pwned Passwords list. Each password
+          is hashed (SHA-1) in this browser and only the first 5 characters of the hash are sent to
+          api.pwnedpasswords.com; the matches that come back are compared here. Your passwords and
+          their full hashes never leave this device, and KeyCrypt&apos;s server isn&apos;t involved.
+        </p>
+      </div>
     </div>
   );
 }

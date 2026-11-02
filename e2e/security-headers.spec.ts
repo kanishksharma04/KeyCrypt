@@ -22,6 +22,9 @@ test("the home page sends a nonce-based CSP without unsafe-inline scripts", asyn
   expect(scriptSrc).not.toContain("'unsafe-eval'");
   expect(scriptSrc).toContain("'wasm-unsafe-eval'");
 
+  // Same origin, plus the opt-in breached-password check (k-anonymity range API).
+  expect(directives["connect-src"]).toEqual(["'self'", "https://api.pwnedpasswords.com"]);
+
   expect(response.headers()["strict-transport-security"]).toContain("max-age=");
 });
 

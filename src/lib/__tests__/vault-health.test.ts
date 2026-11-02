@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
+import { loadPasswordStrengthEstimator } from "@/lib/crypto";
 import { computeVaultHealth } from "../vault-health";
+
+// Vault health runs with zxcvbn loaded, as in the app.
+beforeAll(() => loadPasswordStrengthEstimator());
 
 const NOW = new Date().toISOString();
 const OLD = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString();
@@ -13,6 +17,7 @@ describe("computeVaultHealth", () => {
       weakCount: 0,
       reusedCount: 0,
       oldCount: 0,
+      breachedCount: null,
       issues: [],
     });
   });
@@ -64,12 +69,53 @@ describe("computeVaultHealth", () => {
       { id: "c", name: "Reused two", password: "SamePwdXYZ123!", updatedAt: NOW },
       { id: "d", name: "Old one", password: "Zx9!qLmP7&Tr2^Wc4nBv6y", updatedAt: OLD },
     ]);
-    // penalty = (1/4)*50 + (2/4)*35 + (1/4)*15 = 12.5 + 17.5 + 3.75 = 33.75 → score 66
+    // penalty = (1/4)*30 + (2/4)*25 + (1/4)*10 = 7.5 + 12.5 + 2.5 = 22.5 → score 78
     expect(health.total).toBe(4);
     expect(health.weakCount).toBe(1);
     expect(health.reusedCount).toBe(2);
     expect(health.oldCount).toBe(1);
-    expect(health.score).toBe(66);
+    expect(health.breachedCount).toBeNull();
+    expect(health.score).toBe(78);
+  });
+
+  it("flags a common password zxcvbn sees through, even with all character classes", () => {
+    const health = computeVaultHealth([
+      { id: "1", name: "Router", password: "P@ssw0rd!", updatedAt: NOW },
+    ]);
+    expect(health.weakCount).toBe(1);
+  });
+
+  it("includes breached passwords in the issues and the score", () => {
+    const items = [
+      { id: "1", name: "Forum", password: "Zx9!qLmP7&Tr2^Wc4nBv6y", updatedAt: NOW },
+      { id: "2", name: "Bank", password: "Tr0ub4dor&3xtraLong!Pw", updatedAt: NOW },
+    ];
+    const health = computeVaultHealth(
+      items,
+      new Map([
+        ["1", 12],
+        ["2", 0],
+      ])
+    );
+    expect(health.breachedCount).toBe(1);
+    expect(health.issues).toEqual([{ itemId: "1", name: "Forum", reason: "breached" }]);
+    // penalty = (1/2)*35 = 17.5 → 82.5 → 83
+    expect(health.score).toBe(83);
+
+    // Checked and clean: 0, not null.
+    expect(computeVaultHealth(items, new Map()).breachedCount).toBe(0);
+    expect(computeVaultHealth([], new Map()).breachedCount).toBe(0);
+  });
+
+  it("lists breached issues first", () => {
+    const health = computeVaultHealth(
+      [
+        { id: "a", name: "Weak", password: "abc", updatedAt: NOW },
+        { id: "b", name: "Breached", password: "Zx9!qLmP7&Tr2^Wc4nBv6y", updatedAt: OLD },
+      ],
+      new Map([["b", 3]])
+    );
+    expect(health.issues.map((i) => i.reason)).toEqual(["breached", "weak", "old"]);
   });
 
   it("never scores below 0", () => {

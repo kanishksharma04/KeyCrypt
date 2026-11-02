@@ -27,6 +27,13 @@ reset it or confirm it (it stores only the Argon2id hash), the session cookie, a
 emails for rate limiting. From the ciphertext it can tell how many items you have and roughly how
 large each one is. Each audit entry records the IP address and browser (user agent) of the request; you can see them under Settings → Recent activity.
 
+**Breached-password check (opt-in).** The "Check for breached passwords" button in vault health
+asks [Have I Been Pwned](https://haveibeenpwned.com/Passwords) directly from your browser. Each
+password is hashed with SHA-1 in the browser and only the first 5 hex characters of the hash are
+sent (k-anonymity, with response padding); the returned suffixes are compared locally. Neither
+your passwords nor their full hashes leave the browser, and KeyCrypt's server is not involved.
+Have I Been Pwned sees those prefixes and your IP address.
+
 ```
 vaultKey   = random 256-bit AES-GCM key (generated in the browser)
 kek        = Argon2id(masterPassword, salt, 64 MiB, 3 iterations, parallelism 1)
@@ -59,7 +66,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 ### Vault UX
 
 - **Command palette** — `⌘K` / `Ctrl+K` for quick navigation, item search, and actions (new item, lock vault, toggle theme)
-- **Vault health score** — client-side detection of weak, reused, and stale passwords; decrypted data never leaves the browser
+- **Vault health score** — client-side detection of weak (zxcvbn), reused, and stale passwords, plus an opt-in breached-password check (k-anonymity, Have I Been Pwned); decrypted data never leaves the browser
 - **View dialog** — reveal fields with eye toggle, one-click copy with ✓ checkmark feedback
 - **Password generator** — configurable length, character sets, live entropy score
 - **Recovery kit** — a one-time recovery key (shown at setup, regenerable in Settings) that unlocks the vault and lets you set a new master password if you forget it
@@ -252,7 +259,7 @@ Never set those two variables in a real deployment.
 ### August 11, 2026
 
 - **Command palette** — `⌘K` launcher for navigation, item search, and quick actions (new item, lock vault, toggle theme)
-- **Vault health score** — dashboard widget flagging weak, reused, and stale passwords, computed entirely client-side
+- **Vault health score** — dashboard widget flagging weak (zxcvbn), reused, stale and (opt-in) breached passwords, computed client-side
 - Removed the white background baked into the favicon
 
 ### June 30, 2026
@@ -326,7 +333,7 @@ src/
 ├── lib/
 │   ├── auth.ts             # Auth.js configuration (Credentials provider, JWT sessions)
 │   ├── crypto/             # Web Crypto API — key derivation, encryption, verification (sole encryption surface)
-│   ├── vault-health.ts     # Client-side weak/reused/stale password detection
+│   ├── vault-health.ts     # Client-side weak/reused/stale/breached password scoring
 │   ├── rate-limit.ts       # In-memory rate limiting
 │   └── db.ts               # Prisma client singleton
 ├── providers/              # ThemeProvider, VaultLockProvider, CommandPaletteProvider

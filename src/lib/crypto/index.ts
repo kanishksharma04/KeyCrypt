@@ -82,3 +82,9 @@ export {
 } from "./password-generator";
 
 export type { PasswordOptions, PasswordStrength } from "./password-generator";
+export {
+  loadPasswordStrengthEstimator,
+  isPasswordStrengthEstimatorLoaded,
+} from "./password-strength";
+
+export { countPasswordBreaches, sha1Hex, BreachCheckError, PWNED_PASSWORDS_ORIGIN } from "./breach";

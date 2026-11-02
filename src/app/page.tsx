@@ -361,7 +361,9 @@ export default async function HomePage() {
               your email and name, each item&apos;s type, which items are favourites, when items
               were created and changed, and an activity log of account events (with the IP address
               and browser for each, kept for 180 days). Item names, usernames, passwords, URLs,
-              notes and keys are always encrypted.
+              notes and keys are always encrypted. The optional breached-password check talks to
+              Have I Been Pwned from your browser and sends only the first 5 characters of each
+              password&apos;s SHA-1 hash.
             </p>
           </div>
         </section>

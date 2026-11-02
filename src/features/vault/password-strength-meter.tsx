@@ -1,6 +1,11 @@
 "use client";
 
-import { estimatePasswordStrength } from "@/lib/crypto";
+import { useEffect, useState } from "react";
+import {
+  estimatePasswordStrength,
+  isPasswordStrengthEstimatorLoaded,
+  loadPasswordStrengthEstimator,
+} from "@/lib/crypto";
 import { cn } from "@/lib/utils";
 
 // The one strength meter for typed passwords (master password setup and
@@ -9,7 +14,28 @@ import { cn } from "@/lib/utils";
 
 const BAR_COLORS = ["bg-destructive", "bg-orange-500", "bg-yellow-500", "bg-emerald-500"] as const;
 
+/**
+ * Starts loading zxcvbn (lazy) and re-renders once it is ready, so the meter
+ * switches from the built-in estimate to zxcvbn's verdict.
+ */
+function useStrengthEstimator(): void {
+  const [, setReady] = useState(isPasswordStrengthEstimatorLoaded);
+  useEffect(() => {
+    if (isPasswordStrengthEstimatorLoaded()) return;
+    let active = true;
+    loadPasswordStrengthEstimator().then(
+      () => active && setReady(true),
+      () => undefined // keep the built-in estimate
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+}
+
 export function PasswordStrengthMeter({ password }: { password: string }) {
+  useStrengthEstimator();
+
   // Keep the layout stable while the field is empty.
   if (!password) return <div className="h-7" />;
 
