@@ -11,62 +11,12 @@ import { setupVaultAction } from "@/server/vault-actions";
 import { setVaultKey } from "@/lib/crypto";
 import { createVaultKeys } from "./vault-crypto";
 import { RecoveryKitDisplay } from "./recovery-kit-display";
+import { PasswordStrengthMeter } from "./password-strength-meter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError } from "@/features/auth/field-error";
 import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dialog";
 import { isSameAsAccountPassword, PASSWORD_REUSE_ERROR } from "@/lib/password-reuse";
-import { cn } from "@/lib/utils";
-
-function strengthScore(pw: string): 0 | 1 | 2 | 3 | 4 {
-  if (!pw) return 0;
-  let s = 0;
-  if (pw.length >= 12) s++;
-  if (pw.length >= 16) s++;
-  if (/[A-Z]/.test(pw)) s++;
-  if (/[0-9]/.test(pw)) s++;
-  if (/[^a-zA-Z0-9]/.test(pw)) s++;
-  return Math.min(s, 4) as 0 | 1 | 2 | 3 | 4;
-}
-
-const STRENGTH_LABELS = ["", "Weak", "Fair", "Good", "Strong"] as const;
-const STRENGTH_BAR_COLORS = [
-  "",
-  "bg-destructive",
-  "bg-orange-500",
-  "bg-yellow-500",
-  "bg-emerald-500",
-] as const;
-
-function StrengthMeter({ password }: { password: string }) {
-  const score = strengthScore(password);
-
-  if (!password) return <div className="h-7" />;
-
-  return (
-    <div className="space-y-1">
-      <div
-        className="flex gap-1"
-        role="meter"
-        aria-label={`Password strength: ${STRENGTH_LABELS[score]}`}
-        aria-valuenow={score}
-        aria-valuemin={0}
-        aria-valuemax={4}
-      >
-        {([1, 2, 3, 4] as const).map((i) => (
-          <div
-            key={i}
-            className={cn(
-              "h-1 flex-1 rounded-full transition-colors duration-300",
-              score >= i ? STRENGTH_BAR_COLORS[score] : "bg-muted"
-            )}
-          />
-        ))}
-      </div>
-      <p className="text-muted-foreground text-xs">{STRENGTH_LABELS[score]}</p>
-    </div>
-  );
-}
 
 export function SetupMasterPasswordForm({ userId }: { userId: string }) {
   const router = useRouter();
@@ -197,7 +147,7 @@ export function SetupMasterPasswordForm({ userId }: { userId: string }) {
             aria-invalid={!!errors.masterPassword}
             {...register("masterPassword", masterPasswordRegister)}
           />
-          <StrengthMeter password={masterPassword} />
+          <PasswordStrengthMeter password={masterPassword} />
           <FieldError id="mp-error" message={errors.masterPassword?.message} />
         </div>
 

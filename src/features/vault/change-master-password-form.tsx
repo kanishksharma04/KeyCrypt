@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { changeMasterPasswordSchema, type ChangeMasterPasswordInput } from "@/schemas/vault";
 import { changeMasterPassword } from "./change-master-password";
+import { PasswordStrengthMeter } from "./password-strength-meter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dialog";
@@ -29,6 +30,8 @@ export function ChangeMasterPasswordForm() {
   });
   const [serverError, setServerError] = useState<string>();
   const [isPending, startTransition] = useTransition();
+  // Raw value for the strength meter (watch() doesn't fit React Compiler's memoization).
+  const [newPassword, setNewPassword] = useState("");
 
   const {
     register,
@@ -69,6 +72,7 @@ export function ChangeMasterPasswordForm() {
 
         toast.success("Master password changed successfully.");
         reset();
+        setNewPassword("");
       } catch {
         setServerError("An unexpected error occurred. Please try again.");
       }
@@ -143,7 +147,10 @@ export function ChangeMasterPasswordForm() {
               className="pr-9"
               aria-invalid={!!errors.newPassword}
               aria-describedby={errors.newPassword ? "cmp-new-error" : undefined}
-              {...register("newPassword")}
+              {...register("newPassword", {
+                onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewPassword(e.target.value),
+              })}
             />
             <Button
               type="button"
@@ -160,6 +167,7 @@ export function ChangeMasterPasswordForm() {
               )}
             </Button>
           </div>
+          <PasswordStrengthMeter password={newPassword} />
           <FieldError id="cmp-new-error" message={errors.newPassword?.message} />
           <p className="text-muted-foreground text-xs">
             Min 12 characters — must include uppercase, number, and symbol.
