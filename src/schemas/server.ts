@@ -153,6 +153,12 @@ export const recoverVaultInput = z.object({
   newWrapIv: ivSchema,
 });
 
+/** A 6-digit TOTP code (a space in the middle is allowed). */
+export const totpCodeInput = z.object({ code: z.string().regex(/^\d{3}\s?\d{3}$/) });
+
+/** A TOTP code or a one-time backup code ("XXXXX-XXXXX", any case/spacing). */
+export const secondFactorInput = z.object({ code: z.string().trim().min(6).max(32) });
+
 export const recordVaultExportInput = z.object({
   format: z.enum(["encrypted-json", "csv"]),
 });

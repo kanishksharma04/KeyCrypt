@@ -40,6 +40,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/keycrypt_ci
       AUTH_SECRET: ci-only-dummy-secret-not-used-anywhere-0123456789
+      TOTP_ENCRYPTION_KEY: Y2ktb25seS1kdW1teS10b3RwLWtleS0wMTIzNDU2Nzg=
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: "1"
 

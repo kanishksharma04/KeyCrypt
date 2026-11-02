@@ -17,6 +17,19 @@ export { encryptItem, decryptItem } from "./encryption";
 export { itemAad, generateItemId } from "./aad";
 
 export {
+  generateTotpSecret,
+  totpProvisioningUri,
+  generateTotpCode,
+  verifyTotpCode,
+  generateBackupCodes,
+  normalizeBackupCode,
+  encryptTotpSecret,
+  decryptTotpSecret,
+  TotpKeyError,
+  TOTP_ISSUER,
+} from "./totp";
+
+export {
   generateRecoveryKey,
   parseRecoveryKey,
   formatRecoveryKey,

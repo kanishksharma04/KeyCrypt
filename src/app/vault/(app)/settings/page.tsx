@@ -8,12 +8,15 @@ import { RecoveryKitSettings } from "@/features/vault/recovery-kit-settings";
 import { db } from "@/lib/db";
 import { getRecentActivityAction } from "@/server/activity-actions";
 import { RecentActivity } from "@/features/vault/recent-activity";
+import { getTwoFactorStatusAction } from "@/server/two-factor-actions";
+import { TwoFactorSettings } from "@/features/vault/two-factor-settings";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session) redirect("/auth/signin");
 
   const activity = await getRecentActivityAction();
+  const twoFactor = await getTwoFactorStatusAction();
   const vaultMeta = await db.vaultMeta.findUnique({
     where: { userId: session.user.id },
     select: { recoveryCreatedAt: true },
@@ -50,6 +53,24 @@ export default async function SettingsPage() {
         </p>
         <div className="bg-card rounded-xl border p-4 shadow-xs">
           <ChangeMasterPasswordForm />
+        </div>
+      </section>
+
+      {/* Two-factor sign-in */}
+      <section aria-labelledby="two-factor-heading" className="mb-10">
+        <h2 id="two-factor-heading" className="mb-1 text-base font-semibold">
+          Two-factor sign-in
+        </h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          Ask for a code from your authenticator app whenever you sign in. This protects your
+          account; your vault stays encrypted with your master password either way.
+        </p>
+        <div className="bg-card rounded-xl border p-4 shadow-xs">
+          <TwoFactorSettings
+            {...("error" in twoFactor
+              ? { enabled: false, backupCodesLeft: 0, available: false }
+              : twoFactor)}
+          />
         </div>
       </section>
 

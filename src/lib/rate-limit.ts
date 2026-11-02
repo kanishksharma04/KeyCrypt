@@ -123,6 +123,8 @@ export const rateLimiters = {
   signUp: (ip: string) => isRateLimited(`signup:${ip}`, 3, HOUR),
   /** 5 account-password confirmations (re-auth) per user per 15 minutes */
   reauth: (userId: string) => isRateLimited(`reauth:${userId}`, 5, 15 * MINUTE),
+  /** 5 two-factor code attempts per user per 15 minutes (sign-in, setup, disable) */
+  totp: (userId: string) => isRateLimited(`totp:${userId}`, 5, 15 * MINUTE),
   /** 3 password reset requests per email per hour */
   passwordReset: (email: string) => isRateLimited(`reset:${email}`, 3, HOUR),
 };

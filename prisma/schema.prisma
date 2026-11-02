@@ -23,6 +23,13 @@ model User {
   // Incremented to revoke every JWT session (sign out all devices, password
   // reset). Tokens carry the version they were issued with; see src/lib/session-version.ts.
   tokenVersion  Int       @default(0)
+  // Two-factor sign-in (TOTP). Protects the ACCOUNT, not the vault:
+  // totpSecretEnc is the TOTP secret encrypted on the server (AES-256-GCM,
+  // TOTP_ENCRYPTION_KEY). Set but totpEnabledAt null = setup not yet confirmed.
+  // totpBackupCodes holds Argon2id hashes of unused one-time backup codes.
+  totpSecretEnc   String?
+  totpEnabledAt   DateTime?
+  totpBackupCodes String[]  @default([])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

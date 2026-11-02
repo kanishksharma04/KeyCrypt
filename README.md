@@ -18,7 +18,7 @@ KeyCrypt encrypts the contents of every vault item in your browser before it rea
 | Ciphertext of each item's name and contents (AES-256-GCM)                                                                | Master password                                                   |
 | Random IV per item                                                                                                       | Vault key                                                         |
 | Salt, wrapped vault key (master password + recovery key), verifier                                                       | Item names and contents (usernames, passwords, URLs, notes, keys) |
-| Argon2id hash of the account password                                                                                    | Recovery key                                                      |
+| Argon2id hash of the account password; two-factor secret (encrypted with a server key) and backup-code hashes            | Recovery key                                                      |
 | **Plain-text metadata:** item types, favourite flags, created/updated times                                              |                                                                   |
 | **Audit log:** account events with timestamps, IP address and browser, item type on create, export format; kept 180 days |                                                                   |
 
@@ -237,6 +237,7 @@ Never set those two variables in a real deployment.
 | `NEXT_PUBLIC_APP_URL`      | `https://your-app.vercel.app`                    |
 | `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST URL (optional, recommended)   |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (optional, recommended) |
+| `TOTP_ENCRYPTION_KEY`      | `openssl rand -base64 32` (enables 2FA)          |
 
 3. Apply migrations to the production database from your machine with
    `DATABASE_URL=<direct, non-pooler connection string> pnpm db:deploy`

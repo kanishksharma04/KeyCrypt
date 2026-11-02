@@ -18,6 +18,13 @@ and decryption happens in the browser.
 
 - **Account password** (sign-in): hashed server-side with Argon2id via
   `@node-rs/argon2` (`src/lib/password.ts`; memoryCost 19456, timeCost 2).
+- **Two-factor sign-in (TOTP)**: optional, protects the account (not the vault). The TOTP
+  secret is encrypted on the server with AES-256-GCM under `TOTP_ENCRYPTION_KEY` (AAD bound to
+  the user id; `encryptTotpSecret` in `src/lib/crypto/totp.ts`), `User.totpEnabledAt` marks it
+  on, and `User.totpBackupCodes` holds Argon2 hashes of 10 one-time backup codes, consumed
+  atomically (`src/lib/two-factor.ts`). `authorize()` throws `TOTP_REQUIRED` /
+  `TOTP_INVALID` after the password check; code attempts are rate limited per user. Turning
+  it on or off needs a recent account-password confirmation; disabling also needs a code.
 - **Sessions**: Auth.js JWTs, 7-day max age, revocable by bumping `User.tokenVersion`
   (checked at most every 60 s in the jwt callback, `src/lib/session-version.ts`).
   "Sign out of all devices" and password reset both bump it.

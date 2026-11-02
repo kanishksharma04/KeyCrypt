@@ -16,6 +16,14 @@ const schema = z
     // Optional shared rate-limit store (src/lib/rate-limit.ts). Set both or neither.
     UPSTASH_REDIS_REST_URL: z.string().url("UPSTASH_REDIS_REST_URL must be a valid URL").optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+    // Optional: enables two-factor sign-in. 32 random bytes, base64
+    // (openssl rand -base64 32). Encrypts users' TOTP secrets at rest.
+    TOTP_ENCRYPTION_KEY: z
+      .string()
+      .refine((v) => Buffer.from(v, "base64").byteLength === 32, {
+        message: "TOTP_ENCRYPTION_KEY must be 32 random bytes, base64-encoded",
+      })
+      .optional(),
   })
   .refine((e) => !!e.UPSTASH_REDIS_REST_URL === !!e.UPSTASH_REDIS_REST_TOKEN, {
     message: "Set both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, or neither",

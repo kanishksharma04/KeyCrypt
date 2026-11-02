@@ -44,6 +44,8 @@ export default defineConfig({
       DATABASE_URL: databaseUrl,
       PORT: String(PORT),
       AUTH_SECRET: "e2e-only-secret-never-used-anywhere-else-0123456789",
+      // Enables two-factor sign-in. 32 bytes, not a real key.
+      TOTP_ENCRYPTION_KEY: "ZTJlLW9ubHktdG90cC1rZXktbm90LXJlYWwtMDEyMzQ=",
       AUTH_URL: baseURL,
       AUTH_TRUST_HOST: "true",
       NEXT_PUBLIC_APP_URL: baseURL,

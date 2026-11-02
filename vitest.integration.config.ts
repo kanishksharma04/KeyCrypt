@@ -19,6 +19,8 @@ export default defineConfig({
       NODE_ENV: "test",
       // Signs re-auth cookies in tests (src/lib/reauth.ts). Not a real secret.
       AUTH_SECRET: "integration-tests-only-secret-0123456789abcdef",
+      // Encrypts TOTP secrets at rest (src/lib/two-factor.ts). 32 bytes, not a real key.
+      TOTP_ENCRYPTION_KEY: "aW50ZWdyYXRpb24tb25seS10b3RwLWtleS0wMTIzNDU=",
     },
     // All files share one database and truncate it between tests.
     fileParallelism: false,

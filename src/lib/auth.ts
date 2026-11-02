@@ -19,6 +19,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        // Two-factor code (TOTP or backup code), sent on the second step.
+        totp: { label: "Two-factor code", type: "text" },
       },
       // Rate limiting, timing equalisation and the email-verified check all
       // live in authorizeCredentials (src/lib/authorize-credentials.ts).
