@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, vi } from "vitest";
 import { db } from "@/lib/db";
 import { resetRateLimitStateForTests } from "@/lib/rate-limit";
-import { clearTestCookies, resetDatabase, signOutTestUser } from "./helpers";
+import { clearTestCookies, resetDatabase, setTestRequestHeaders, signOutTestUser } from "./helpers";
 
 // ─── Framework mocks (apply to every integration test file) ──────────────────
 
@@ -23,9 +23,9 @@ vi.mock("next/cache", () => ({
 
 // cookies() is backed by an in-memory jar the tests can inspect and edit.
 vi.mock("next/headers", async () => {
-  const { testCookieJar } = await import("./helpers");
+  const { testCookieJar, getTestRequestHeaders } = await import("./helpers");
   return {
-    headers: vi.fn(async () => new Headers()),
+    headers: vi.fn(async () => getTestRequestHeaders()),
     cookies: vi.fn(async () => testCookieJar),
   };
 });
@@ -35,6 +35,7 @@ vi.mock("next/headers", async () => {
 beforeEach(async () => {
   signOutTestUser();
   clearTestCookies();
+  setTestRequestHeaders({});
   resetRateLimitStateForTests();
   await resetDatabase();
 });

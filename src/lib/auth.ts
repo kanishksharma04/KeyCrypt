@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import { authConfig } from "@/lib/auth.config";
 import { authorizeCredentials } from "@/lib/authorize-credentials";
 import { checkTokenVersion } from "@/lib/session-version";
@@ -44,12 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   events: {
     async signIn({ user, isNewUser }) {
       if (!user.id) return;
-      await db.auditLog.create({
-        data: {
-          userId: user.id,
-          action: isNewUser ? "auth.signup.oauth" : "auth.signin",
-        },
-      });
+      await logAudit(user.id, isNewUser ? "auth.signup.oauth" : "auth.signin");
     },
   },
 });

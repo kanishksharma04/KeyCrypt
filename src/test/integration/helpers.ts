@@ -24,6 +24,19 @@ export function getMockSession(): Session | null {
   return currentSession;
 }
 
+// ─── Request headers (back the mocked next/headers headers()) ────────────────
+
+let requestHeaders = new Headers();
+
+/** Headers the "current request" carries, e.g. { "x-real-ip": "…", "user-agent": "…" }. */
+export function setTestRequestHeaders(init: Record<string, string>): void {
+  requestHeaders = new Headers(init);
+}
+
+export function getTestRequestHeaders(): Headers {
+  return requestHeaders;
+}
+
 // ─── Cookie jar (backs the mocked next/headers cookies()) ────────────────────
 
 interface StoredCookie {

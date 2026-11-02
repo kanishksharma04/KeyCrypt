@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import { requireRecentReauth } from "@/lib/reauth";
 import type { ExportFormat } from "@/lib/vault-export";
 import type { VaultItemRow } from "@/types/vault";
@@ -60,8 +61,6 @@ export async function recordVaultExportAction(format: ExportFormat): Promise<{ e
     if (!reauth.ok) return { error: reauth.error };
   }
 
-  await db.auditLog.create({
-    data: { userId, action: "vault.export", metadata: { format: parsed.data.format } },
-  });
+  await logAudit(userId, "vault.export", { format: parsed.data.format });
   return {};
 }

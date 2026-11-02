@@ -6,11 +6,14 @@ import { SignOutAllDevicesButton } from "@/features/vault/sign-out-all-devices-b
 import { ExportVault } from "@/features/vault/export-vault";
 import { RecoveryKitSettings } from "@/features/vault/recovery-kit-settings";
 import { db } from "@/lib/db";
+import { getRecentActivityAction } from "@/server/activity-actions";
+import { RecentActivity } from "@/features/vault/recent-activity";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session) redirect("/auth/signin");
 
+  const activity = await getRecentActivityAction();
   const vaultMeta = await db.vaultMeta.findUnique({
     where: { userId: session.user.id },
     select: { recoveryCreatedAt: true },
@@ -77,6 +80,20 @@ export default async function SettingsPage() {
         </p>
         <div className="bg-card rounded-xl border p-4 shadow-xs">
           <ExportVault />
+        </div>
+      </section>
+
+      {/* Recent activity */}
+      <section aria-labelledby="activity-heading" className="mb-10">
+        <h2 id="activity-heading" className="mb-1 text-base font-semibold">
+          Recent activity
+        </h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          The last 50 security events on your account, with the IP address and browser they came
+          from. Entries are kept for 180 days.
+        </p>
+        <div className="bg-card rounded-xl border px-4 py-2 shadow-xs">
+          <RecentActivity entries={"error" in activity ? [] : activity} />
         </div>
       </section>
 

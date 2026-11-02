@@ -3,6 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import { requireRecentReauth } from "@/lib/reauth";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import {
@@ -74,12 +75,8 @@ export async function setupVaultAction(input: {
     },
   });
 
-  await db.auditLog.createMany({
-    data: [
-      { userId, action: "vault.setup", metadata: { cryptoVersion: 2 } },
-      { userId, action: "vault.recovery.created" },
-    ],
-  });
+  await logAudit(userId, "vault.setup", { cryptoVersion: 2 });
+  await logAudit(userId, "vault.recovery.created");
 
   return null;
 }
@@ -216,9 +213,7 @@ export async function upgradeVaultAction(input: {
     throw err;
   }
 
-  await db.auditLog.create({
-    data: { userId, action: "vault.upgraded", metadata: { cryptoVersion: 2 } },
-  });
+  await logAudit(userId, "vault.upgraded", { cryptoVersion: 2 });
   return {};
 }
 
@@ -288,7 +283,7 @@ export async function setRecoveryKeyAction(input: {
   });
   if (result.error) return result;
 
-  await db.auditLog.create({ data: { userId, action: "vault.recovery.created" } });
+  await logAudit(userId, "vault.recovery.created");
   return {};
 }
 
@@ -346,6 +341,6 @@ export async function recoverVaultAction(input: {
   });
   if (result.error) return result;
 
-  await db.auditLog.create({ data: { userId, action: "vault.recovery.used" } });
+  await logAudit(userId, "vault.recovery.used");
   return {};
 }

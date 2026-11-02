@@ -156,6 +156,14 @@ test("sign up, store four items, change master password, and read them all back"
   // Change the master password (client-side navigation keeps the vault unlocked).
   await page.getByRole("link", { name: "Settings" }).click();
   await expect(page).toHaveURL(/\/vault\/settings$/);
+
+  // Settings → Recent activity shows real entries with browser (and IP when known).
+  const activity = page.getByRole("list", { name: "Recent activity" });
+  await expect(activity.getByText("Signed in")).toBeVisible();
+  await expect(activity.getByText("Vault created")).toBeVisible();
+  await expect(activity.getByText("Item created (login)")).toBeVisible();
+  await expect(activity.getByText(/Chrome on \w+/).first()).toBeVisible();
+  console.log("recent activity (first entry):", await activity.locator("li").first().innerText());
   await page.locator("#cmp-current").fill(MASTER_1);
   await page.locator("#cmp-new").fill(MASTER_2);
   await page.locator("#cmp-confirm").fill(MASTER_2);

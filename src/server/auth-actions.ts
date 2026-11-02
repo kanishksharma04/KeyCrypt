@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import { hashPassword } from "@/lib/password";
 import { generateToken, consumeToken } from "@/lib/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
@@ -73,9 +74,7 @@ export async function signUpAction(data: SignUpInput): Promise<ActionResult> {
       }
     }
 
-    await db.auditLog.create({
-      data: { userId: user.id, action: "auth.signup", ip },
-    });
+    await logAudit(user.id, "auth.signup");
 
     return { success: true, emailSent };
   }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, type VaultItemType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import {
   INVALID_INPUT,
   createVaultItemInput,
@@ -73,9 +74,7 @@ export async function createVaultItemAction(input: {
     throw err;
   }
 
-  await db.auditLog.create({
-    data: { userId: session.user.id, action: "vault.item.create", metadata: { type: data.type } },
-  });
+  await logAudit(session.user.id, "vault.item.create", { type: data.type });
 
   revalidatePath("/vault");
   return { id: item.id };
@@ -122,9 +121,7 @@ export async function deleteVaultItemAction(rawId: string): Promise<{ error?: st
 
   if (result.count === 0) return { error: "Item not found" };
 
-  await db.auditLog.create({
-    data: { userId: session.user.id, action: "vault.item.delete" },
-  });
+  await logAudit(session.user.id, "vault.item.delete");
 
   revalidatePath("/vault");
   return {};

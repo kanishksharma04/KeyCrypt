@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import { verifyAgainstDummyHash, verifyPassword } from "@/lib/password";
 import { rateLimiters } from "@/lib/rate-limit";
 import { issueReauthCookie } from "@/lib/reauth";
@@ -29,11 +30,11 @@ export async function confirmAccountPasswordAction(password: string): Promise<{ 
     : await verifyAgainstDummyHash(parsed.data.password);
 
   if (!valid) {
-    await db.auditLog.create({ data: { userId, action: "auth.reauth.failed" } });
+    await logAudit(userId, "auth.reauth.failed");
     return { error: "Incorrect account password." };
   }
 
   await issueReauthCookie(userId);
-  await db.auditLog.create({ data: { userId, action: "auth.reauth" } });
+  await logAudit(userId, "auth.reauth");
   return {};
 }

@@ -57,8 +57,9 @@ and decryption happens in the browser.
   are encrypted** with the secret (`sealItem`/`openItem` in `src/features/vault/item-payload.ts`)
   and `VaultItem.name` is null; names are decrypted, searched and sorted in the browser
   (vault list, command palette, health). Server-visible plain text: item `type`, `favorite`,
-  `createdAt`/`updatedAt`. `AuditLog` stores actions with timestamps (IP only at sign-up,
-  item type on create; `userAgent` is never written). Keep README's security table and
+  `createdAt`/`updatedAt`. `AuditLog` stores actions with timestamps, IP and user agent (always
+  via `logAudit()` in `src/lib/audit.ts`, which prunes entries older than 180 days),
+  item type on create and export format; shown in Settings → Recent activity. Keep README's security table and
   the landing page's "What the server can see today" note in sync with any change here.
 
 ## Hard rules

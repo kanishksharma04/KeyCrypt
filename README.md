@@ -13,19 +13,19 @@ KeyCrypt encrypts the contents of every vault item in your browser before it rea
 
 ## Security model
 
-| What the server stores                                                            | What the server never sees                                        |
-| --------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Ciphertext of each item's name and contents (AES-256-GCM)                         | Master password                                                   |
-| Random IV per item                                                                | Vault key                                                         |
-| Salt, wrapped vault key (master password + recovery key), verifier                | Item names and contents (usernames, passwords, URLs, notes, keys) |
-| Argon2id hash of the account password                                             | Recovery key                                                      |
-| **Plain-text metadata:** item types, favourite flags, created/updated times       |                                                                   |
-| **Audit log:** account events with timestamps, IP at sign-up, item type on create |                                                                   |
+| What the server stores                                                                                                   | What the server never sees                                        |
+| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Ciphertext of each item's name and contents (AES-256-GCM)                                                                | Master password                                                   |
+| Random IV per item                                                                                                       | Vault key                                                         |
+| Salt, wrapped vault key (master password + recovery key), verifier                                                       | Item names and contents (usernames, passwords, URLs, notes, keys) |
+| Argon2id hash of the account password                                                                                    | Recovery key                                                      |
+| **Plain-text metadata:** item types, favourite flags, created/updated times                                              |                                                                   |
+| **Audit log:** account events with timestamps, IP address and browser, item type on create, export format; kept 180 days |                                                                   |
 
 The server also handles your email and name, your account password while you sign in, sign up,
 reset it or confirm it (it stores only the Argon2id hash), the session cookie, and client IPs and
 emails for rate limiting. From the ciphertext it can tell how many items you have and roughly how
-large each one is. The audit log has a user-agent column, but nothing records it today.
+large each one is. Each audit entry records the IP address and browser (user agent) of the request; you can see them under Settings → Recent activity.
 
 ```
 vaultKey   = random 256-bit AES-GCM key (generated in the browser)

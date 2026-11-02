@@ -6,6 +6,7 @@ import { revokeAllSessions } from "@/lib/session-version";
 import { requireRecentReauth } from "@/lib/reauth";
 import { Prisma, type VaultItemType } from "@prisma/client";
 import { db } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import { VAULT_CHANGED_ERROR } from "@/lib/action-errors";
 import { INVALID_INPUT, changeMasterPasswordInput } from "@/schemas/server";
 
@@ -156,9 +157,7 @@ export async function changeMasterPasswordAction(input: {
     throw err;
   }
 
-  await db.auditLog.create({
-    data: { userId, action: "vault.master_password.changed" },
-  });
+  await logAudit(userId, "vault.master_password.changed");
 
   revalidatePath("/vault");
   return {};
@@ -177,9 +176,7 @@ export async function signOutEverywhereAction(): Promise<{ error?: string }> {
   if (!reauth.ok) return { error: reauth.error };
 
   await revokeAllSessions(session.user.id);
-  await db.auditLog.create({
-    data: { userId: session.user.id, action: "auth.sessions.revoked_all" },
-  });
+  await logAudit(session.user.id, "auth.sessions.revoked_all");
 
   // Clears this browser's session cookie and redirects (throws NEXT_REDIRECT).
   await signOut({ redirectTo: "/auth/signin" });
