@@ -82,9 +82,9 @@ and decryption happens in the browser.
    `src/schemas/server.ts` and `src/schemas/auth.ts`) and returns
    `{ error: "Invalid input" }` without echoing the input.
 5. Destructive actions (master-password change, sign out all devices, plain CSV export via
-   `recordVaultExportAction("csv")`, and later account deletion) call
-   `requireRecentReauth(userId)` from `src/lib/reauth.ts` right after `auth()`. The UI asks
-   first with `ConfirmPasswordDialog` (account password).
+   `recordVaultExportAction("csv")`, TOTP setup/disable, and account deletion via
+   `deleteAccountAction`) call `requireRecentReauth(userId)` from `src/lib/reauth.ts` right
+   after `auth()`. The UI asks first with `ConfirmPasswordDialog` (account password).
 6. Never use `Math.random` for anything secret. Use `crypto.getRandomValues` in the
    browser (`src/lib/crypto`) or Node's `randomBytes` on the server (`src/lib/tokens.ts`).
 7. Don't log or toast secrets, keys or decrypted data. Write security-relevant events

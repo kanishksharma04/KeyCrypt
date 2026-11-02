@@ -11,7 +11,12 @@ import { Input } from "@/components/ui/input";
 import { signInSchema, type SignInInput } from "@/schemas/auth";
 import { FieldError } from "./field-error";
 
-export function SignInForm() {
+interface SignInFormProps {
+  /** Shown above the form, e.g. after the account was deleted. */
+  notice?: string;
+}
+
+export function SignInForm({ notice }: SignInFormProps = {}) {
   const [serverError, setServerError] = useState<string>();
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -69,6 +74,12 @@ export function SignInForm() {
             : "Welcome back to your vault"}
         </p>
       </div>
+
+      {notice && !serverError && (
+        <div role="status" className="bg-muted rounded-lg px-3 py-2 text-sm">
+          {notice}
+        </div>
+      )}
 
       {serverError && (
         <div

@@ -3,6 +3,15 @@ import { SignInForm } from "@/features/auth/sign-in-form";
 
 export const metadata: Metadata = { title: "Sign In" };
 
-export default function SignInPage() {
-  return <SignInForm />;
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { deleted } = await searchParams;
+  return (
+    <SignInForm
+      notice={deleted === "1" ? "Your account and vault were permanently deleted." : undefined}
+    />
+  );
 }

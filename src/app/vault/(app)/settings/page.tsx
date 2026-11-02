@@ -10,6 +10,7 @@ import { getRecentActivityAction } from "@/server/activity-actions";
 import { RecentActivity } from "@/features/vault/recent-activity";
 import { getTwoFactorStatusAction } from "@/server/two-factor-actions";
 import { TwoFactorSettings } from "@/features/vault/two-factor-settings";
+import { DeleteAccount } from "@/features/vault/delete-account";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -134,6 +135,19 @@ export default async function SettingsPage() {
             label="Sign out of this device"
           />
           <SignOutAllDevicesButton />
+        </div>
+      </section>
+
+      {/* Danger zone */}
+      <section aria-labelledby="delete-account-heading" className="mt-10">
+        <h2 id="delete-account-heading" className="text-destructive mb-1 text-base font-semibold">
+          Danger zone
+        </h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          Delete your account and everything stored with it.
+        </p>
+        <div className="border-destructive/40 bg-card rounded-xl border p-4 shadow-xs">
+          <DeleteAccount email={session.user.email ?? ""} />
         </div>
       </section>
     </div>

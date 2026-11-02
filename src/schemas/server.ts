@@ -163,6 +163,9 @@ export const recordVaultExportInput = z.object({
   format: z.enum(["encrypted-json", "csv"]),
 });
 
+/** Account deletion: the user types their account email to confirm. */
+export const deleteAccountInput = z.object({ email: z.string().trim().min(1).max(254) });
+
 export const confirmAccountPasswordInput = z.object({
   password: z.string().min(1).max(256),
 });
