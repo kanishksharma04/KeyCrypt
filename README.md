@@ -71,6 +71,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Password generator** — configurable length, character sets, live entropy score
 - **Recovery kit** — a one-time recovery key (shown at setup, regenerable in Settings) that unlocks the vault and lets you set a new master password if you forget it
 - **Export** — Settings → Export, built in the browser: an encrypted JSON file (`keycrypt-export` v1, PBKDF2 600k + AES-256-GCM under a separate export password), or a plain Bitwarden-format CSV after re-entering your account password
+- **Import** — Settings → Import from Bitwarden (unencrypted JSON or CSV), 1Password, LastPass and Chrome/Edge CSV, or a KeyCrypt encrypted export. The file is parsed in the browser and never uploaded; a preview shows counts per type and skipped rows, then each item is encrypted in the browser and saved in batches of 50
 - **Favorites filter** — star items and filter to pinned items only
 - **Search** — live filter across name, username, URL, SSID; press `/` to focus, `Escape` to clear
 - **Item count** — shows `3 items` or `2 of 5 items` when filtered

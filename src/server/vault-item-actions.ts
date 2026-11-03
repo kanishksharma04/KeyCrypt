@@ -8,6 +8,8 @@ import { logAudit } from "@/lib/audit";
 import {
   INVALID_INPUT,
   createVaultItemInput,
+  createVaultItemsBatchInput,
+  MAX_ITEMS_PER_REKEY,
   itemIdInput,
   toggleFavoriteInput,
   updateVaultItemInput,
@@ -78,6 +80,61 @@ export async function createVaultItemAction(input: {
 
   revalidatePath("/vault");
   return { id: item.id };
+}
+
+/**
+ * Import: create up to 50 items in one call. Each was encrypted in the browser
+ * (crypto v2, AAD bound to its id); the server stores ciphertext only.
+ * All-or-nothing per batch.
+ */
+export async function createVaultItemsBatchAction(input: {
+  items: Array<{
+    id: string;
+    type: VaultItemType;
+    ciphertext: string;
+    iv: string;
+    favorite: boolean;
+  }>;
+}): Promise<{ count: number } | { error: string }> {
+  const parsed = createVaultItemsBatchInput.safeParse(input);
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const { items } = parsed.data;
+
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+  const userId = session.user.id;
+
+  // Changing the master password re-encrypts every item in one request, which
+  // is capped; don't let an import grow the vault past that.
+  const existing = await db.vaultItem.count({ where: { userId } });
+  if (existing + items.length > MAX_ITEMS_PER_REKEY) {
+    return { error: `A vault can hold up to ${MAX_ITEMS_PER_REKEY.toLocaleString("en")} items.` };
+  }
+
+  let count: number;
+  try {
+    ({ count } = await db.vaultItem.createMany({
+      data: items.map((item) => ({
+        id: item.id,
+        userId,
+        type: item.type,
+        name: null, // encrypted inside the ciphertext
+        ciphertext: item.ciphertext,
+        iv: item.iv,
+        favorite: item.favorite,
+      })),
+    }));
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { error: "An item with this id already exists." };
+    }
+    throw err;
+  }
+
+  await logAudit(userId, "vault.items.imported", { count });
+
+  revalidatePath("/vault");
+  return { count };
 }
 
 export async function updateVaultItemAction(input: {

@@ -11,6 +11,7 @@ import { RecentActivity } from "@/features/vault/recent-activity";
 import { getTwoFactorStatusAction } from "@/server/two-factor-actions";
 import { TwoFactorSettings } from "@/features/vault/two-factor-settings";
 import { DeleteAccount } from "@/features/vault/delete-account";
+import { ImportVault } from "@/features/vault/import-vault";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -102,6 +103,19 @@ export default async function SettingsPage() {
         </p>
         <div className="bg-card rounded-xl border p-4 shadow-xs">
           <ExportVault />
+        </div>
+      </section>
+
+      {/* Import */}
+      <section aria-labelledby="import-heading" className="mb-10">
+        <h2 id="import-heading" className="mb-1 text-base font-semibold">
+          Import
+        </h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          Bring your passwords over from another password manager or browser.
+        </p>
+        <div className="bg-card rounded-xl border p-4 shadow-xs">
+          <ImportVault />
         </div>
       </section>
 

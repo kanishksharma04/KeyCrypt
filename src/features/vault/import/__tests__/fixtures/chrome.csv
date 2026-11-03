@@ -1,0 +1,5 @@
+name,url,username,password,note
+accounts.google.com,https://accounts.google.com/signin,jane@example.test,G00gle-pw,
+example.test,https://example.test/login,jane,"pw,with,commas",personal
+,https://nopw.example.test,jane,,
+,,,,

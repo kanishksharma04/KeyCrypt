@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   "vault.master_password.changed": "Master password changed",
   "vault.item.create": "Item created",
   "vault.item.delete": "Item deleted",
+  "vault.items.imported": "Items imported",
   "vault.export": "Vault exported",
   "vault.recovery.created": "Recovery key created",
   "vault.recovery.used": "Recovery key used",
@@ -38,6 +39,9 @@ export function activityLabel(action: string, metadata?: unknown): string {
   const m = (metadata ?? {}) as Record<string, unknown>;
   if (action === "vault.item.create" && typeof m.type === "string" && ITEM_TYPES[m.type]) {
     return `${base} (${ITEM_TYPES[m.type]})`;
+  }
+  if (action === "vault.items.imported" && typeof m.count === "number") {
+    return `${base} (${m.count})`;
   }
   if (action === "vault.export" && typeof m.format === "string" && EXPORT_FORMATS[m.format]) {
     return `${base} (${EXPORT_FORMATS[m.format]})`;

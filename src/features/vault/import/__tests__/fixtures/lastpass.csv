@@ -1,0 +1,7 @@
+url,username,password,totp,extra,name,grouping,fav
+https://twitter.com,jack,tw!tter1,,,Twitter,Social,1
+http://sn,,,,"NoteType:Server
+Hostname:db.internal
+Username:admin",DB server,Infra,0
+https://mail.example.test,me,m@il-pw,JBSWY3DPEHPK3PXP,backup codes in safe,Mail,,0
+,,,,,,,

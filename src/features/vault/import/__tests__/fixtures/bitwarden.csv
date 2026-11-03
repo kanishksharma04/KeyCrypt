@@ -1,0 +1,9 @@
+folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp
+Work,1,login,GitHub,"Line one
+Line two",Recovery email: me@example.test,0,"https://github.com,https://gist.github.com",octocat,"pa,ss""word",JBSWY3DPEHPK3PXP
+,,note,Door codes,Front: 1234,,0,,,,
+,,note,Home WiFi,,"SSID: HomeNet
+Password: hunter22
+Security: WPA3",0,,,,
+,,card,Visa,,,0,,,,
+,,,,,,,,,,

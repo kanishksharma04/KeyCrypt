@@ -58,6 +58,18 @@ export const createVaultItemInput = z.object({
   iv: ivSchema,
 });
 
+/** Import: up to 50 new items per call (crypto v2, ids generated in the browser). */
+export const IMPORT_BATCH_MAX = 50;
+export const createVaultItemsBatchInput = z.object({
+  items: z
+    .array(createVaultItemInput.extend({ favorite: z.boolean() }))
+    .min(1)
+    .max(IMPORT_BATCH_MAX)
+    .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
+      message: "Duplicate ids",
+    }),
+});
+
 export const updateVaultItemInput = z.object({
   id: idSchema,
   ciphertext: ciphertextSchema,
