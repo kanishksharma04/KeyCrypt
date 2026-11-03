@@ -13,6 +13,8 @@ KeyCrypt encrypts the contents of every vault item in your browser before it rea
 
 ## Security model
 
+The full [threat model](docs/threat-model.md) covers assets, attackers, trust boundaries, crypto v2 and what is (and isn't) defended. To report a vulnerability, see [SECURITY.md](SECURITY.md) (GitHub private vulnerability reporting; also in [`/.well-known/security.txt`](public/.well-known/security.txt)).
+
 | What the server stores                                                                                                                 | What the server never sees                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Ciphertext of each item's name and contents (AES-256-GCM)                                                                              | Master password                                                   |

@@ -28,6 +28,36 @@ test("the home page sends a nonce-based CSP without unsafe-inline scripts", asyn
   expect(response.headers()["strict-transport-security"]).toContain("max-age=");
 });
 
+test("serves /.well-known/security.txt (RFC 9116) and links the policy from the home page", async ({
+  request,
+  page,
+}) => {
+  const response = await request.get("/.well-known/security.txt");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toMatch(/^text\/plain/);
+  const body = await response.text();
+  expect(body).toMatch(
+    /^Contact: https:\/\/github\.com\/kanishksharma04\/KeyCrypt\/security\/advisories\/new$/m
+  );
+  expect(body).toMatch(/^Expires: 2027-11-03T00:00:00\.000Z$/m);
+  expect(body).toMatch(/^Policy: .+\/SECURITY\.md$/m);
+
+  await page.goto("/");
+  const footer = page.locator("footer");
+  await expect(footer.getByRole("link", { name: /Security policy/ })).toHaveAttribute(
+    "href",
+    /SECURITY\.md$/
+  );
+  await expect(footer.getByRole("link", { name: /Threat model/ })).toHaveAttribute(
+    "href",
+    /docs\/threat-model\.md$/
+  );
+  await expect(footer.getByRole("link", { name: "security.txt" })).toHaveAttribute(
+    "href",
+    "/.well-known/security.txt"
+  );
+});
+
 test("each response gets a fresh nonce", async ({ request }) => {
   const nonceOf = async () =>
     (await request.get("/")).headers()["content-security-policy"]?.match(/'nonce-([^']+)'/)?.[1];

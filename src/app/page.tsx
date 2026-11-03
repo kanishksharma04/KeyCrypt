@@ -460,6 +460,36 @@ export default async function HomePage() {
                     <span className="text-[10px] opacity-60">↗</span>
                   </a>
                 </li>
+                <li>
+                  <a
+                    href="https://github.com/kanishksharma04/KeyCrypt/blob/main/SECURITY.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                  >
+                    Security policy
+                    <span className="text-[10px] opacity-60">↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/kanishksharma04/KeyCrypt/blob/main/docs/threat-model.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                  >
+                    Threat model
+                    <span className="text-[10px] opacity-60">↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/.well-known/security.txt"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    security.txt
+                  </a>
+                </li>
               </ul>
             </div>
           </div>

@@ -1,0 +1,5 @@
+# KeyCrypt security contact (RFC 9116). See SECURITY.md for the full policy.
+Contact: https://github.com/kanishksharma04/KeyCrypt/security/advisories/new
+Expires: 2027-11-03T00:00:00.000Z
+Policy: https://github.com/kanishksharma04/KeyCrypt/blob/main/SECURITY.md
+Preferred-Languages: en
