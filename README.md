@@ -199,6 +199,7 @@ pnpm lint         # ESLint
 pnpm test         # Vitest unit tests (no database)
 pnpm test:integration # Server-action tests against Postgres (see below)
 pnpm test:e2e     # Playwright end-to-end tests against a production build (see below)
+pnpm test:docker  # Smoke test against a running Docker container (see Self-hosting)
 pnpm db:deploy    # Apply pending migrations (prisma migrate deploy)
 pnpm db:migrate   # Create + apply a new migration in development (prisma migrate dev)
 pnpm db:push      # Throwaway local databases only — no migration history
@@ -232,6 +233,57 @@ CSP nonce and HSTS are live) and drives Chromium through sign-up, vault setup, a
 types, lock/unlock and a master-password change. SMTP is left unset so new accounts are
 auto-verified, and rate limits are switched off with `E2E=1` + `E2E_DISABLE_RATE_LIMIT=1`.
 Never set those two variables in a real deployment.
+
+---
+
+## Self-hosting with Docker
+
+The repository ships a `Dockerfile` (Next.js standalone server on Node 22, Debian slim, running
+as a non-root user) and a `docker-compose.yml` with PostgreSQL 16. At start-up the container
+runs `prisma migrate deploy`, then starts the server.
+
+1. Create a `.env` file next to `docker-compose.yml`:
+
+   ```bash
+   AUTH_SECRET=...            # openssl rand -base64 32
+   POSTGRES_PASSWORD=...      # a long random password
+   TOTP_ENCRYPTION_KEY=...    # optional, enables two-factor sign-in: openssl rand -base64 32
+   APP_URL=https://vault.example.com   # optional, default http://localhost:3000
+   APP_PORT=3000              # optional, host port
+   ```
+
+2. Build and start:
+
+   ```bash
+   docker compose up -d --build --wait
+   ```
+
+3. Open `APP_URL` and create an account.
+
+| Variable                                                         | Required | Notes                                                                                                                                  |
+| ---------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                                                    | yes      | Signs sessions and re-auth cookies. `openssl rand -base64 32`                                                                          |
+| `POSTGRES_PASSWORD`                                              | yes      | Password of the bundled Postgres; `DATABASE_URL` is built from it                                                                      |
+| `APP_URL`                                                        | no       | Public URL. Used for `AUTH_URL` and baked into the build as `NEXT_PUBLIC_APP_URL`, so **rebuild** (`--build`) after changing it        |
+| `TOTP_ENCRYPTION_KEY`                                            | no       | 32 random bytes, base64. Without it two-factor sign-in is unavailable. Changing it breaks existing 2FA codes (backup codes still work) |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`             | no       | Shared rate-limit store. Not needed for a single container                                                                             |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | no       | Email verification and password reset. Without SMTP, new accounts are verified automatically                                           |
+
+Things to know:
+
+- **HTTPS is required** beyond `localhost`: browsers only expose the Web Crypto API (which does all
+  vault encryption) on `https://` or `localhost`. Put the container behind a TLS-terminating
+  reverse proxy (Caddy, Traefik, nginx) and set `APP_URL` to the `https://` address.
+- **Rate limiting** falls back to an in-memory store when Upstash isn't configured. That's fine
+  for **one** app container (limits reset when it restarts, and a warning is logged at start-up);
+  run more than one instance only with Upstash.
+- **Backups**: the database lives in the `pgdata` volume. Back it up (`pg_dump`) and keep
+  encrypted exports (Settings → Export). The operator can't decrypt vaults, so neither can a
+  backup.
+- **Updating**: `git pull && docker compose up -d --build --wait`. New migrations are applied when
+  the container starts (`SKIP_MIGRATIONS=1` turns that off).
+- **Smoke test** a running instance: `DOCKER_APP_URL=http://localhost:3000 pnpm test:docker`
+  (creates a throwaway account).
 
 ---
 

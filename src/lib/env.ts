@@ -30,7 +30,11 @@ const schema = z
     path: ["UPSTASH_REDIS_REST_URL"],
   });
 
-const parsed = schema.safeParse(process.env);
+// An empty variable counts as unset: docker-compose passes optional ones as ""
+// (e.g. TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-}).
+const parsed = schema.safeParse(
+  Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== ""))
+);
 
 if (!parsed.success) {
   const issues = parsed.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n");

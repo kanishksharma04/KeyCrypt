@@ -16,6 +16,8 @@ const databaseUrl = getTestDatabaseUrl();
 
 export default defineConfig({
   testDir: "./e2e",
+  // e2e/docker runs against a running container instead (playwright.docker.config.ts).
+  testIgnore: ["docker/**"],
   // One shared database and server; run specs one at a time.
   fullyParallel: false,
   workers: 1,

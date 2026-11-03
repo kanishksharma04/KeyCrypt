@@ -1,0 +1,74 @@
+# Self-hosted KeyCrypt: the app plus PostgreSQL 16.
+#
+#   1. Put the secrets in a .env file next to this one (see README → Self-hosting):
+#        AUTH_SECRET=<openssl rand -base64 32>
+#        POSTGRES_PASSWORD=<a long random password>
+#        TOTP_ENCRYPTION_KEY=<openssl rand -base64 32>   # optional, enables 2FA
+#   2. docker compose up -d --build
+#   3. Open http://localhost:3000 (or APP_URL)
+#
+# One app instance: rate limits are kept in memory unless UPSTASH_* is set.
+# Serve it over HTTPS (a reverse proxy) for anything beyond localhost: browsers
+# only allow the Web Crypto API on https:// or localhost.
+
+name: keycrypt
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keycrypt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: keycrypt
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycrypt -d keycrypt"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3000}
+    image: keycrypt:local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://keycrypt:${POSTGRES_PASSWORD}@db:5432/keycrypt
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env (openssl rand -base64 32)}
+      AUTH_URL: ${APP_URL:-http://localhost:3000}
+      AUTH_TRUST_HOST: "true"
+      NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3000}
+      # Optional; leave empty to disable.
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    # Healthy once migrations have run and the server answers.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/auth/signin').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  pgdata:

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Self-contained server in .next/standalone (with only the node_modules it
+  // needs) for the Docker image; see Dockerfile.
+  output: "standalone",
   // Silence workspace-root detection warning when parent lockfiles exist
   turbopack: {
     root: __dirname,
