@@ -24,6 +24,18 @@ export function itemAad({ userId, itemId, type }: ItemAadContext): string {
 }
 
 /**
+ * "kc:v2-folder|<userId>|<folderId>": AAD for an encrypted folder name. The
+ * distinct prefix means a folder name can never be passed off as an item
+ * (or the other way round).
+ */
+export function folderAad({ userId, folderId }: { userId: string; folderId: string }): string {
+  for (const part of [userId, folderId]) {
+    if (!part || part.includes(SEPARATOR)) throw new Error("Invalid AAD component");
+  }
+  return ["kc:v2-folder", userId, folderId].join(SEPARATOR);
+}
+
+/**
  * A new item id, generated in the browser so it can be bound into the AAD
  * before the item is ever sent to the server (random UUID v4).
  */

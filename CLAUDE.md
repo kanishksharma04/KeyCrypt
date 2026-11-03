@@ -62,6 +62,11 @@ and decryption happens in the browser.
   (`generateItemId()`, UUID v4) before encryption; the server validates the format and
   rejects duplicates. Client code gets the user id from `useVaultUserId()`
   (`src/providers/vault-user-provider.tsx`).
+- **Folders**: `Folder` stores only `nameCiphertext`/`nameIv`: the name is encrypted with the
+  vault key and AAD `"kc:v2-folder|" + userId + "|" + folderId` (`folderAad()`), with the id
+  generated in the browser (`sealFolderName` in `src/features/vault/folder-payload.ts`).
+  `VaultItem.folderId` is a plain-text relation (`onDelete: SetNull`). Actions in
+  `src/server/folder-actions.ts`.
 - **Verification blob**: a known plaintext encrypted with the vault key and stored in
   `VaultMeta` (`verificationBlob` + `verificationIv`) alongside the salt. Unlock decrypts
   it client-side to check the master password (`src/lib/crypto/verification.ts`);
@@ -70,7 +75,7 @@ and decryption happens in the browser.
   are encrypted** with the secret (`sealItem`/`openItem` in `src/features/vault/item-payload.ts`)
   and `VaultItem.name` is null; names are decrypted, searched and sorted in the browser
   (vault list, command palette, health). Server-visible plain text: item `type`, `favorite`,
-  `createdAt`/`updatedAt`. `AuditLog` stores actions with timestamps, IP and user agent (always
+  `folderId`, `createdAt`/`updatedAt`. `AuditLog` stores actions with timestamps, IP and user agent (always
   via `logAudit()` in `src/lib/audit.ts`, which prunes entries older than 180 days),
   item type on create and export format; shown in Settings → Recent activity. Keep README's security table and
   the landing page's "What the server can see today" note in sync with any change here.

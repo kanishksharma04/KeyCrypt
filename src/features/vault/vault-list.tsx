@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { KeyRound, Loader2, Plus, Star } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FolderCog, FolderOpen, KeyRound, Loader2, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { deleteVaultItemAction } from "@/server/vault-item-actions";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,9 @@ import { WifiPasswordDialog } from "./wifi-password-dialog";
 import { OtpSecretDialog } from "./otp-secret-dialog";
 import { totpParamsToUri } from "@/lib/crypto";
 import { useDecryptedItems } from "./use-decrypted-items";
+import { useDecryptedFolders } from "./folder-payload";
+import { ManageFoldersDialog, MoveItemDialog, SELECT_CLASS } from "./folders";
+import type { FolderRow } from "@/server/folder-actions";
 import { VaultToolbar, filterVaultItems } from "./vault-toolbar";
 import { VaultItemRow } from "./vault-item-row";
 import { ViewItemDialog } from "./view-item-dialog";
@@ -43,15 +46,36 @@ function safeTotpUri(secret: Parameters<typeof totpParamsToUri>[0]): string {
 
 interface VaultListProps {
   items: VaultItemRowData[];
+  /** Encrypted folder names; decrypted in the browser. */
+  folders?: FolderRow[];
   initialOpenId?: string;
   initialNewType?: VaultItemType;
 }
 
 type CreateType = VaultItemType | null;
 
-export function VaultList({ items, initialOpenId, initialNewType }: VaultListProps) {
+const NO_FOLDERS: FolderRow[] = [];
+
+export function VaultList({
+  items,
+  folders: folderRows = NO_FOLDERS,
+  initialOpenId,
+  initialNewType,
+}: VaultListProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { decrypted, loading } = useDecryptedItems(items);
+  const folders = useDecryptedFolders(folderRows);
+  const folderNames = new Map(folders.map((f) => [f.id, f.name]));
+  // The folder filter lives in the URL (?folder=<id>|none) so the command
+  // palette can link to it; changing it here doesn't reload the page.
+  const folderParam = searchParams.get("folder") ?? "all";
+  const folderFilter =
+    folderParam === "none" || folderParam === "all" || folderRows.some((f) => f.id === folderParam)
+      ? folderParam
+      : "all";
+  const [manageFolders, setManageFolders] = useState(false);
+  const [moveItem, setMoveItem] = useState<DecryptedVaultItem | null>(null);
   const [search, setSearch] = useState("");
   const [createType, setCreateType] = useState<CreateType>(initialNewType ?? null);
   const [favOnly, setFavOnly] = useState(false);
@@ -76,7 +100,12 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialOpenId, initialNewType, decrypted, loading]);
 
-  const filtered = filterVaultItems(decrypted, search, favOnly);
+  const filtered = filterVaultItems(decrypted, search, favOnly, folderFilter);
+
+  function setFolderFilter(value: string) {
+    const url = value === "all" ? "/vault" : `/vault?folder=${encodeURIComponent(value)}`;
+    window.history.replaceState(null, "", url);
+  }
 
   function handleConfirmDelete() {
     if (!deleteTarget) return;
@@ -102,6 +131,29 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
         totalCount={decrypted.length}
       />
 
+      {/* Folder filter */}
+      <div className="flex items-center gap-2">
+        <FolderOpen className="text-muted-foreground size-4" aria-hidden="true" />
+        <select
+          aria-label="Folder filter"
+          className={SELECT_CLASS}
+          value={folderFilter}
+          onChange={(e) => setFolderFilter(e.target.value)}
+        >
+          <option value="all">All folders</option>
+          <option value="none">No folder</option>
+          {folders.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+        <Button variant="ghost" size="sm" onClick={() => setManageFolders(true)}>
+          <FolderCog className="size-3.5" aria-hidden="true" />
+          Manage folders
+        </Button>
+      </div>
+
       {/* List */}
       {loading ? (
         <div className="space-y-2" aria-label="Loading vault items">
@@ -110,7 +162,7 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        !search && !favOnly ? (
+        !search && !favOnly && folderFilter === "all" ? (
           <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-20 text-center">
             <div className="bg-primary/10 flex size-16 items-center justify-center rounded-2xl">
               <KeyRound className="text-primary size-8" aria-hidden="true" />
@@ -137,10 +189,18 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium">
-                {search ? "No items match your search" : "No favorites yet"}
+                {search
+                  ? "No items match your search"
+                  : favOnly
+                    ? "No favorites yet"
+                    : "No items in this folder"}
               </p>
               <p className="text-muted-foreground text-xs">
-                {search ? "Try a different search term" : "Star any item to pin it here"}
+                {search
+                  ? "Try a different search term"
+                  : favOnly
+                    ? "Star any item to pin it here"
+                    : "Use “Move to folder…” on an item to file it here"}
               </p>
             </div>
             {favOnly && !search && (
@@ -163,6 +223,8 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
                 onView={() => setViewItem(item)}
                 onEdit={() => setEditItem(item)}
                 onDelete={() => setDeleteTarget({ id: item.id, name: item.name })}
+                onMove={() => setMoveItem(item)}
+                folderName={item.folderId ? folderNames.get(item.folderId) : undefined}
               />
             </div>
           ))}
@@ -174,6 +236,16 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
         item={viewItem}
         onOpenChange={(open) => {
           if (!open) setViewItem(null);
+        }}
+      />
+
+      {/* ── Folders ─────────────────────────────────────────────────────────── */}
+      <ManageFoldersDialog open={manageFolders} onOpenChange={setManageFolders} folders={folders} />
+      <MoveItemDialog
+        item={moveItem}
+        folders={folders}
+        onOpenChange={(open) => {
+          if (!open) setMoveItem(null);
         }}
       />
 

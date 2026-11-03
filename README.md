@@ -13,14 +13,14 @@ KeyCrypt encrypts the contents of every vault item in your browser before it rea
 
 ## Security model
 
-| What the server stores                                                                                                   | What the server never sees                                        |
-| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| Ciphertext of each item's name and contents (AES-256-GCM)                                                                | Master password                                                   |
-| Random IV per item                                                                                                       | Vault key                                                         |
-| Salt, wrapped vault key (master password + recovery key), verifier                                                       | Item names and contents (usernames, passwords, URLs, notes, keys) |
-| Argon2id hash of the account password; two-factor secret (encrypted with a server key) and backup-code hashes            | Recovery key                                                      |
-| **Plain-text metadata:** item types, favourite flags, created/updated times                                              |                                                                   |
-| **Audit log:** account events with timestamps, IP address and browser, item type on create, export format; kept 180 days |                                                                   |
+| What the server stores                                                                                                                 | What the server never sees                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Ciphertext of each item's name and contents (AES-256-GCM)                                                                              | Master password                                                   |
+| Random IV per item                                                                                                                     | Vault key                                                         |
+| Salt, wrapped vault key (master password + recovery key), verifier                                                                     | Item names and contents (usernames, passwords, URLs, notes, keys) |
+| Argon2id hash of the account password; two-factor secret (encrypted with a server key) and backup-code hashes                          | Recovery key                                                      |
+| **Plain-text metadata:** item types, favourite flags, created/updated times, which folder each item is in (folder names are encrypted) |                                                                   |
+| **Audit log:** account events with timestamps, IP address and browser, item type on create, export format; kept 180 days               |                                                                   |
 
 The server also handles your email and name, your account password while you sign in, sign up,
 reset it or confirm it (it stores only the Argon2id hash), the session cookie, and client IPs and
@@ -72,6 +72,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Password generator** — configurable length, character sets, live entropy score
 - **Recovery kit** — a one-time recovery key (shown at setup, regenerable in Settings) that unlocks the vault and lets you set a new master password if you forget it
 - **Export** — Settings → Export, built in the browser: an encrypted JSON file (`keycrypt-export` v1, PBKDF2 600k + AES-256-GCM under a separate export password), or a plain Bitwarden-format CSV after re-entering your account password
+- **Folders** — group items into folders (create, rename, delete, move, filter; the command palette finds items by folder and jumps to a folder). Folder names are encrypted in the browser with the vault key, bound to the user and folder id
 - **Import** — Settings → Import from Bitwarden (unencrypted JSON or CSV), 1Password, LastPass and Chrome/Edge CSV, or a KeyCrypt encrypted export. The file is parsed in the browser and never uploaded; a preview shows counts per type and skipped rows, then each item is encrypted in the browser and saved in batches of 50
 - **Favorites filter** — star items and filter to pinned items only
 - **Search** — live filter across name, username, URL, SSID; press `/` to focus, `Escape` to clear

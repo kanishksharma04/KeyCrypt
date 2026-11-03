@@ -21,10 +21,14 @@ import { cn } from "@/lib/utils";
 export function filterVaultItems(
   items: DecryptedVaultItem[],
   search: string,
-  favOnly: boolean
+  favOnly: boolean,
+  /** "all", "none" (unfiled) or a folder id. */
+  folder: string = "all"
 ): DecryptedVaultItem[] {
   return items.filter((item) => {
     if (favOnly && !item.favorite) return false;
+    if (folder === "none" && item.folderId) return false;
+    if (folder !== "all" && folder !== "none" && item.folderId !== folder) return false;
     const q = search.toLowerCase();
     if (!q) return true;
     if (item.name.toLowerCase().includes(q)) return true;

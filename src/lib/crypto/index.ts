@@ -14,7 +14,7 @@ export {
 
 export { encryptItem, decryptItem } from "./encryption";
 
-export { itemAad, generateItemId } from "./aad";
+export { itemAad, folderAad, generateItemId } from "./aad";
 
 export {
   generateTotpSecret,

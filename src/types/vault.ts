@@ -49,6 +49,8 @@ interface BaseDecryptedItem {
   id: string;
   name: string;
   favorite: boolean;
+  /** The folder it is filed in, if any. */
+  folderId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -95,6 +97,15 @@ export interface VaultItemRow {
   ciphertext: string;
   iv: string;
   favorite: boolean;
+  folderId?: string | null;
   createdAt: string; // ISO date string (serialized from Date)
   updatedAt: string;
+}
+
+// ─── Folders ─────────────────────────────────────────────────────────────────
+
+/** A folder with its name decrypted in the browser. */
+export interface DecryptedFolder {
+  id: string;
+  name: string;
 }

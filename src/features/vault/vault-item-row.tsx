@@ -1,7 +1,17 @@
 "use client";
 
 import { useTransition } from "react";
-import { Copy, Eye, ExternalLink, MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Eye,
+  ExternalLink,
+  Folder,
+  FolderInput,
+  MoreHorizontal,
+  Pencil,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { toggleFavoriteAction } from "@/server/vault-item-actions";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -24,9 +34,19 @@ interface VaultItemRowProps {
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onMove?: () => void;
+  /** Decrypted name of the item's folder, if it has one. */
+  folderName?: string;
 }
 
-export function VaultItemRow({ item, onView, onEdit, onDelete }: VaultItemRowProps) {
+export function VaultItemRow({
+  item,
+  onView,
+  onEdit,
+  onDelete,
+  onMove,
+  folderName,
+}: VaultItemRowProps) {
   const [pendingFav, startFavTransition] = useTransition();
   const { Icon, iconBg, iconColor } = TYPE_META[item.type];
 
@@ -97,6 +117,12 @@ export function VaultItemRow({ item, onView, onEdit, onDelete }: VaultItemRowPro
         <div className="flex items-baseline gap-2">
           <p className="truncate text-sm font-medium">{item.name}</p>
           <span className="text-muted-foreground shrink-0 text-xs">{timeAgo(item.updatedAt)}</span>
+          {folderName && (
+            <span className="text-muted-foreground bg-muted inline-flex max-w-32 shrink-0 items-center gap-1 rounded px-1.5 text-[11px]">
+              <Folder className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">{folderName}</span>
+            </span>
+          )}
         </div>
         {secondaryText && <p className="text-muted-foreground truncate text-xs">{secondaryText}</p>}
       </button>
@@ -171,6 +197,12 @@ export function VaultItemRow({ item, onView, onEdit, onDelete }: VaultItemRowPro
               <Pencil className="size-3.5" aria-hidden="true" />
               Edit
             </DropdownMenuItem>
+            {onMove && (
+              <DropdownMenuItem onClick={onMove}>
+                <FolderInput className="size-3.5" aria-hidden="true" />
+                Move to folder…
+              </DropdownMenuItem>
+            )}
             {dropdownCopyItems.map(({ label, text }) => (
               <DropdownMenuItem key={label} onClick={() => void copyToClipboard(text)}>
                 <Copy className="size-3.5" aria-hidden="true" />

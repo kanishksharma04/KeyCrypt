@@ -70,6 +70,33 @@ export const createVaultItemsBatchInput = z.object({
     }),
 });
 
+// ─── Folders ─────────────────────────────────────────────────────────────────
+// Folder names are encrypted in the browser; the server sees ciphertext only.
+
+/** A browser-generated folder id (UUID v4, bound into the name's AAD). */
+export const folderIdSchema = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+
+/** AES-GCM of {"name": ...}; a 100-character name stays well under this. */
+const folderNameCiphertextSchema = base64({ min: 4, max: 2048 });
+
+export const MAX_FOLDERS = 200;
+
+export const folderInput = z.object({
+  id: folderIdSchema,
+  nameCiphertext: folderNameCiphertextSchema,
+  nameIv: ivSchema,
+});
+
+export const folderIdInput = z.object({ id: folderIdSchema });
+
+export const moveItemInput = z.object({
+  itemId: idSchema,
+  /** null moves the item out of any folder. */
+  folderId: folderIdSchema.nullable(),
+});
+
 export const updateVaultItemInput = z.object({
   id: idSchema,
   ciphertext: ciphertextSchema,

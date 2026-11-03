@@ -12,17 +12,17 @@ datasource db {
 // ─── Auth.js v5 models (used by @auth/prisma-adapter) ────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
+  id              String    @id @default(cuid())
+  name            String?
+  email           String    @unique
+  emailVerified   DateTime?
+  image           String?
   // Argon2id hash of the account (sign-in) password — never the master password.
   // Set at sign-up; a user without a hash cannot sign in with credentials.
-  passwordHash  String?
+  passwordHash    String?
   // Incremented to revoke every JWT session (sign out all devices, password
   // reset). Tokens carry the version they were issued with; see src/lib/session-version.ts.
-  tokenVersion  Int       @default(0)
+  tokenVersion    Int       @default(0)
   // Two-factor sign-in (TOTP). Protects the ACCOUNT, not the vault:
   // totpSecretEnc is the TOTP secret encrypted on the server (AES-256-GCM,
   // TOTP_ENCRYPTION_KEY). Set but totpEnabledAt null = setup not yet confirmed.
@@ -30,16 +30,17 @@ model User {
   totpSecretEnc   String?
   totpEnabledAt   DateTime?
   totpBackupCodes String[]  @default([])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
+  accounts       Account[]
+  sessions       Session[]
   // WebAuthn passkey authenticators (scaffolded; no UI yet)
   authenticators Authenticator[]
-  vaultMeta     VaultMeta?
-  vaultItems    VaultItem[]
-  auditLogs     AuditLog[]
+  vaultMeta      VaultMeta?
+  vaultItems     VaultItem[]
+  folders        Folder[]
+  auditLogs      AuditLog[]
 
   @@index([email])
 }
@@ -115,33 +116,33 @@ model Authenticator {
 //   key-encryption key derived from the master password and `salt`. Changing
 //   the master password only re-wraps it. v1 vaults upgrade on unlock.
 model VaultMeta {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  cryptoVersion    Int      @default(1)
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  cryptoVersion      Int       @default(1)
   // Password KDF for `salt`: "pbkdf2" (v1 vault key) or "argon2id" (v2 KEK; all
   // new and upgraded vaults). kdfParams holds its cost parameters; null means the
   // historical PBKDF2-SHA-256 default of 600,000 iterations.
-  kdf              String   @default("pbkdf2")
-  kdfParams        Json?
+  kdf                String    @default("pbkdf2")
+  kdfParams          Json?
   // Base64 random salt for the password-based key derivation
-  salt             String
+  salt               String
   // AES-256-GCM encrypted known-plaintext blob (under the vault key); used to
   // verify the key in the browser without comparing anything server-side.
   // Written at vault setup; a row without it is treated as "vault not set up".
-  verificationBlob String?  @db.Text
+  verificationBlob   String?   @db.Text
   // IV for the verification blob encryption
-  verificationIv   String?
+  verificationIv     String?
   // v2: the vault key wrapped with AES-GCM under the key-encryption key (base64)
-  wrappedVaultKey  String?  @db.Text
+  wrappedVaultKey    String?   @db.Text
   // v2: IV for wrappedVaultKey (base64, 12 bytes)
-  wrapIv           String?
+  wrapIv             String?
   // v2 recovery kit: the SAME vault key wrapped under a key derived (HKDF) from
   // a random 128-bit recovery key the user keeps offline. Regenerating replaces it.
   recoveryWrappedKey String?   @db.Text
   recoveryIv         String?
   recoveryCreatedAt  DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -161,14 +162,16 @@ model VaultItem {
   // Base64-encoded random 96-bit IV. Unique per encryption operation.
   iv         String
   favorite   Boolean       @default(false)
-  // Not used yet; reserved for folder grouping
+  // Optional folder (deleting the folder leaves the item unfiled)
   folderId   String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([folderId])
   @@index([userId, type])
   @@index([userId, favorite])
   @@index([userId, updatedAt])
@@ -182,6 +185,23 @@ enum VaultItemType {
   // Authenticator (TOTP) secret; the otpauth parameters live inside the ciphertext.
   OTP_SECRET
   // Possible future types: SSH_KEY CRYPTO_WALLET BANK_DETAILS LICENSE
+}
+
+// A folder for grouping vault items. Its name is encrypted in the browser
+// with the vault key (AES-256-GCM, AAD bound to user + folder id); the server
+// stores only the ciphertext. The id is generated in the browser (UUID v4) so
+// it can be bound into the AAD before the folder is created.
+model Folder {
+  id             String   @id
+  userId         String
+  nameCiphertext String   @db.Text
+  nameIv         String
+  createdAt      DateTime @default(now())
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items VaultItem[]
+
+  @@index([userId])
 }
 
 // ─── Audit log ────────────────────────────────────────────────────────────────

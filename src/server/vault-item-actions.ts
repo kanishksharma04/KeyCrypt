@@ -27,6 +27,7 @@ export async function getVaultItemSummariesAction(): Promise<
       ciphertext: string;
       iv: string;
       favorite: boolean;
+      folderId: string | null;
     }[]
   | { error: string }
 > {
@@ -35,7 +36,15 @@ export async function getVaultItemSummariesAction(): Promise<
 
   return db.vaultItem.findMany({
     where: { userId: session.user.id },
-    select: { id: true, type: true, name: true, ciphertext: true, iv: true, favorite: true },
+    select: {
+      id: true,
+      type: true,
+      name: true,
+      ciphertext: true,
+      iv: true,
+      favorite: true,
+      folderId: true,
+    },
   });
 }
 

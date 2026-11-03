@@ -47,6 +47,14 @@ async function createUserWithData(email: string) {
       credentialBackedUp: false,
     },
   });
+  await db.folder.create({
+    data: {
+      id: (await import("crypto")).randomUUID(),
+      userId,
+      nameCiphertext: "bmFtZQ==",
+      nameIv: "aXYtaXYtaXYtaXYt",
+    },
+  });
   await logAudit(userId, "auth.signin");
   await logAudit(userId, "vault.item.create", { type: "LOGIN" });
   await generateToken("reset", email);
@@ -55,7 +63,7 @@ async function createUserWithData(email: string) {
 }
 
 async function rowsFor(userId: string, email: string) {
-  const [users, metas, items, accounts, sessions, authenticators, audit, tokens] =
+  const [users, metas, items, accounts, sessions, authenticators, audit, tokens, folders] =
     await Promise.all([
       db.user.count({ where: { id: userId } }),
       db.vaultMeta.count({ where: { userId } }),
@@ -65,8 +73,9 @@ async function rowsFor(userId: string, email: string) {
       db.authenticator.count({ where: { userId } }),
       db.auditLog.count({ where: { userId } }),
       db.verificationToken.count({ where: { identifier: { endsWith: `:${email}` } } }),
+      db.folder.count({ where: { userId } }),
     ]);
-  return { users, metas, items, accounts, sessions, authenticators, audit, tokens };
+  return { users, metas, items, accounts, sessions, authenticators, audit, tokens, folders };
 }
 
 const ALL_GONE = {
@@ -78,6 +87,7 @@ const ALL_GONE = {
   authenticators: 0,
   audit: 0,
   tokens: 0,
+  folders: 0,
 };
 
 function signInAttempt(email: string) {
@@ -128,6 +138,7 @@ describe("deleteAccountAction", () => {
       authenticators: 1,
       audit: 2,
       tokens: 2,
+      folders: 1,
     });
     expect(await signInAttempt(bob.email)).toMatchObject({ id: bob.id });
   });

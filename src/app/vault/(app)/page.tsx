@@ -35,10 +35,18 @@ export default async function VaultPage({
       ciphertext: true,
       iv: true,
       favorite: true,
+      folderId: true,
       createdAt: true,
       updatedAt: true,
     },
     orderBy: [{ favorite: "desc" }, { updatedAt: "desc" }],
+  });
+
+  // Folder names are ciphertext here; the browser decrypts them.
+  const folders = await db.folder.findMany({
+    where: { userId: session.user.id },
+    select: { id: true, nameCiphertext: true, nameIv: true },
+    orderBy: { createdAt: "asc" },
   });
 
   // Serialize Date → ISO string so props are safely passed to Client Component
@@ -49,13 +57,19 @@ export default async function VaultPage({
     ciphertext: item.ciphertext,
     iv: item.iv,
     favorite: item.favorite,
+    folderId: item.folderId,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
   }));
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-6">
-      <VaultList items={items} initialOpenId={initialOpenId} initialNewType={initialNewType} />
+      <VaultList
+        items={items}
+        folders={folders}
+        initialOpenId={initialOpenId}
+        initialNewType={initialNewType}
+      />
     </div>
   );
 }

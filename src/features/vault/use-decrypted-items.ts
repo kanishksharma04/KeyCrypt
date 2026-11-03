@@ -30,6 +30,7 @@ export async function decryptVaultItem(
     id: row.id,
     name,
     favorite: row.favorite,
+    folderId: row.folderId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -78,6 +79,7 @@ export function useDecryptedItems(items: VaultItemRow[]) {
             type: row.type,
             name: row.name ?? UNREADABLE_ITEM_NAME,
             favorite: row.favorite,
+            folderId: row.folderId ?? null,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
             secret: {},
