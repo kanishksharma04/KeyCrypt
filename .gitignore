@@ -2,6 +2,10 @@
 
 # dependencies
 /node_modules
+/extension/node_modules
+# browser extension builds
+/extension/dist
+/extension/dist-e2e
 /.pnp
 .pnp.*
 .yarn/*

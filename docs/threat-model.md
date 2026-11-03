@@ -132,6 +132,14 @@ vault key (random AES-256-GCM) ──► items, folder names, verification blob
   password, then AES-256-GCM. It is built in the browser.
 - **CSV export**: plain text, after an account-password confirmation. The user is warned.
 
+### Browser extension
+
+The extension (`extension/`, Manifest V3) uses the same crypto module. It fetches the vault metadata
+and item ciphertext from `/api/ext/*` with the session cookie, unlocks with the master password
+in the popup, and keeps the vault key only in the popup's memory (no `storage` permission). It
+fills only the active tab after a click (`activeTab`), on `https://` pages whose host matches the
+saved login, and the injected script refuses to fill if the page's host changed.
+
 ## What the server sees
 
 **Never**: the master password, the vault key, the recovery key, decrypted secrets, item names or

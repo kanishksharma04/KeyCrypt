@@ -2,6 +2,9 @@
   "name": "keycrypt",
   "version": "0.1.0",
   "private": true,
+  "exports": {
+    "./crypto": "./src/lib/crypto/index.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -10,7 +13,8 @@
     "lint:fix": "eslint --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm --filter @keycrypt/extension typecheck",
+    "ext:build": "pnpm --filter @keycrypt/extension build",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -22,6 +26,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
     "test:docker": "playwright test --config playwright.docker.config.ts",
+    "test:extension": "playwright test --config playwright.extension.config.ts",
     "prepare": "husky"
   },
   "lint-staged": {

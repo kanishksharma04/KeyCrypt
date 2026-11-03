@@ -75,6 +75,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Recovery kit** — a one-time recovery key (shown at setup, regenerable in Settings) that unlocks the vault and lets you set a new master password if you forget it
 - **Export** — Settings → Export, built in the browser: an encrypted JSON file (`keycrypt-export` v1, PBKDF2 600k + AES-256-GCM under a separate export password), or a plain Bitwarden-format CSV after re-entering your account password
 - **Folders** — group items into folders (create, rename, delete, move, filter; the command palette finds items by folder and jumps to a folder). Folder names are encrypted in the browser with the vault key, bound to the user and folder id
+- **Browser extension (MVP)** — `extension/`: a Manifest V3 extension that unlocks the vault locally (same crypto module, key kept only in popup memory) and fills logins matching the current site. See [extension/README.md](extension/README.md)
 - **Import** — Settings → Import from Bitwarden (unencrypted JSON or CSV), 1Password, LastPass and Chrome/Edge CSV, or a KeyCrypt encrypted export. The file is parsed in the browser and never uploaded; a preview shows counts per type and skipped rows, then each item is encrypted in the browser and saved in batches of 50
 - **Favorites filter** — star items and filter to pinned items only
 - **Search** — live filter across name, username, URL, SSID; press `/` to focus, `Escape` to clear
@@ -200,6 +201,8 @@ pnpm test         # Vitest unit tests (no database)
 pnpm test:integration # Server-action tests against Postgres (see below)
 pnpm test:e2e     # Playwright end-to-end tests against a production build (see below)
 pnpm test:docker  # Smoke test against a running Docker container (see Self-hosting)
+pnpm ext:build    # Build the browser extension into extension/dist
+pnpm test:extension # Load the extension unpacked in Chromium and fill a test form
 pnpm db:deploy    # Apply pending migrations (prisma migrate deploy)
 pnpm db:migrate   # Create + apply a new migration in development (prisma migrate dev)
 pnpm db:push      # Throwaway local databases only — no migration history

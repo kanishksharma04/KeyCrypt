@@ -21,3 +21,4 @@ docker-compose*.yml
 Dockerfile
 .dockerignore
 extension/node_modules
+extension/dist

@@ -51,7 +51,8 @@ fix needs longer, we'll tell you why.
 ## Scope
 
 In scope: this repository's code — the web app, its server actions and API routes, the
-cryptography in `src/lib/crypto`, and the self-hosting image (`Dockerfile`, `docker-compose.yml`).
+cryptography in `src/lib/crypto`, the browser extension (`extension/`) and the self-hosting image
+(`Dockerfile`, `docker-compose.yml`).
 
 Especially interesting:
 

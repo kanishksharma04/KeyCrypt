@@ -1,3 +1,5 @@
 .next
 node_modules
 pnpm-lock.yaml
+extension/dist
+extension/dist-e2e

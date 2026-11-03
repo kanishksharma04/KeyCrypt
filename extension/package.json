@@ -1,0 +1,19 @@
+{
+  "name": "@keycrypt/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "KeyCrypt browser extension (Manifest V3): unlock locally and fill logins.",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "keycrypt": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.3.7",
+    "typescript": "5.9.3",
+    "vite": "8.1.0"
+  }
+}

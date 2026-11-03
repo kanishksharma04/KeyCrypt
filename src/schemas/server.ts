@@ -97,6 +97,9 @@ export const moveItemInput = z.object({
   folderId: folderIdSchema.nullable(),
 });
 
+/** GET /api/ext/items query (browser extension). */
+export const extItemsQuery = z.object({ type: itemTypeSchema.optional() });
+
 export const updateVaultItemInput = z.object({
   id: idSchema,
   ciphertext: ciphertextSchema,

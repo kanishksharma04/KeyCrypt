@@ -83,7 +83,8 @@ and decryption happens in the browser.
 ## Hard rules
 
 1. All cryptography lives in `src/lib/crypto`. Import it **only** via
-   `@/lib/crypto` (`index.ts`), never from sub-modules.
+   `@/lib/crypto` (`index.ts`), never from sub-modules. The browser extension imports the same
+   `index.ts` as `keycrypt/crypto` (workspace package).
 2. The server must never receive the master password, the vault key, or decrypted
    secrets. Server actions accept and return ciphertext only.
 3. Every server action (`src/server/*`, `"use server"`) calls `auth()`, returns early
@@ -164,6 +165,7 @@ Environment variables: see `.env.example` (`DATABASE_URL`, `AUTH_SECRET`,
 ```
 prisma/schema.prisma   User, Account, Session, VaultMeta, VaultItem, AuditLog, ...
 prisma/migrations/     Prisma Migrate history (0_init = baseline)
+extension/             browser extension (pnpm workspace package; imports keycrypt/crypto)
 src/
   app/                 App Router routes
     auth/              signin, signup, verify-email, forgot/reset-password, error
@@ -179,6 +181,7 @@ src/
   schemas/             Zod schemas (auth, vault)
   server/              server actions (auth, vault, vault items, settings)
   types/               shared types, next-auth augmentation
+  app/api/ext/         JSON API for the browser extension (session cookie, ciphertext only)
   proxy.ts             Next 16 "proxy" (ex-middleware): verifies the session JWT with the
                        edge-safe lib/auth.config.ts (no Prisma), route guards, CSP nonce
 ```

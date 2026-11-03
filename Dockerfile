@@ -25,6 +25,8 @@ WORKDIR /app
 # ── Dependencies (cached until the lockfile changes) ─────────────────────────
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# The workspace also has the browser extension; only its manifest is needed here.
+COPY extension/package.json ./extension/package.json
 RUN pnpm install --frozen-lockfile
 
 # ── Build ────────────────────────────────────────────────────────────────────
