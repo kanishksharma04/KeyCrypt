@@ -1,6 +1,17 @@
 import { decryptExport, EXPORT_FORMAT } from "@/lib/crypto";
 import type { VaultExportPayload } from "@/lib/vault-export";
-import { ImportCollector, asWifiSecurity, str } from "./normalize";
+import { ImportCollector, asWifiSecurity, importedTotp, str } from "./normalize";
+
+/** Rebuild an otpauth:// link from a stored OTP secret's fields (validated afterwards). */
+function totpUriFromSecret(s: Record<string, unknown>): string {
+  const q = new URLSearchParams({
+    secret: str(s.secret),
+    algorithm: str(s.algorithm) || "SHA1",
+    digits: str(s.digits) || "6",
+    period: str(s.period) || "30",
+  });
+  return `otpauth://totp/x?${q.toString()}`;
+}
 import { ImportFormatError, type ImportResult } from "./types";
 
 // KeyCrypt's own password-protected export (Settings → Export, "keycrypt-export" v1).
@@ -52,6 +63,7 @@ export async function parseKeyCryptExport(
             password: str(s.password),
             url: str(s.url),
             notes: str(s.notes),
+            ...(str(s.totp) && { totp: str(s.totp) }),
           },
         });
       case "SECURE_NOTE":
@@ -80,6 +92,21 @@ export async function parseKeyCryptExport(
             notes: str(s.notes),
           },
         });
+      case "OTP_SECRET": {
+        const params = importedTotp(totpUriFromSecret(s));
+        if (!params) return out.skip(row, "Damaged authenticator key");
+        return out.add(row, {
+          type: "OTP_SECRET",
+          name,
+          favorite,
+          secret: {
+            ...params,
+            issuer: str(s.issuer),
+            account: str(s.account),
+            notes: str(s.notes),
+          },
+        });
+      }
       default:
         return out.skip(row, `Unknown item type “${str(item.type) || "(none)"}”`);
     }

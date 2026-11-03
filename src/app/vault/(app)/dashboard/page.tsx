@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Code2, FileText, KeyRound, Star, Vault, Wifi } from "lucide-react";
+import { Code2, FileText, KeyRound, Star, Timer, Vault, Wifi } from "lucide-react";
 import { getVaultStatsAction } from "@/server/settings-actions";
 import { VaultHealthScore } from "@/features/vault/vault-health-score";
 
@@ -18,6 +18,12 @@ const TYPE_META = {
     Icon: Wifi,
     color: "text-orange-500",
     bg: "bg-orange-500/10",
+  },
+  OTP_SECRET: {
+    label: "Authenticators",
+    Icon: Timer,
+    color: "text-cyan-500",
+    bg: "bg-cyan-500/10",
   },
 } as const;
 
@@ -98,7 +104,7 @@ export default async function DashboardPage() {
             <h2 className="text-muted-foreground mb-3 text-sm font-semibold tracking-wider uppercase">
               By type
             </h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(
                 Object.entries(TYPE_META) as [
                   keyof typeof TYPE_META,

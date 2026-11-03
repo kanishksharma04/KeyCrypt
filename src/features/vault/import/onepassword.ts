@@ -21,16 +21,11 @@ export function parseOnePasswordCsv(text: string): ImportResult {
       username: cell(r, "username", "user name"),
       password: cell(r, "password"),
       url: url.split(/\r?\n/)[0]?.trim() ?? "",
-      notes: joinNotes(
-        cell(r, "notes", "notesplain"),
-        fieldLines([
-          ["TOTP", cell(r, "otpauth", "one-time password")],
-          ["Tags", cell(r, "tags")],
-        ])
-      ),
+      notes: joinNotes(cell(r, "notes", "notesplain"), fieldLines([["Tags", cell(r, "tags")]])),
+      totp: cell(r, "otpauth", "one-time password"),
     };
     const title = cell(r, "title");
-    if (!title && !login.username && !login.password && !login.url && !login.notes) {
+    if (!title && !login.username && !login.password && !login.url && !login.notes && !login.totp) {
       return out.skip(row, "Empty row");
     }
     out.add(row, loginOrNote(itemName(title, login.url), truthy(cell(r, "favorite")), login));

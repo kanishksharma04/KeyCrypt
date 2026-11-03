@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseTotpInput } from "@/lib/crypto";
 
 const masterPasswordRules = z
   .string()
@@ -52,12 +53,30 @@ export type UnlockInput = z.infer<typeof unlockSchema>;
 
 // ─── Vault item schemas ────────────────────────────────────────────────────────
 
+/** An authenticator key: a base32 secret or an otpauth://totp/ link. */
+const totpInputSchema = z
+  .string()
+  .max(2048, "Max 2048 characters")
+  .refine(
+    (v) => {
+      try {
+        parseTotpInput(v);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: "Enter a base32 key or an otpauth:// link" }
+  );
+
 export const loginItemSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Max 100 characters"),
   username: z.string().max(256, "Max 256 characters"),
   password: z.string().max(4096, "Max 4096 characters"),
   url: z.string().max(2048, "Max 2048 characters"),
   notes: z.string().max(10_000, "Max 10,000 characters"),
+  /** Optional; empty means no authenticator key. */
+  totp: z.union([z.literal(""), totpInputSchema]).optional(),
 });
 export type LoginItemInput = z.infer<typeof loginItemSchema>;
 
@@ -86,3 +105,13 @@ export const wifiPasswordSchema = z.object({
   notes: z.string().max(10_000, "Max 10,000 characters"),
 });
 export type WifiPasswordInput = z.infer<typeof wifiPasswordSchema>;
+
+export const otpSecretSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Max 100 characters"),
+  /** Base32 key or otpauth:// link (normalised to the parameters on save). */
+  secret: totpInputSchema,
+  issuer: z.string().max(100, "Max 100 characters"),
+  account: z.string().max(256, "Max 256 characters"),
+  notes: z.string().max(10_000, "Max 10,000 characters"),
+});
+export type OtpSecretInput = z.infer<typeof otpSecretSchema>;

@@ -1,4 +1,4 @@
-import { Code2, FileText, KeyRound, Wifi } from "lucide-react";
+import { Code2, FileText, KeyRound, Timer, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import { copySecret, COPIED_TOAST } from "@/lib/clipboard";
 
@@ -30,6 +30,12 @@ export const TYPE_META = {
     label: "WiFi Password",
     iconBg: "bg-orange-500/10",
     iconColor: "text-orange-500",
+  },
+  OTP_SECRET: {
+    Icon: Timer,
+    label: "Authenticator",
+    iconBg: "bg-cyan-500/10",
+    iconColor: "text-cyan-500",
   },
 } as const;
 

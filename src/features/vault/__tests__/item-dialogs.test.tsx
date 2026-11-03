@@ -16,6 +16,7 @@ import { LoginItemDialog } from "../login-item-dialog";
 import { SecureNoteDialog } from "../secure-note-dialog";
 import { ApiKeyDialog } from "../api-key-dialog";
 import { WifiPasswordDialog } from "../wifi-password-dialog";
+import { OtpSecretDialog } from "../otp-secret-dialog";
 
 const USER_ID = "cuser000000000000000000001";
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -40,7 +41,7 @@ interface Case {
   /** Field id → value typed into it. */
   fields: Record<string, string>;
   /** What the encrypted payload must decrypt to. */
-  secret: Record<string, string>;
+  secret: Record<string, unknown>;
   /** Plaintext values that must never appear in the action's arguments. */
   sensitive: string[];
 }
@@ -109,6 +110,52 @@ const CASES: Case[] = [
     },
     sensitive: ["Pl41ntext-W1fi-Pass", "Pl41ntext-SSID", "wifi-notes-secret"],
   },
+  {
+    type: "OTP_SECRET",
+    Dialog: OtpSecretDialog,
+    nameField: "otp-name",
+    name: "Bank 2FA",
+    fields: {
+      "otp-secret": "hxdm vjec jjws rb3h wizr 4ifu gftm xboz",
+      "otp-issuer": "Pl41ntext-Bank",
+      "otp-account": "pl41ntext@acct.test",
+      "otp-notes": "otp-notes-secret",
+    },
+    secret: {
+      secret: "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
+      issuer: "Pl41ntext-Bank",
+      account: "pl41ntext@acct.test",
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      notes: "otp-notes-secret",
+    },
+    sensitive: [
+      "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
+      "hxdm vjec",
+      "Pl41ntext-Bank",
+      "otp-notes-secret",
+    ],
+  },
+  {
+    type: "LOGIN",
+    Dialog: LoginItemDialog,
+    nameField: "item-name",
+    name: "GitLab",
+    fields: {
+      "item-username": "dev-user",
+      "item-password": "Pl41ntext-Pw-2!",
+      "item-totp": "otpauth://totp/GitLab:dev?secret=JBSWY3DPEHPK3PXP&issuer=GitLab&digits=8",
+    },
+    secret: {
+      username: "dev-user",
+      password: "Pl41ntext-Pw-2!",
+      url: "",
+      notes: "",
+      totp: "otpauth://totp/GitLab:dev?issuer=GitLab&secret=JBSWY3DPEHPK3PXP&algorithm=SHA1&digits=8&period=30",
+    },
+    sensitive: ["Pl41ntext-Pw-2!", "JBSWY3DPEHPK3PXP"],
+  },
 ];
 
 let key: CryptoKey;
@@ -131,8 +178,24 @@ const field = (id: string) => {
   return el;
 };
 
+describe("authenticator key validation", () => {
+  it("rejects a value that isn't a base32 key or otpauth:// link", async () => {
+    render(
+      <VaultUserProvider userId={USER_ID}>
+        <OtpSecretDialog open onOpenChange={vi.fn()} mode="create" />
+      </VaultUserProvider>
+    );
+    const user = userEvent.setup();
+    await user.type(field("otp-name"), "Broken");
+    await user.type(field("otp-secret"), "not a key!");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Enter a base32 key or an otpauth:// link")).toBeTruthy();
+    expect(createVaultItemAction).not.toHaveBeenCalled();
+  });
+});
+
 describe.each(CASES)(
-  "$type dialog",
+  "$type dialog ($name)",
   ({ type, Dialog, nameField, name, fields, secret, sensitive }) => {
     function renderDialog() {
       const onOpenChange = vi.fn();

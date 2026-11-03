@@ -1,3 +1,4 @@
+import { totpParamsToUri } from "@/lib/crypto";
 import type { DecryptedVaultItem } from "@/types/vault";
 
 // Pure helpers for Settings → Export. Everything runs in the browser on items
@@ -91,6 +92,7 @@ function toRow(item: DecryptedVaultItem): CsvRow {
         login_uri: item.secret.url,
         login_username: item.secret.username,
         login_password: item.secret.password,
+        login_totp: item.secret.totp ?? "",
       };
     case "SECURE_NOTE":
       return { ...base, notes: item.secret.content };
@@ -114,6 +116,15 @@ function toRow(item: DecryptedVaultItem): CsvRow {
           ["Password", item.secret.password],
           ["Security", item.secret.securityType],
         ]),
+      };
+    // An authenticator becomes a Bitwarden login holding just the TOTP link.
+    case "OTP_SECRET":
+      return {
+        ...base,
+        type: "login",
+        notes: item.secret.notes,
+        login_username: item.secret.account,
+        login_totp: totpParamsToUri(item.secret),
       };
   }
 }

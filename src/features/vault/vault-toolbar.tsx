@@ -33,6 +33,11 @@ export function filterVaultItems(
         item.secret.username.toLowerCase().includes(q) || item.secret.url.toLowerCase().includes(q)
       );
     if (item.type === "WIFI_PASSWORD") return item.secret.ssid.toLowerCase().includes(q);
+    if (item.type === "OTP_SECRET")
+      return (
+        item.secret.issuer.toLowerCase().includes(q) ||
+        item.secret.account.toLowerCase().includes(q)
+      );
     return false;
   });
 }

@@ -21,12 +21,9 @@ const BITWARDEN_TYPES: Record<number, string> = {
   5: "SSH key",
 };
 
-/** Extra URLs (beyond the first) and a TOTP secret, kept in the notes. */
-function loginExtras(urls: string[], totp: string): Array<[string, string]> {
-  return [
-    ...(urls.length > 1 ? [["Other URLs", urls.slice(1).join(", ")] as [string, string]] : []),
-    ["TOTP", totp],
-  ];
+/** Extra URLs (beyond the first), kept in the notes. */
+function loginExtras(urls: string[]): Array<[string, string]> {
+  return urls.length > 1 ? [["Other URLs", urls.slice(1).join(", ")]] : [];
 }
 
 interface BitwardenJsonItem {
@@ -87,7 +84,8 @@ export function parseBitwardenJson(text: string): ImportResult {
             username: str(login.username),
             password: str(login.password),
             url,
-            notes: joinNotes(notes, fieldLines([...loginExtras(urls, str(login.totp)), ...fields])),
+            notes: joinNotes(notes, fieldLines([...loginExtras(urls), ...fields])),
+            totp: str(login.totp),
           })
         );
       }
@@ -141,10 +139,8 @@ export function parseBitwardenCsv(text: string): ImportResult {
           username: cell(r, "login_username"),
           password: cell(r, "login_password"),
           url,
-          notes: joinNotes(
-            notes,
-            fieldLines([...loginExtras(urls, cell(r, "login_totp")), ...fields])
-          ),
+          notes: joinNotes(notes, fieldLines([...loginExtras(urls), ...fields])),
+          totp: cell(r, "login_totp"),
         })
       );
     }

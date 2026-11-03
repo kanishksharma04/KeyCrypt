@@ -13,6 +13,7 @@ import {
   Settings as SettingsIcon,
   Sun,
   Vault,
+  Timer,
   Wifi,
 } from "lucide-react";
 import {
@@ -38,6 +39,7 @@ const TYPE_META = {
   SECURE_NOTE: { Icon: FileText, label: "Secure Note" },
   API_KEY: { Icon: Code2, label: "API Key" },
   WIFI_PASSWORD: { Icon: Wifi, label: "WiFi Password" },
+  OTP_SECRET: { Icon: Timer, label: "Authenticator" },
 } as const;
 
 interface ItemSummary {

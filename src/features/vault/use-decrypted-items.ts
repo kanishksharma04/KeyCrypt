@@ -10,6 +10,7 @@ import type {
   SecureNoteSecret,
   ApiKeySecret,
   WifiPasswordSecret,
+  OtpSecretSecret,
   VaultItemRow,
 } from "@/types/vault";
 
@@ -42,6 +43,8 @@ export async function decryptVaultItem(
       return { ...base, type: "API_KEY" as const, secret: secret as ApiKeySecret };
     case "WIFI_PASSWORD":
       return { ...base, type: "WIFI_PASSWORD" as const, secret: secret as WifiPasswordSecret };
+    case "OTP_SECRET":
+      return { ...base, type: "OTP_SECRET" as const, secret: secret as OtpSecretSecret };
   }
 }
 

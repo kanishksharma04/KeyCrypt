@@ -28,6 +28,7 @@ const TYPE_LABELS: Record<string, [string, string]> = {
   SECURE_NOTE: ["secure note", "secure notes"],
   API_KEY: ["API key", "API keys"],
   WIFI_PASSWORD: ["WiFi password", "WiFi passwords"],
+  OTP_SECRET: ["authenticator", "authenticators"],
 };
 
 function plural(type: string, n: number): string {

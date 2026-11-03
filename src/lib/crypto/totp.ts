@@ -1,4 +1,4 @@
-import { Secret, TOTP } from "otpauth";
+import { Secret, TOTP, URI } from "otpauth";
 import { encryptItem, decryptItem } from "./encryption";
 import { fromBase64 } from "./utils";
 
@@ -118,4 +118,107 @@ export async function decryptTotpSecret(
   if (!iv || !ciphertext || rest.length > 0) throw new Error("Malformed TOTP secret");
   const key = await importTotpKey(keyBase64);
   return decryptItem<string>(key, { iv, ciphertext }, totpAad(userId));
+}
+
+// ─── Authenticator codes stored in the vault (OTP_SECRET items, login.totp) ──
+//
+// Runs in the browser on decrypted item secrets. Unlike account 2FA above,
+// these follow whatever the issuing site chose (algorithm, digits, period).
+
+export type TotpAlgorithm = "SHA1" | "SHA256" | "SHA512";
+
+export interface TotpParams {
+  /** Base32, upper case, no padding or spaces. */
+  secret: string;
+  issuer: string;
+  account: string;
+  algorithm: TotpAlgorithm;
+  digits: number;
+  period: number;
+}
+
+export class TotpParseError extends Error {
+  constructor(message = "That isn't a valid authenticator key or otpauth:// link.") {
+    super(message);
+    this.name = "TotpParseError";
+  }
+}
+
+const ALGORITHMS: readonly TotpAlgorithm[] = ["SHA1", "SHA256", "SHA512"];
+
+function checkedParams(p: TotpParams): TotpParams {
+  if (!/^[A-Z2-7]{8,256}$/.test(p.secret)) throw new TotpParseError();
+  if (!ALGORITHMS.includes(p.algorithm)) throw new TotpParseError("Unsupported algorithm.");
+  if (!Number.isInteger(p.digits) || p.digits < 6 || p.digits > 8) {
+    throw new TotpParseError("Codes must have 6 to 8 digits.");
+  }
+  if (!Number.isInteger(p.period) || p.period < 10 || p.period > 300) {
+    throw new TotpParseError("Unsupported code period.");
+  }
+  return p;
+}
+
+/**
+ * Read an authenticator setup value: an otpauth://totp/ link, or a bare
+ * base32 secret (spaces, dashes and case ignored, "=" padding allowed).
+ * `fallback` fills issuer/account when the input doesn't name them.
+ */
+export function parseTotpInput(
+  input: string,
+  fallback: { issuer?: string; account?: string } = {}
+): TotpParams {
+  const value = input.trim();
+  if (/^otpauth:/i.test(value)) {
+    let parsed;
+    try {
+      parsed = URI.parse(value);
+    } catch {
+      throw new TotpParseError();
+    }
+    if (!(parsed instanceof TOTP)) {
+      throw new TotpParseError("Only time-based (TOTP) codes are supported.");
+    }
+    return checkedParams({
+      secret: parsed.secret.base32.replace(/=+$/, ""),
+      issuer: parsed.issuer || fallback.issuer || "",
+      account: parsed.label || fallback.account || "",
+      algorithm: parsed.algorithm as TotpAlgorithm,
+      digits: parsed.digits,
+      period: parsed.period,
+    });
+  }
+  return checkedParams({
+    secret: value.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase(),
+    issuer: fallback.issuer ?? "",
+    account: fallback.account ?? "",
+    algorithm: "SHA1",
+    digits: 6,
+    period: 30,
+  });
+}
+
+function itemTotp(p: TotpParams): TOTP {
+  return new TOTP({
+    issuer: p.issuer,
+    label: p.account || p.issuer || "account",
+    algorithm: p.algorithm,
+    digits: p.digits,
+    period: p.period,
+    secret: Secret.fromBase32(p.secret),
+  });
+}
+
+/** The canonical otpauth:// link for these parameters (stored on logins). */
+export function totpParamsToUri(p: TotpParams): string {
+  return itemTotp(checkedParams(p)).toString();
+}
+
+/** The code for `timestamp` and how many whole seconds it stays valid. */
+export function currentTotpCode(
+  p: TotpParams,
+  timestamp = Date.now()
+): { code: string; secondsLeft: number } {
+  const code = itemTotp(p).generate({ timestamp });
+  const elapsed = Math.floor(timestamp / 1000) % p.period;
+  return { code, secondsLeft: p.period - elapsed };
 }

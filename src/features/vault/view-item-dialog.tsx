@@ -8,6 +8,7 @@ import { CopyButton } from "@/components/shared/copy-button";
 import type { DecryptedVaultItem } from "@/types/vault";
 import { TYPE_META, copyToClipboard } from "./vault-item-meta";
 import { cn } from "@/lib/utils";
+import { loginTotpParams, TotpCode } from "./totp-code";
 
 // ─── ViewItemDialog ───────────────────────────────────────────────────────────
 
@@ -102,6 +103,14 @@ function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
             <div className="py-3">
               <RevealField label="Password" value={item.secret.password} />
             </div>
+            {(() => {
+              const totp = loginTotpParams(item.secret.totp);
+              return totp ? (
+                <div className="py-3">
+                  <TotpCode params={totp} />
+                </div>
+              ) : null;
+            })()}
             {item.secret.url && (
               <div className="py-3">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
@@ -173,6 +182,27 @@ function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
             </div>
             <div className="py-3">
               <TextField label="Security" value={item.secret.securityType} />
+            </div>
+          </>
+        )}
+
+        {item.type === "OTP_SECRET" && (
+          <>
+            <div className="py-3">
+              <TotpCode params={item.secret} />
+            </div>
+            {item.secret.issuer && (
+              <div className="py-3">
+                <TextField label="Issuer" value={item.secret.issuer} />
+              </div>
+            )}
+            {item.secret.account && (
+              <div className="py-3">
+                <TextField label="Account" value={item.secret.account} />
+              </div>
+            )}
+            <div className="py-3">
+              <RevealField label="Secret key" value={item.secret.secret} />
             </div>
           </>
         )}

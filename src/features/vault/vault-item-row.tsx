@@ -15,6 +15,7 @@ import {
 import type { DecryptedVaultItem } from "@/types/vault";
 import { TYPE_META, copyToClipboard, timeAgo } from "./vault-item-meta";
 import { cn } from "@/lib/utils";
+import { currentTotpCode } from "@/lib/crypto";
 
 // ─── VaultItemRow ─────────────────────────────────────────────────────────────
 
@@ -34,16 +35,31 @@ export function VaultItemRow({ item, onView, onEdit, onDelete }: VaultItemRowPro
     if (item.type === "LOGIN") return item.secret.username;
     if (item.type === "SECURE_NOTE") return null;
     if (item.type === "API_KEY") return item.secret.description;
+    if (item.type === "OTP_SECRET") {
+      return [item.secret.issuer, item.secret.account].filter(Boolean).join(" · ") || null;
+    }
     const { ssid, securityType } = item.secret;
     return ssid ? `${ssid} · ${securityType}` : securityType;
   })();
 
   // Primary copy action (the "sensitive" value for this item type)
-  const primaryCopy = (() => {
-    if (item.type === "LOGIN") return { text: item.secret.password, label: "Password" };
-    if (item.type === "SECURE_NOTE") return { text: item.secret.content, label: "Note" };
-    if (item.type === "API_KEY") return { text: item.secret.key, label: "API key" };
-    return { text: item.secret.password, label: "Password" };
+  // `text` is read at click time: an authenticator code changes every period.
+  const primaryCopy = ((): { text: () => string; label: string } => {
+    if (item.type === "LOGIN") return { text: () => item.secret.password, label: "Password" };
+    if (item.type === "SECURE_NOTE") return { text: () => item.secret.content, label: "Note" };
+    if (item.type === "API_KEY") return { text: () => item.secret.key, label: "API key" };
+    if (item.type === "OTP_SECRET") {
+      const secret = item.secret;
+      const code = () => {
+        try {
+          return currentTotpCode(secret).code;
+        } catch {
+          return ""; // damaged secret: nothing to copy
+        }
+      };
+      return { text: code, label: "Code" };
+    }
+    return { text: () => item.secret.password, label: "Password" };
   })();
 
   // Secondary dropdown copy items specific to each type
@@ -87,11 +103,11 @@ export function VaultItemRow({ item, onView, onEdit, onDelete }: VaultItemRowPro
 
       <div className="flex shrink-0 items-center gap-1">
         {/* Primary copy */}
-        {primaryCopy.text && (
+        {primaryCopy.text() && (
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => void copyToClipboard(primaryCopy.text)}
+            onClick={() => void copyToClipboard(primaryCopy.text())}
             title={`Copy ${primaryCopy.label.toLowerCase()}`}
           >
             <Copy className="size-3.5" aria-hidden="true" />

@@ -10,6 +10,8 @@ export interface LoginSecret {
   password: string;
   url: string;
   notes: string;
+  /** Optional authenticator key, as an otpauth://totp/ link. Absent or "" = none. */
+  totp?: string;
 }
 
 export interface SecureNoteSecret {
@@ -26,6 +28,18 @@ export interface WifiPasswordSecret {
   ssid: string;
   password: string;
   securityType: WifiSecurityType;
+  notes: string;
+}
+
+/** An authenticator (TOTP) secret with the parameters its codes use. */
+export interface OtpSecretSecret {
+  /** Base32, upper case. */
+  secret: string;
+  issuer: string;
+  account: string;
+  algorithm: "SHA1" | "SHA256" | "SHA512";
+  digits: number;
+  period: number;
   notes: string;
 }
 
@@ -59,11 +73,17 @@ export interface DecryptedWifiPasswordItem extends BaseDecryptedItem {
   secret: WifiPasswordSecret;
 }
 
+export interface DecryptedOtpSecretItem extends BaseDecryptedItem {
+  type: "OTP_SECRET";
+  secret: OtpSecretSecret;
+}
+
 export type DecryptedVaultItem =
   | DecryptedLoginItem
   | DecryptedSecureNoteItem
   | DecryptedApiKeyItem
-  | DecryptedWifiPasswordItem;
+  | DecryptedWifiPasswordItem
+  | DecryptedOtpSecretItem;
 
 // ─── Serializable row (Server Component → Client Component) ───────────────────
 

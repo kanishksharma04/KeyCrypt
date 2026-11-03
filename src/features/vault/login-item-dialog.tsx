@@ -8,7 +8,7 @@ import { PasswordGeneratorPopover } from "./password-generator";
 import { toast } from "sonner";
 import { loginItemSchema, type LoginItemInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
-import { getVaultKey, generateItemId } from "@/lib/crypto";
+import { getVaultKey, generateItemId, parseTotpInput, totpParamsToUri } from "@/lib/crypto";
 import { sealItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ const EMPTY_VALUES: LoginItemInput = {
   password: "",
   url: "",
   notes: "",
+  totp: "",
 };
 
 interface LoginItemFormProps {
@@ -69,6 +70,12 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
           url: data.url,
           notes: data.notes,
         };
+        // Optional authenticator key, stored as a canonical otpauth:// link.
+        if (data.totp) {
+          secret.totp = totpParamsToUri(
+            parseTotpInput(data.totp, { issuer: data.name, account: data.username })
+          );
+        }
 
         // The id exists before encryption so it can be bound into the AAD:
         // this ciphertext only decrypts as item `id` of type LOGIN for this user.
@@ -192,6 +199,23 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
           autoComplete="off"
           {...register("url")}
         />
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="item-totp" className="text-sm font-medium">
+          Authenticator key (TOTP)
+        </label>
+        <Input
+          id="item-totp"
+          placeholder="Optional: setup key or otpauth:// link"
+          autoComplete="off"
+          spellCheck={false}
+          className="font-mono"
+          aria-invalid={!!errors.totp}
+          aria-describedby={errors.totp ? "item-totp-error" : undefined}
+          {...register("totp")}
+        />
+        <FieldError id="item-totp-error" message={errors.totp?.message} />
       </div>
 
       <div className="space-y-1">

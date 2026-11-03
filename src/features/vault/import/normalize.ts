@@ -1,7 +1,9 @@
 import type { ZodTypeAny } from "zod";
+import { parseTotpInput, totpParamsToUri, type TotpParams } from "@/lib/crypto";
 import {
   apiKeySchema,
   loginItemSchema,
+  otpSecretSchema,
   secureNoteSchema,
   wifiPasswordSchema,
   WIFI_SECURITY_TYPES,
@@ -18,6 +20,7 @@ const SCHEMAS: Record<ImportedItem["type"], ZodTypeAny> = {
   SECURE_NOTE: secureNoteSchema,
   API_KEY: apiKeySchema,
   WIFI_PASSWORD: wifiPasswordSchema,
+  OTP_SECRET: otpSecretSchema,
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -30,6 +33,8 @@ const FIELD_LABELS: Record<string, string> = {
   description: "Description",
   ssid: "SSID",
   securityType: "Security",
+  secret: "Authenticator key",
+  totp: "Authenticator key",
 };
 
 /** A scalar from untrusted input as a string; anything else becomes "". */
@@ -186,14 +191,41 @@ export function noteOrTypedItem(
   };
 }
 
-/** A login, or a secure note when it has no username, password or URL. */
+/** Parse a TOTP value from another app (otpauth:// link or base32 key); null if invalid. */
+export function importedTotp(
+  raw: string,
+  labels: { issuer?: string; account?: string } = {}
+): TotpParams | null {
+  if (!raw.trim()) return null;
+  try {
+    return parseTotpInput(raw, labels);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A login, with its authenticator key if it has one. With no username,
+ * password or URL it becomes an authenticator (if it has a key) or a secure
+ * note. A TOTP value that can't be parsed is kept in the notes instead.
+ */
 export function loginOrNote(
   name: string,
   favorite: boolean,
-  login: { username: string; password: string; url: string; notes: string }
+  login: { username: string; password: string; url: string; notes: string; totp?: string }
 ): ImportedItem {
+  const { totp: raw = "", ...fields } = login;
+  const params = importedTotp(raw, { issuer: name, account: login.username });
+  const notes = params || !raw.trim() ? login.notes : joinNotes(login.notes, `TOTP: ${raw}`);
+
   if (!login.username && !login.password && !login.url) {
-    return { type: "SECURE_NOTE", name, favorite, secret: { content: login.notes } };
+    if (params) return { type: "OTP_SECRET", name, favorite, secret: { ...params, notes } };
+    return { type: "SECURE_NOTE", name, favorite, secret: { content: notes } };
   }
-  return { type: "LOGIN", name, favorite, secret: login };
+  return {
+    type: "LOGIN",
+    name,
+    favorite,
+    secret: { ...fields, notes, ...(params && { totp: totpParamsToUri(params) }) },
+  };
 }

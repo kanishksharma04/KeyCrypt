@@ -1,6 +1,7 @@
 import type {
   ApiKeySecret,
   LoginSecret,
+  OtpSecretSecret,
   SecureNoteSecret,
   WifiPasswordSecret,
 } from "@/types/vault";
@@ -17,7 +18,8 @@ export type ImportedItem =
   | (Base & { type: "LOGIN"; secret: LoginSecret })
   | (Base & { type: "SECURE_NOTE"; secret: SecureNoteSecret })
   | (Base & { type: "API_KEY"; secret: ApiKeySecret })
-  | (Base & { type: "WIFI_PASSWORD"; secret: WifiPasswordSecret });
+  | (Base & { type: "WIFI_PASSWORD"; secret: WifiPasswordSecret })
+  | (Base & { type: "OTP_SECRET"; secret: OtpSecretSecret });
 
 /** A row (CSV: data row, 1-based, header excluded) or entry (JSON: 1-based) that was left out. */
 export interface SkippedEntry {

@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { describe, expect, it } from "vitest";
-import { ExportDecryptionError } from "@/lib/crypto";
+import { ExportDecryptionError, parseTotpInput, totpParamsToUri } from "@/lib/crypto";
 import {
   countByType,
   detectImportFormat,
@@ -10,6 +10,10 @@ import {
   type ImportFormat,
   type ImportedItem,
 } from "..";
+
+/** The canonical otpauth:// link a TOTP value is stored as. */
+const totpLink = (raw: string, issuer: string, account: string) =>
+  totpParamsToUri(parseTotpInput(raw, { issuer, account }));
 
 const fixture = (name: string) => readFileSync(resolve(__dirname, "fixtures", name), "utf8");
 const byName = (items: ImportedItem[], name: string) => {
@@ -51,9 +55,12 @@ describe("Bitwarden JSON", () => {
         password: 'gh-S3cret, "quoted" ✓',
         url: "https://github.com/login",
         notes:
-          "Work account\n\nOther URLs: https://gist.github.com\n" +
-          "TOTP: otpauth://totp/GitHub:octocat?secret=JBSWY3DPEHPK3PXP&issuer=GitHub\n" +
-          "Recovery email: me@example.test",
+          "Work account\n\nOther URLs: https://gist.github.com\nRecovery email: me@example.test",
+        totp: totpLink(
+          "otpauth://totp/GitHub:octocat?secret=JBSWY3DPEHPK3PXP&issuer=GitHub",
+          "",
+          ""
+        ),
       },
     });
     expect(byName(items, "Door codes").secret).toEqual({ content: "Front: 1234\nBack: 5678" });
@@ -101,8 +108,10 @@ describe("Bitwarden CSV", () => {
         password: 'pa,ss"word',
         url: "https://github.com",
         notes:
-          "Line one\r\nLine two\n\nOther URLs: https://gist.github.com\nTOTP: JBSWY3DPEHPK3PXP\n" +
+          "Line one\r\nLine two\n\nOther URLs: https://gist.github.com\n" +
           "Recovery email: me@example.test",
+        // A bare base32 key becomes a link labelled with the item and username.
+        totp: totpLink("JBSWY3DPEHPK3PXP", "GitHub", "octocat"),
       },
     });
     expect(byName(items, "Door codes")).toMatchObject({
@@ -150,8 +159,8 @@ describe("1Password CSV", () => {
           username: "jdoe",
           password: "b@nk, pw",
           url: "https://bank.example.test",
-          notes:
-            "Call 555-0100\n\nTOTP: otpauth://totp/Bank:jdoe?secret=GEZDGNBVGY3TQOJQ&issuer=Bank",
+          notes: "Call 555-0100",
+          totp: totpLink("otpauth://totp/Bank:jdoe?secret=GEZDGNBVGY3TQOJQ&issuer=Bank", "", ""),
         },
       },
       {
@@ -196,7 +205,8 @@ describe("LastPass CSV", () => {
           username: "me",
           password: "m@il-pw",
           url: "https://mail.example.test",
-          notes: "backup codes in safe\n\nTOTP: JBSWY3DPEHPK3PXP",
+          notes: "backup codes in safe",
+          totp: totpLink("JBSWY3DPEHPK3PXP", "Mail", "me"),
         },
       },
     ]);
@@ -304,6 +314,73 @@ describe("KeyCrypt encrypted export", () => {
     await expect(
       parseImportFile("keycrypt-export", fixture("keycrypt-export.json"))
     ).rejects.toBeInstanceOf(ImportFormatError);
+  });
+});
+
+describe("TOTP secrets", () => {
+  it("keeps the URI's own issuer, account and parameters", async () => {
+    const { items } = await parseImportFile(
+      "bitwarden-json",
+      JSON.stringify({
+        items: [
+          {
+            type: 1,
+            name: "Steam-ish",
+            login: {
+              username: "u",
+              password: "p",
+              totp: "otpauth://totp/Corp:alice?secret=JBSWY3DPEHPK3PXP&issuer=Corp&algorithm=SHA256&digits=8&period=60",
+            },
+          },
+        ],
+      })
+    );
+    const totp = (items[0]?.secret as { totp?: string }).totp ?? "";
+    expect(parseTotpInput(totp)).toEqual({
+      secret: "JBSWY3DPEHPK3PXP",
+      issuer: "Corp",
+      account: "alice",
+      algorithm: "SHA256",
+      digits: 8,
+      period: 60,
+    });
+  });
+
+  it("keeps an unparseable TOTP value in the notes", async () => {
+    const { items } = await parseImportFile(
+      "1password-csv",
+      "Title,Url,Username,Password,OTPAuth,Notes\nSite,https://s.test,u,p,not-a-key!,hi\n"
+    );
+    expect(items[0]?.secret).toEqual({
+      username: "u",
+      password: "p",
+      url: "https://s.test",
+      notes: "hi\n\nTOTP: not-a-key!",
+    });
+  });
+
+  it("turns a login with only a TOTP key into an authenticator", async () => {
+    const { items } = await parseImportFile(
+      "bitwarden-csv",
+      "folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp\n" +
+        ",,login,Corp VPN,,,0,,,,JBSWY3DPEHPK3PXP\n"
+    );
+    expect(items).toEqual([
+      {
+        type: "OTP_SECRET",
+        name: "Corp VPN",
+        favorite: false,
+        secret: {
+          secret: "JBSWY3DPEHPK3PXP",
+          issuer: "Corp VPN",
+          account: "",
+          algorithm: "SHA1",
+          digits: 6,
+          period: 30,
+          notes: "",
+        },
+      },
+    ]);
   });
 });
 

@@ -179,7 +179,9 @@ enum VaultItemType {
   SECURE_NOTE
   API_KEY
   WIFI_PASSWORD
-  // Possible future types: SSH_KEY CRYPTO_WALLET OTP_SECRET BANK_DETAILS LICENSE
+  // Authenticator (TOTP) secret; the otpauth parameters live inside the ciphertext.
+  OTP_SECRET
+  // Possible future types: SSH_KEY CRYPTO_WALLET BANK_DETAILS LICENSE
 }
 
 // ─── Audit log ────────────────────────────────────────────────────────────────

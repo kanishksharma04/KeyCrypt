@@ -117,6 +117,58 @@ describe("toBitwardenCsv", () => {
   });
 });
 
+describe("toBitwardenCsv: authenticator codes", () => {
+  it("exports a login's TOTP link and an authenticator as a login with login_totp, and both re-import", async () => {
+    const { parseImportFile } = await import("@/features/vault/import");
+    const uri =
+      "otpauth://totp/GitHub:octocat?issuer=GitHub&secret=JBSWY3DPEHPK3PXP&algorithm=SHA1&digits=6&period=30";
+    const csv = toBitwardenCsv([
+      {
+        ...T,
+        id: "o1",
+        type: "LOGIN",
+        name: "GitHub",
+        favorite: false,
+        secret: {
+          username: "octocat",
+          password: "pw",
+          url: "https://github.com",
+          notes: "",
+          totp: uri,
+        },
+      },
+      {
+        ...T,
+        id: "o2",
+        type: "OTP_SECRET",
+        name: "Bank 2FA",
+        favorite: false,
+        secret: {
+          secret: "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
+          issuer: "Bank",
+          account: "jo",
+          algorithm: "SHA256",
+          digits: 8,
+          period: 60,
+          notes: "n",
+        },
+      },
+    ]);
+    expect(csv).toContain(uri);
+    expect(csv).toContain("secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ");
+
+    const { items } = await parseImportFile("bitwarden-csv", csv);
+    expect(items[0]).toMatchObject({ type: "LOGIN", secret: { totp: uri } });
+    // An authenticator with an account comes back as a login holding the key.
+    expect(items[1]).toMatchObject({
+      type: "LOGIN",
+      name: "Bank 2FA",
+      secret: { username: "jo", notes: "n" },
+    });
+    expect((items[1]?.secret as { totp?: string }).totp).toContain("algorithm=SHA256");
+  });
+});
+
 describe("buildExportPayload", () => {
   it("keeps every item's content but drops server ids", () => {
     const payload = buildExportPayload(ITEMS, new Date("2026-10-31T22:16:00Z"));

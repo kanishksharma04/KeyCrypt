@@ -19,6 +19,8 @@ import { LoginItemDialog } from "./login-item-dialog";
 import { SecureNoteDialog } from "./secure-note-dialog";
 import { ApiKeyDialog } from "./api-key-dialog";
 import { WifiPasswordDialog } from "./wifi-password-dialog";
+import { OtpSecretDialog } from "./otp-secret-dialog";
+import { totpParamsToUri } from "@/lib/crypto";
 import { useDecryptedItems } from "./use-decrypted-items";
 import { VaultToolbar, filterVaultItems } from "./vault-toolbar";
 import { VaultItemRow } from "./vault-item-row";
@@ -28,6 +30,14 @@ import type {
   VaultItemRow as VaultItemRowData,
   VaultItemType,
 } from "@/types/vault";
+
+function safeTotpUri(secret: Parameters<typeof totpParamsToUri>[0]): string {
+  try {
+    return totpParamsToUri(secret);
+  } catch {
+    return secret.secret ?? "";
+  }
+}
 
 // ─── VaultList ────────────────────────────────────────────────────────────────
 
@@ -196,6 +206,13 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
         }}
         mode="create"
       />
+      <OtpSecretDialog
+        open={createType === "OTP_SECRET"}
+        onOpenChange={(o) => {
+          if (!o) setCreateType(null);
+        }}
+        mode="create"
+      />
 
       {/* ── Edit dialogs (always rendered, open toggled by editItem type) ─── */}
       <LoginItemDialog
@@ -241,6 +258,26 @@ export function VaultList({ items, initialOpenId, initialNewType }: VaultListPro
         initialValues={
           editItem?.type === "WIFI_PASSWORD"
             ? { name: editItem.name, ...editItem.secret }
+            : undefined
+        }
+      />
+      <OtpSecretDialog
+        open={editItem?.type === "OTP_SECRET"}
+        onOpenChange={(o) => {
+          if (!o) setEditItem(null);
+        }}
+        mode="edit"
+        itemId={editItem?.id}
+        initialValues={
+          editItem?.type === "OTP_SECRET"
+            ? {
+                name: editItem.name,
+                // The full link keeps non-default algorithm/digits/period on save.
+                secret: safeTotpUri(editItem.secret),
+                issuer: editItem.secret.issuer,
+                account: editItem.secret.account,
+                notes: editItem.secret.notes,
+              }
             : undefined
         }
       />

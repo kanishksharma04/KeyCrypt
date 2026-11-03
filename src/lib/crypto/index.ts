@@ -27,7 +27,12 @@ export {
   decryptTotpSecret,
   TotpKeyError,
   TOTP_ISSUER,
+  parseTotpInput,
+  totpParamsToUri,
+  currentTotpCode,
+  TotpParseError,
 } from "./totp";
+export type { TotpParams, TotpAlgorithm } from "./totp";
 
 export {
   generateRecoveryKey,

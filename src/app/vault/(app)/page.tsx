@@ -4,7 +4,13 @@ import { db } from "@/lib/db";
 import { VaultList } from "@/features/vault/vault-list";
 import type { VaultItemRow, VaultItemType } from "@/types/vault";
 
-const VALID_TYPES: VaultItemType[] = ["LOGIN", "SECURE_NOTE", "API_KEY", "WIFI_PASSWORD"];
+const VALID_TYPES: VaultItemType[] = [
+  "LOGIN",
+  "SECURE_NOTE",
+  "API_KEY",
+  "WIFI_PASSWORD",
+  "OTP_SECRET",
+];
 
 export default async function VaultPage({
   searchParams,

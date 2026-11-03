@@ -53,6 +53,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Secure notes** — encrypted free-form text for PINs, recovery codes, sensitive memos
 - **API keys** — key, description, notes with monospace display
 - **Wi-Fi passwords** — SSID, password, security type (WPA2 / WPA3 / Open)
+- **Authenticators (TOTP)** — a setup key or `otpauth://` link; the vault shows the live code with a countdown (SHA-1/256/512, 6–8 digits). Logins can hold a TOTP key too, and imports from Bitwarden, 1Password and LastPass carry it over. Codes are computed in the browser
 
 ### Security & crypto
 

@@ -1,5 +1,5 @@
 import { cell, parseCsv, requireColumns } from "./csv";
-import { fieldLines, ImportCollector, itemName, joinNotes, truthy } from "./normalize";
+import { fieldLines, ImportCollector, itemName, joinNotes, loginOrNote, truthy } from "./normalize";
 import type { ImportResult } from "./types";
 
 // LastPass CSV: url, username, password, totp, extra, name, grouping, fav.
@@ -30,17 +30,16 @@ export function parseLastPassCsv(text: string): ImportResult {
     const username = cell(r, "username");
     const password = cell(r, "password");
     if (!name && !url && !username && !password && !extra) return out.skip(row, "Empty row");
-    out.add(row, {
-      type: "LOGIN",
-      name: itemName(name, url),
-      favorite,
-      secret: {
+    out.add(
+      row,
+      loginOrNote(itemName(name, url), favorite, {
         username,
         password,
         url,
-        notes: joinNotes(extra, fieldLines([["TOTP", cell(r, "totp")]]), folder),
-      },
-    });
+        notes: joinNotes(extra, folder),
+        totp: cell(r, "totp"),
+      })
+    );
   });
   return out.done();
 }

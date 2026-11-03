@@ -15,7 +15,7 @@ import { INVALID_INPUT, changeMasterPasswordInput } from "@/schemas/server";
 export interface VaultStats {
   total: number;
   favorites: number;
-  byType: { LOGIN: number; SECURE_NOTE: number; API_KEY: number; WIFI_PASSWORD: number };
+  byType: Record<VaultItemType, number>;
   lastModified: string | null; // ISO date string
 }
 
@@ -35,7 +35,13 @@ export async function getVaultStatsAction(): Promise<VaultStats | null> {
     }),
   ]);
 
-  const byType = { LOGIN: 0, SECURE_NOTE: 0, API_KEY: 0, WIFI_PASSWORD: 0 };
+  const byType: Record<VaultItemType, number> = {
+    LOGIN: 0,
+    SECURE_NOTE: 0,
+    API_KEY: 0,
+    WIFI_PASSWORD: 0,
+    OTP_SECRET: 0,
+  };
   let total = 0;
   for (const g of groups) {
     byType[g.type] += g._count;

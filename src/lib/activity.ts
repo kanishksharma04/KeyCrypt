@@ -26,6 +26,7 @@ const ITEM_TYPES: Record<string, string> = {
   SECURE_NOTE: "secure note",
   API_KEY: "API key",
   WIFI_PASSWORD: "WiFi password",
+  OTP_SECRET: "authenticator",
 };
 
 const EXPORT_FORMATS: Record<string, string> = {
