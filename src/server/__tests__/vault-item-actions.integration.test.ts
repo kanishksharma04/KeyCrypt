@@ -74,6 +74,20 @@ describe("vault item actions: cross-user access (IDOR)", () => {
     expect(await aliceItem()).toBeNull();
   });
 
+  // Vault health flags logins not updated in a year from updatedAt, so starring
+  // an item must not make it look freshly edited.
+  it("starring and unstarring an item keeps its updatedAt", async () => {
+    const longAgo = new Date("2024-01-15T10:00:00Z");
+    await db.vaultItem.update({ where: { id: aliceItemId }, data: { updatedAt: longAgo } });
+    signInAs(alice);
+
+    expect(await toggleFavoriteAction(aliceItemId, true)).toEqual({});
+    expect(await aliceItem()).toMatchObject({ favorite: true, updatedAt: longAgo });
+
+    expect(await toggleFavoriteAction(aliceItemId, false)).toEqual({});
+    expect(await aliceItem()).toMatchObject({ favorite: false, updatedAt: longAgo });
+  });
+
   it("signed-out callers are rejected", async () => {
     expect(await updateVaultItemAction({ id: aliceItemId, ...TAMPERED })).toEqual({
       error: "Not authenticated",

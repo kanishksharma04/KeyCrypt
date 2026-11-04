@@ -204,12 +204,15 @@ export async function toggleFavoriteAction(
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
-  const result = await db.vaultItem.updateMany({
-    where: { id, userId: session.user.id },
-    data: { favorite },
-  });
+  // Starring isn't an edit: keep updatedAt (vault health flags logins not
+  // updated in a year). Prisma's @updatedAt is applied by the client on every
+  // update, so a single SQL UPDATE changes only `favorite`, atomically.
+  // userId in WHERE prevents IDOR.
+  const count = await db.$executeRaw`
+    UPDATE "VaultItem" SET "favorite" = ${favorite}
+    WHERE "id" = ${id} AND "userId" = ${session.user.id}`;
 
-  if (result.count === 0) return { error: "Item not found" };
+  if (count === 0) return { error: "Item not found" };
 
   revalidatePath("/vault");
   return {};
