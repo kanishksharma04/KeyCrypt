@@ -3,6 +3,7 @@
 import { auth, signOut } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireRecentReauth } from "@/lib/reauth";
+import { tokensFor } from "@/lib/tokens";
 import { INVALID_INPUT, deleteAccountInput } from "@/schemas/server";
 
 // ─── Delete account ───────────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ export async function deleteAccountAction(input: { email: string }): Promise<{ e
   await db.$transaction([
     db.auditLog.deleteMany({ where: { userId } }),
     db.verificationToken.deleteMany({
-      where: { identifier: { in: [`verify:${user.email}`, `reset:${user.email}`] } },
+      where: { OR: [tokensFor("verify", user.email), tokensFor("reset", user.email)] },
     }),
     db.user.delete({ where: { id: userId } }),
   ]);

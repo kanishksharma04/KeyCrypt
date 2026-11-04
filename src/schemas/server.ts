@@ -213,6 +213,6 @@ export const confirmAccountPasswordInput = z.object({
 });
 
 export const verifyEmailInput = z.object({
-  email: z.string().email().max(254),
+  email: z.string().trim().toLowerCase().email().max(254),
   token: tokenSchema,
 });

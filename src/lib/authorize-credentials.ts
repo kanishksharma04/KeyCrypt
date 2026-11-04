@@ -7,6 +7,7 @@ import { signInSchema } from "@/schemas/auth";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { verifySecondFactor } from "@/lib/two-factor";
+import { byEmail } from "@/lib/user-email";
 
 // Credentials sign-in, used by the Auth.js Credentials provider in src/lib/auth.ts.
 // It lives in its own module so integration tests can call it directly.
@@ -53,8 +54,8 @@ export async function authorizeCredentials(
   ]);
   if (ipLimited || emailLimited) throw new RateLimitedError();
 
-  const user = await db.user.findUnique({
-    where: { email },
+  const user = await db.user.findFirst({
+    ...byEmail(email),
     select: {
       id: true,
       email: true,

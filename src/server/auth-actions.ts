@@ -8,6 +8,7 @@ import { generateToken, consumeToken } from "@/lib/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/email";
 import { rateLimiters } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
+import { byEmail } from "@/lib/user-email";
 import {
   signUpSchema,
   forgotPasswordSchema,
@@ -37,9 +38,10 @@ export async function signUpAction(data: SignUpInput): Promise<ActionResult> {
     return { error: "Too many accounts created from this IP. Try again later." };
   }
 
-  // Always return success even if email exists — prevents enumeration
-  const existing = await db.user.findUnique({
-    where: { email: parsed.data.email },
+  // Always return success even if email exists — prevents enumeration.
+  // Case-insensitive, so "Alice@x.com" can't open a second "alice@x.com" account.
+  const existing = await db.user.findFirst({
+    ...byEmail(parsed.data.email),
     select: { id: true },
   });
 
@@ -88,13 +90,14 @@ export async function verifyEmailAction(email: string, token: string): Promise<A
   const parsed = verifyEmailInput.safeParse({ email, token });
   if (!parsed.success) return { error: INVALID_INPUT };
 
+  const linkError = { error: "Invalid or expired verification link." };
   const valid = await consumeToken("verify", parsed.data.email, parsed.data.token);
-  if (!valid) return { error: "Invalid or expired verification link." };
+  if (!valid) return linkError;
 
-  await db.user.update({
-    where: { email: parsed.data.email },
-    data: { emailVerified: new Date() },
-  });
+  const user = await db.user.findFirst({ ...byEmail(parsed.data.email), select: { id: true } });
+  if (!user) return linkError;
+
+  await db.user.update({ where: { id: user.id }, data: { emailVerified: new Date() } });
 
   return { success: true };
 }
@@ -110,15 +113,15 @@ export async function forgotPasswordAction(data: ForgotPasswordInput): Promise<A
   }
 
   // Always return success — prevents email enumeration
-  const user = await db.user.findUnique({
-    where: { email: parsed.data.email },
-    select: { id: true, passwordHash: true },
+  const user = await db.user.findFirst({
+    ...byEmail(parsed.data.email),
+    select: { email: true, passwordHash: true },
   });
 
   // Only send reset email for credential-based accounts (not OAuth-only)
   if (user?.passwordHash) {
-    const token = await generateToken("reset", parsed.data.email);
-    await sendPasswordResetEmail(parsed.data.email, token);
+    const token = await generateToken("reset", user.email);
+    await sendPasswordResetEmail(user.email, token);
   }
 
   return { success: true };
@@ -140,11 +143,14 @@ export async function resetPasswordAction(data: ResetPasswordInput): Promise<Act
   const valid = await consumeToken("reset", parsed.data.email, parsed.data.token);
   if (!valid) return resetLinkError;
 
+  const user = await db.user.findFirst({ ...byEmail(parsed.data.email), select: { id: true } });
+  if (!user) return resetLinkError;
+
   const passwordHash = await hashPassword(parsed.data.password);
   // Bumping tokenVersion ends every existing (JWT) session for this account
   // within TOKEN_VERSION_CHECK_INTERVAL_MS (src/lib/session-version.ts).
   await db.user.update({
-    where: { email: parsed.data.email },
+    where: { id: user.id },
     data: { passwordHash, tokenVersion: { increment: 1 } },
   });
 

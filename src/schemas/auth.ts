@@ -8,15 +8,21 @@ const passwordRules = z
   .regex(/[0-9]/, "Must include a number")
   .regex(/[^a-zA-Z0-9]/, "Must include a special character");
 
+/**
+ * Emails are trimmed and lower-cased, so an account's email matches however it
+ * is typed (lookups are also case-insensitive; see src/lib/user-email.ts).
+ */
+export const emailSchema = z.string().trim().toLowerCase().email("Invalid email address");
+
 export const signInSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: emailSchema,
   password: z.string().min(1, "Password is required"),
 });
 
 export const signUpSchema = z
   .object({
     name: z.string().min(2, "At least 2 characters").max(64, "Maximum 64 characters"),
-    email: z.string().email("Invalid email address"),
+    email: emailSchema,
     password: passwordRules,
     confirmPassword: z.string(),
   })
@@ -26,12 +32,12 @@ export const signUpSchema = z
   });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: emailSchema,
 });
 
 export const resetPasswordSchema = z
   .object({
-    email: z.string().email(),
+    email: emailSchema,
     token: z.string().min(1),
     password: passwordRules,
     confirmPassword: z.string(),

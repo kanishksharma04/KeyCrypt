@@ -30,6 +30,25 @@ describe("authorizeCredentials", () => {
     expect(await attempt("203.0.113.1", "wrong-password")).toBeNull();
   });
 
+  it("signs in whatever the capitalisation of the email, ignoring spaces", async () => {
+    expect(await attempt("203.0.113.1", PASSWORD, "  Alice@Test.LOCAL ")).toMatchObject({
+      email: EMAIL,
+    });
+  });
+
+  it("finds an account stored with capitals (from before emails were lower-cased)", async () => {
+    await db.user.create({
+      data: {
+        email: "Bob@Test.Local",
+        passwordHash: await hashPassword(PASSWORD),
+        emailVerified: new Date(),
+      },
+    });
+    expect(await attempt("203.0.113.1", PASSWORD, "bob@test.local")).toMatchObject({
+      email: "Bob@Test.Local",
+    });
+  });
+
   it("returns null (not an error) for an unknown email", async () => {
     expect(await attempt("203.0.113.1", PASSWORD, "nobody@test.local")).toBeNull();
   });

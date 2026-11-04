@@ -12,14 +12,20 @@ function identifier(type: TokenType, email: string) {
   return `${type}:${email}`;
 }
 
+/**
+ * Matches the tokens of this type for an email, whatever the email's case
+ * (emails are case-insensitive; see src/lib/user-email.ts).
+ */
+export function tokensFor(type: TokenType, email: string) {
+  return { identifier: { equals: identifier(type, email), mode: "insensitive" as const } };
+}
+
 export async function generateToken(type: TokenType, email: string): Promise<string> {
   const token = randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + TOKEN_EXPIRY_MINUTES[type] * 60 * 1000);
 
-  // Delete any existing token for this identifier before creating a new one
-  await db.verificationToken.deleteMany({
-    where: { identifier: identifier(type, email) },
-  });
+  // Delete any existing token for this address before creating a new one
+  await db.verificationToken.deleteMany({ where: tokensFor(type, email) });
 
   await db.verificationToken.create({
     data: { identifier: identifier(type, email), token, expires },
@@ -28,26 +34,20 @@ export async function generateToken(type: TokenType, email: string): Promise<str
   return token;
 }
 
+/** True if the token was valid for this email. It is used up either way. */
 export async function consumeToken(
   type: TokenType,
   email: string,
   token: string
 ): Promise<boolean> {
-  const record = await db.verificationToken.findUnique({
-    where: { identifier_token: { identifier: identifier(type, email), token } },
+  const record = await db.verificationToken.findFirst({
+    where: { ...tokensFor(type, email), token },
   });
-
   if (!record) return false;
-  if (record.expires < new Date()) {
-    await db.verificationToken.delete({
-      where: { identifier_token: { identifier: identifier(type, email), token } },
-    });
-    return false;
-  }
 
-  await db.verificationToken.delete({
-    where: { identifier_token: { identifier: identifier(type, email), token } },
+  // Delete first: only one request can consume a token, even concurrently.
+  const { count } = await db.verificationToken.deleteMany({
+    where: { identifier: record.identifier, token: record.token },
   });
-
-  return true;
+  return count === 1 && record.expires >= new Date();
 }
