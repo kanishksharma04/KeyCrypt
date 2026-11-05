@@ -3,108 +3,147 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
-
-/* ─── Light mode (shadcn baseline + KeyCrypt tokens) ─────────────────────── */
-:root {
-  /* KeyCrypt semantic tokens — light */
-  --color-primary: #2563eb;
-  --color-accent: #3b82f6;
-  --color-background: #ffffff;
-  --color-surface: #f4f4f5;
-  --color-text: #09090b;
-  --color-border: #e4e4e7;
-  --color-muted: #71717a;
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
-
-  /* shadcn variables — light */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.546 0.244 264.054); /* #2563eb */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.613 0.22 264.054); /* #3b82f6 */
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.577 0.245 27.325); /* #ef4444 */
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.546 0.244 264.054); /* matches --primary */
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.546 0.244 264.054);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.546 0.244 264.054);
+/* Devices with a real hover (mouse/trackpad); touch screens skip these styles. */
+@custom-variant can-hover {
+  @media (hover: hover) {
+    @slot;
+  }
 }
 
-/* ─── Dark mode (KeyCrypt dark palette) ──────────────────────────────────── */
+/* ─── Light mode: warm paper, ink buttons, bronze accent ─────────────────── */
+:root {
+  /* KeyCrypt semantic tokens — light */
+  --color-success: #3f8f5a;
+  --color-danger: #c2412d;
+  --color-warning: #b7791f;
+
+  /* Bronze accent: eyebrows, icons, active nav, focus ring */
+  --brand: #8a5a2b;
+  --brand-soft: #f2e4d3;
+  --brand-foreground: #1c1a17;
+
+  /* Item-type accents (icons, dashboard bars) */
+  --type-note: #4a6fb5;
+  --type-api: #7c55b8;
+  --type-wifi: #2f8f7e;
+  --type-otp: #3f8f5a;
+
+  /* shadcn variables — light */
+  --background: #f9f7f2;
+  --foreground: #1c1a17;
+  --card: #ffffff;
+  --card-foreground: #1c1a17;
+  --popover: #ffffff;
+  --popover-foreground: #1c1a17;
+  --primary: #1c1a17;
+  --primary-foreground: #f9f7f2;
+  --secondary: #f2ede3;
+  --secondary-foreground: #1c1a17;
+  --muted: #f2ede3;
+  --muted-foreground: #6b655c;
+  --accent: #f2ede3;
+  --accent-foreground: #1c1a17;
+  --destructive: #c2412d;
+  --border: #e8e2d6;
+  --input: #e2dbcd;
+  --ring: #8a5a2b;
+  --radius: 0.625rem;
+  --sidebar: #f9f7f2;
+  --sidebar-foreground: #1c1a17;
+  --sidebar-primary: #1c1a17;
+  --sidebar-primary-foreground: #f9f7f2;
+  --sidebar-accent: #f2ede3;
+  --sidebar-accent-foreground: #1c1a17;
+  --sidebar-border: #e8e2d6;
+  --sidebar-ring: #8a5a2b;
+}
+
+/* ─── Dark mode: charcoal surfaces, amber accent ─────────────────────────── */
 .dark {
   /* KeyCrypt semantic tokens — dark */
-  --color-primary: #2563eb;
-  --color-accent: #3b82f6;
-  --color-background: #09090b;
-  --color-surface: #18181b;
-  --color-text: #fafafa;
-  --color-border: #27272a;
-  --color-muted: #a1a1aa;
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
+  --color-success: #7fbf8e;
+  --color-danger: #ef6b5b;
+  --color-warning: #e0a458;
+
+  --brand: #d49a5e;
+  --brand-soft: #2c241c;
+  --brand-foreground: #1a1206;
+
+  --type-note: #93a8d8;
+  --type-api: #b79ad9;
+  --type-wifi: #6cc3b0;
+  --type-otp: #8fc489;
 
   /* shadcn variables — dark */
-  --background: oklch(0.07 0 0); /* #09090b */
-  --foreground: oklch(0.985 0 0); /* #fafafa */
-  --card: oklch(0.13 0 0); /* #18181b */
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.13 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.546 0.244 264.054); /* #2563eb */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.2 0 0); /* #27272a */
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.2 0 0);
-  --muted-foreground: oklch(0.74 0 0); /* lifted from #a1a1aa for better contrast */
-  --accent: oklch(0.613 0.22 264.054); /* #3b82f6 */
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.577 0.245 27.325); /* #ef4444 */
-  --border: oklch(0.2 0 0); /* #27272a */
-  --input: oklch(0.2 0 0 / 80%);
-  --ring: oklch(0.546 0.244 264.054);
-  --sidebar: oklch(0.13 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.546 0.244 264.054);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.2 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.2 0 0);
-  --sidebar-ring: oklch(0.546 0.244 264.054);
+  --background: #131215;
+  --foreground: #f2f0ec;
+  --card: #1b1a1f;
+  --card-foreground: #f2f0ec;
+  --popover: #1f1e24;
+  --popover-foreground: #f2f0ec;
+  --primary: #d49a5e;
+  --primary-foreground: #1a1206;
+  --secondary: #26252b;
+  --secondary-foreground: #f2f0ec;
+  --muted: #26252b;
+  --muted-foreground: #a19ea6;
+  --accent: #26252b;
+  --accent-foreground: #f2f0ec;
+  --destructive: #ef6b5b;
+  --border: #2b2a31;
+  --input: #2f2e35;
+  --ring: #d49a5e;
+  --sidebar: #1b1a1f;
+  --sidebar-foreground: #f2f0ec;
+  --sidebar-primary: #d49a5e;
+  --sidebar-primary-foreground: #1a1206;
+  --sidebar-accent: #26252b;
+  --sidebar-accent-foreground: #f2f0ec;
+  --sidebar-border: #2b2a31;
+  --sidebar-ring: #d49a5e;
+}
+
+/* The marketing page is always shown in the light palette (see src/app/page.tsx). */
+.theme-light {
+  color-scheme: light;
+  --brand: #8a5a2b;
+  --brand-soft: #f2e4d3;
+  --brand-foreground: #1c1a17;
+  --background: #f9f7f2;
+  --foreground: #1c1a17;
+  --card: #ffffff;
+  --card-foreground: #1c1a17;
+  --popover: #ffffff;
+  --popover-foreground: #1c1a17;
+  --primary: #1c1a17;
+  --primary-foreground: #f9f7f2;
+  --secondary: #f2ede3;
+  --secondary-foreground: #1c1a17;
+  --muted: #f2ede3;
+  --muted-foreground: #6b655c;
+  --accent: #f2ede3;
+  --accent-foreground: #1c1a17;
+  --border: #e8e2d6;
+  --input: #e2dbcd;
+  --ring: #8a5a2b;
 }
 
 /* ─── Tailwind theme bridge ───────────────────────────────────────────────── */
 @theme inline {
-  /* KeyCrypt tokens available as Tailwind utilities (bg-primary, text-muted, etc.) */
-  --color-primary: var(--color-primary);
-  --color-accent: var(--color-accent);
-  --color-background: var(--color-background);
-  --color-surface: var(--color-surface);
-  --color-text: var(--color-text);
-  --color-border: var(--color-border);
-  --color-muted: var(--color-muted);
   --color-success: var(--color-success);
   --color-danger: var(--color-danger);
   --color-warning: var(--color-warning);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-type-note: var(--type-note);
+  --color-type-api: var(--type-api);
+  --color-type-wifi: var(--type-wifi);
+  --color-type-otp: var(--type-otp);
+  /* A solid, slightly lifted card colour: hovered list rows and what sits on them. */
+  --color-row-hover: color-mix(in oklab, var(--card), var(--foreground) 4%);
   --font-sans: var(--font-inter);
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 
   /* shadcn token bridge */
   --color-background: var(--background);
@@ -169,15 +208,6 @@
 
 /* ─── Premium animations ──────────────────────────────────────────────────── */
 
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -221,10 +251,6 @@
 
   .animate-fade-in-up {
     animation: fade-in-up 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .animate-marquee {
-    animation: marquee 35s linear infinite;
   }
 
   .animate-fade-in {
