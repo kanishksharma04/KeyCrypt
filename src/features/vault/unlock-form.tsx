@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Shield, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { unlockSchema, type UnlockInput } from "@/schemas/vault";
 import { setVaultKey } from "@/lib/crypto";
@@ -110,12 +110,19 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
         description="Your vault is moving to a stronger encryption format. This re-encrypts every item in your browser."
         confirmLabel="Upgrade and unlock"
       />
-      <form onSubmit={onSubmit} noValidate className="space-y-5">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Unlock your vault</h1>
-          <p className="text-muted-foreground text-sm">
-            Enter your master password to decrypt your secrets.
-          </p>
+      <form onSubmit={onSubmit} noValidate className="space-y-6">
+        <div className="space-y-4">
+          <div className="bg-muted/60 flex size-12 items-center justify-center rounded-xl border">
+            <Lock className="text-brand size-5" aria-hidden="true" />
+          </div>
+          <div className="space-y-1.5">
+            <h1 className="font-serif text-[1.75rem] leading-tight font-semibold tracking-tight">
+              Unlock your vault
+            </h1>
+            <p className="text-muted-foreground text-[15px] leading-relaxed">
+              Enter your master password to decrypt your vault in this browser.
+            </p>
+          </div>
         </div>
 
         {wrongPassword && (
@@ -137,8 +144,8 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <label htmlFor="masterPassword" className="text-sm font-medium">
+        <div className="space-y-2">
+          <label htmlFor="masterPassword" className="text-muted-foreground text-sm font-medium">
             Master password
           </label>
           <div className="relative">
@@ -147,7 +154,8 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               autoFocus
-              className="pr-9"
+              placeholder="Enter your master password"
+              className="h-11 rounded-xl pr-11 text-base md:text-[15px]"
               aria-describedby={errors.masterPassword ? "mp-error" : undefined}
               aria-invalid={!!errors.masterPassword}
               {...register("masterPassword")}
@@ -156,7 +164,7 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded p-0.5"
             >
               {showPassword ? (
                 <EyeOff className="size-4" aria-hidden="true" />
@@ -168,27 +176,38 @@ export function UnlockForm({ meta, userId }: UnlockFormProps) {
           <FieldError id="mp-error" message={errors.masterPassword?.message} />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isPending}>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-xl text-[15px] font-semibold"
+          disabled={isPending}
+        >
           {isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
           {isPending ? "Unlocking…" : "Unlock vault"}
         </Button>
 
-        {canRecover && (
-          <p className="text-muted-foreground text-center text-sm">
-            Forgot your master password?{" "}
+        <p className="bg-muted/50 text-muted-foreground flex items-start gap-2.5 rounded-xl px-3.5 py-3 text-xs leading-relaxed">
+          <Shield className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          Decryption happens on this device. Your master password is never sent anywhere.
+        </p>
+
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+          {canRecover ? (
             <button
               type="button"
               onClick={() => setUseRecovery(true)}
-              className="text-primary font-medium underline-offset-4 hover:underline"
+              className="text-brand rounded font-medium underline-offset-4 hover:underline"
             >
-              Use recovery key
+              Use recovery key instead
             </button>
-          </p>
-        )}
-
-        <p className="text-muted-foreground text-center text-sm">
-          Not you? <SignOutButton variant="link" className="h-auto p-0 align-baseline" />
-        </p>
+          ) : (
+            <span />
+          )}
+          <SignOutButton
+            label="Not you? Sign out"
+            variant="link"
+            className="text-muted-foreground hover:text-foreground h-auto p-0 text-sm font-normal underline underline-offset-4"
+          />
+        </div>
       </form>
     </>
   );

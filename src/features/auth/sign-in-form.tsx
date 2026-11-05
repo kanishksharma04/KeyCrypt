@@ -67,7 +67,7 @@ export function SignInForm({ notice }: SignInFormProps = {}) {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <h1 className="font-serif text-2xl font-semibold tracking-tight">Sign in</h1>
         <p className="text-muted-foreground text-sm">
           {needsCode
             ? "Enter the 6-digit code from your authenticator app, or a backup code."

@@ -60,7 +60,7 @@ export function ResetPasswordForm({ email, token }: Props) {
       <input type="hidden" {...register("token")} />
 
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">New password</h1>
+        <h1 className="font-serif text-2xl font-semibold tracking-tight">New password</h1>
         <p className="text-muted-foreground text-sm">Choose a strong password for your account.</p>
       </div>
 

@@ -52,7 +52,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Forgot password</h1>
+        <h1 className="font-serif text-2xl font-semibold tracking-tight">Forgot password</h1>
         <p className="text-muted-foreground text-sm">
           Enter your email and we&apos;ll send a reset link.
         </p>

@@ -99,7 +99,7 @@ export function RecoveryUnlock({ meta, userId, onCancel }: RecoveryUnlockProps) 
       />
 
       <div className="space-y-1">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <h1 className="flex items-center gap-2 font-serif text-2xl font-semibold tracking-tight">
           <KeyRound className="text-primary size-6" aria-hidden="true" />
           Use recovery key
         </h1>
