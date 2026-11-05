@@ -14,12 +14,34 @@ export interface SealedImportItem {
   ciphertext: string;
   iv: string;
   favorite: boolean;
+  folderId: string | null;
 }
 
+/** Folder names match without regard to case or surrounding spaces. */
+export function folderKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** The distinct folder names the items are filed in, in first-seen order. */
+export function importFolderNames(items: readonly ImportedItem[]): string[] {
+  const names = new Map<string, string>();
+  for (const item of items) {
+    if (item.folder && !names.has(folderKey(item.folder))) {
+      names.set(folderKey(item.folder), item.folder);
+    }
+  }
+  return [...names.values()];
+}
+
+/**
+ * @param folderIds folderKey(name) → the id of the user's folder with that name.
+ *   An item whose folder isn't in the map is imported without a folder.
+ */
 export async function sealImportBatches(
   items: readonly ImportedItem[],
   key: CryptoKey,
-  userId: string
+  userId: string,
+  folderIds: ReadonlyMap<string, string> = new Map()
 ): Promise<SealedImportItem[][]> {
   const sealed = await Promise.all(
     items.map(async (item) => {
@@ -29,7 +51,8 @@ export async function sealImportBatches(
         { id, type: item.type, name: item.name, secret: item.secret },
         userId
       );
-      return { id, type: item.type, ciphertext, iv, favorite: item.favorite };
+      const folderId = item.folder ? (folderIds.get(folderKey(item.folder)) ?? null) : null;
+      return { id, type: item.type, ciphertext, iv, favorite: item.favorite, folderId };
     })
   );
   const batches: SealedImportItem[][] = [];

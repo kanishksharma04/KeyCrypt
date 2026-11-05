@@ -1,6 +1,6 @@
 "use client";
 
-import { relativeTime } from "@/lib/activity";
+import { relativeTime } from "@/lib/relative-time";
 import type { ActivityEntry } from "@/server/activity-actions";
 
 /** Settings → Recent activity: what happened on this account, where and from which browser. */

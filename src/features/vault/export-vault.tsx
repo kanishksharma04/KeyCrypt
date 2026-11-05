@@ -15,27 +15,46 @@ import {
 } from "@/lib/vault-export";
 import { exportPasswordSchema, type ExportPasswordInput } from "@/schemas/vault";
 import { getVaultItemsForExportAction, recordVaultExportAction } from "@/server/export-actions";
+import { getFoldersAction } from "@/server/folder-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dialog";
 import { FieldError } from "@/features/auth/field-error";
 import type { DecryptedVaultItem } from "@/types/vault";
 import { decryptVaultItem } from "./use-decrypted-items";
+import { openFolderName } from "./folder-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 
-/** Fetch every item and decrypt it in the browser. Fails if any item can't be read. */
-async function loadDecryptedVault(userId: string): Promise<DecryptedVaultItem[]> {
+/**
+ * Fetch every item and folder and decrypt them in the browser. Fails if any
+ * can't be read: an export is never silently incomplete.
+ */
+async function loadDecryptedVault(
+  userId: string
+): Promise<{ items: DecryptedVaultItem[]; folders: Map<string, string> }> {
   const key = getVaultKey();
   if (!key) throw new Error("Vault is locked. Unlock it and try again.");
 
-  const rows = await getVaultItemsForExportAction();
+  const [rows, folderRows] = await Promise.all([
+    getVaultItemsForExportAction(),
+    getFoldersAction(),
+  ]);
   if ("error" in rows) throw new Error(rows.error);
+  if ("error" in folderRows) throw new Error(folderRows.error);
 
+  let items: DecryptedVaultItem[];
   try {
-    return await Promise.all(rows.map((row) => decryptVaultItem(key, row, userId)));
+    items = await Promise.all(rows.map((row) => decryptVaultItem(key, row, userId)));
   } catch {
-    // Never produce a silently incomplete export.
     throw new Error("Some items could not be decrypted, so nothing was exported.");
+  }
+  try {
+    const names = await Promise.all(
+      folderRows.map(async (row) => [row.id, await openFolderName(key, row, userId)] as const)
+    );
+    return { items, folders: new Map(names) };
+  } catch {
+    throw new Error("Some folder names could not be decrypted, so nothing was exported.");
   }
 }
 
@@ -77,9 +96,9 @@ export function ExportVault() {
 
   const exportEncrypted = handleSubmit(({ exportPassword }) =>
     run("encrypted-json", async () => {
-      const items = await loadDecryptedVault(userId);
+      const { items, folders } = await loadDecryptedVault(userId);
       // PBKDF2 (600k) + AES-256-GCM under the export password, with a fresh salt.
-      const file = await encryptExport(buildExportPayload(items), exportPassword);
+      const file = await encryptExport(buildExportPayload(items, folders), exportPassword);
       await recordExport("encrypted-json");
       downloadFile(
         exportFilename("encrypted-json"),
@@ -96,8 +115,8 @@ export function ExportVault() {
     setConfirmCsv(false);
     run("csv", async () => {
       await recordExport("csv"); // server requires the recent confirmation
-      const items = await loadDecryptedVault(userId);
-      downloadFile(exportFilename("csv"), toBitwardenCsv(items), "text/csv;charset=utf-8");
+      const { items, folders } = await loadDecryptedVault(userId);
+      downloadFile(exportFilename("csv"), toBitwardenCsv(items, folders), "text/csv;charset=utf-8");
       toast.success(`Unencrypted CSV of ${items.length} items downloaded.`);
     });
   }

@@ -66,6 +66,12 @@ export function itemName(name: string, url = "", fallback = "Imported item"): st
   return n.length > MAX_NAME ? `${n.slice(0, MAX_NAME - 1)}…` : n;
 }
 
+/** A folder name from another app: trimmed, at most 100 characters; "" for none. */
+export function folderName(name: string): string {
+  const n = name.trim();
+  return n.length > MAX_NAME ? `${n.slice(0, MAX_NAME - 1)}…` : n;
+}
+
 /** "Label: value" lines for the non-empty pairs. */
 export function fieldLines(pairs: ReadonlyArray<readonly [string, string]>): string {
   return pairs
@@ -124,7 +130,8 @@ export function asWifiSecurity(value: string): WifiSecurityType {
 export class ImportCollector {
   private readonly result: ImportResult = { items: [], skipped: [] };
 
-  add(row: number, item: ImportedItem): void {
+  /** Add a parsed item, filed in the folder with this name (if any). */
+  add(row: number, item: ImportedItem, folder = ""): void {
     const check = SCHEMAS[item.type].safeParse({ name: item.name, ...item.secret });
     if (!check.success) {
       const issue = check.error.issues[0];
@@ -132,7 +139,8 @@ export class ImportCollector {
       this.skip(row, `${FIELD_LABELS[field] ?? "A field"}: ${issue?.message ?? "invalid"}`);
       return;
     }
-    this.result.items.push(item);
+    const name = folderName(folder);
+    this.result.items.push(name ? { ...item, folder: name } : item);
   }
 
   skip(row: number, reason: string): void {

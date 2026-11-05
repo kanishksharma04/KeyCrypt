@@ -23,7 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DecryptedVaultItem } from "@/types/vault";
-import { TYPE_META, copyToClipboard, timeAgo } from "./vault-item-meta";
+import { TYPE_META, copyToClipboard } from "./vault-item-meta";
+import { relativeTime } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { currentTotpCode } from "@/lib/crypto";
 
@@ -116,7 +117,9 @@ export function VaultItemRow({
       >
         <div className="flex items-baseline gap-2">
           <p className="truncate text-sm font-medium">{item.name}</p>
-          <span className="text-muted-foreground shrink-0 text-xs">{timeAgo(item.updatedAt)}</span>
+          <span className="text-muted-foreground shrink-0 text-xs">
+            {relativeTime(item.updatedAt, { longAgo: "ago" })}
+          </span>
           {folderName && (
             <span className="text-muted-foreground bg-muted inline-flex max-w-32 shrink-0 items-center gap-1 rounded px-1.5 text-[11px]">
               <Folder className="size-3 shrink-0" aria-hidden="true" />

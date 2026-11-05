@@ -58,11 +58,24 @@ export const createVaultItemInput = z.object({
   iv: ivSchema,
 });
 
-/** Import: up to 50 new items per call (crypto v2, ids generated in the browser). */
+/** A browser-generated folder id (UUID v4, bound into the name's AAD). */
+export const folderIdSchema = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+
+/**
+ * Import: up to 50 new items per call (crypto v2, ids generated in the browser),
+ * each optionally filed in one of the user's folders.
+ */
 export const IMPORT_BATCH_MAX = 50;
 export const createVaultItemsBatchInput = z.object({
   items: z
-    .array(createVaultItemInput.extend({ favorite: z.boolean() }))
+    .array(
+      createVaultItemInput.extend({
+        favorite: z.boolean(),
+        folderId: folderIdSchema.nullable().optional(),
+      })
+    )
     .min(1)
     .max(IMPORT_BATCH_MAX)
     .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
@@ -72,11 +85,6 @@ export const createVaultItemsBatchInput = z.object({
 
 // ─── Folders ─────────────────────────────────────────────────────────────────
 // Folder names are encrypted in the browser; the server sees ciphertext only.
-
-/** A browser-generated folder id (UUID v4, bound into the name's AAD). */
-export const folderIdSchema = z
-  .string()
-  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 
 /** AES-GCM of {"name": ...}; a 100-character name stays well under this. */
 const folderNameCiphertextSchema = base64({ min: 4, max: 2048 });
@@ -149,7 +157,12 @@ export const setupVaultInput = z.object({
   verificationIv: ivSchema,
 });
 
-export const MAX_ITEMS_PER_REKEY = 5_000;
+/**
+ * Most items one vault can hold. The one-time v1 → v2 upgrade re-encrypts every
+ * item in a single request, and full-vault reads (export, health, palette)
+ * decrypt everything in the browser, so the vault is kept to a bounded size.
+ */
+export const MAX_VAULT_ITEMS = 5_000;
 
 /** One-time v1 → v2 upgrade: every item re-encrypted under the new random vault key. */
 export const upgradeVaultInput = z.object({
@@ -164,7 +177,7 @@ export const upgradeVaultInput = z.object({
   newVerificationIv: ivSchema,
   items: z
     .array(z.object({ id: idSchema, ciphertext: ciphertextSchema, iv: ivSchema }))
-    .max(MAX_ITEMS_PER_REKEY),
+    .max(MAX_VAULT_ITEMS),
 });
 
 /** v2 master-password change: re-wrap the same vault key; items are untouched. */

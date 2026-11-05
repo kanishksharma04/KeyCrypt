@@ -117,6 +117,28 @@ describe("toBitwardenCsv", () => {
   });
 });
 
+describe("toBitwardenCsv: folders", () => {
+  it("fills the folder column, and the folder survives a re-import", async () => {
+    const { parseImportFile } = await import("@/features/vault/import");
+    const folderId = "0b7f3c1e-2a4d-4e8f-9a1b-3c5d7e9f1a2b";
+    const csv = toBitwardenCsv(
+      ITEMS.map((i, n) => (n < 2 ? { ...i, folderId } : i)),
+      new Map([[folderId, "Work, personal"]])
+    );
+    const rows = parseCsv(csv);
+    const col = rows[0]!.indexOf("folder");
+    expect(rows.slice(1).map((r) => r[col])).toEqual(["Work, personal", "Work, personal", "", ""]);
+
+    const { items } = await parseImportFile("bitwarden-csv", csv);
+    expect(items.map((i) => i.folder)).toEqual([
+      "Work, personal",
+      "Work, personal",
+      undefined,
+      undefined,
+    ]);
+  });
+});
+
 describe("toBitwardenCsv: authenticator codes", () => {
   it("exports a login's TOTP link and an authenticator as a login with login_totp, and both re-import", async () => {
     const { parseImportFile } = await import("@/features/vault/import");
@@ -171,17 +193,28 @@ describe("toBitwardenCsv: authenticator codes", () => {
 
 describe("buildExportPayload", () => {
   it("keeps every item's content but drops server ids", () => {
-    const payload = buildExportPayload(ITEMS, new Date("2026-10-31T22:16:00Z"));
+    const payload = buildExportPayload(ITEMS, new Map(), new Date("2026-10-31T22:16:00Z"));
     expect(payload.exportedAt).toBe("2026-10-31T22:16:00.000Z");
     expect(payload.items).toHaveLength(4);
     expect(payload.items[0]).toEqual({
       type: "LOGIN",
       name: "GitHub, Inc.",
       favorite: true,
+      folder: "",
       ...T,
       secret: ITEMS[0]!.secret,
     });
     expect(JSON.stringify(payload)).not.toContain('"id"');
+  });
+
+  it("names each item's folder instead of its folder id", () => {
+    const folderId = "0b7f3c1e-2a4d-4e8f-9a1b-3c5d7e9f1a2b";
+    const items = ITEMS.map((i, n) => (n === 0 ? { ...i, folderId } : i));
+    // An id with no known name (shouldn't happen) is exported without a folder.
+    const orphan = { ...ITEMS[1]!, folderId: "ffffffff-ffff-4fff-bfff-ffffffffffff" };
+    const payload = buildExportPayload([...items, orphan], new Map([[folderId, "Work"]]));
+    expect(payload.items.map((i) => i.folder)).toEqual(["Work", "", "", "", ""]);
+    expect(JSON.stringify(payload)).not.toContain(folderId);
   });
 });
 

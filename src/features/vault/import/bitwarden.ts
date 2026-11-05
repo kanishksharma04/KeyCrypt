@@ -31,6 +31,7 @@ interface BitwardenJsonItem {
   name?: unknown;
   notes?: unknown;
   favorite?: unknown;
+  folderId?: unknown;
   login?: { username?: unknown; password?: unknown; totp?: unknown; uris?: unknown };
   fields?: unknown;
   card?: unknown;
@@ -45,7 +46,12 @@ export function parseBitwardenJson(text: string): ImportResult {
   } catch {
     throw new ImportFormatError("The file isn't valid JSON.");
   }
-  const root = data as { encrypted?: unknown; passwordProtected?: unknown; items?: unknown };
+  const root = data as {
+    encrypted?: unknown;
+    passwordProtected?: unknown;
+    folders?: unknown;
+    items?: unknown;
+  };
   if (root?.encrypted === true || root?.passwordProtected === true) {
     throw new ImportFormatError(
       "This Bitwarden export is encrypted. Export again with the file format “.json” (unencrypted)."
@@ -55,6 +61,14 @@ export function parseBitwardenJson(text: string): ImportResult {
     throw new ImportFormatError("This doesn't look like a Bitwarden JSON export.");
   }
 
+  // Folder id → name. Items refer to their folder by id.
+  const folders = new Map<string, string>();
+  if (Array.isArray(root.folders)) {
+    for (const f of root.folders as Array<{ id?: unknown; name?: unknown } | null>) {
+      if (str(f?.id)) folders.set(str(f?.id), str(f?.name));
+    }
+  }
+
   const out = new ImportCollector();
   root.items.forEach((raw: unknown, i) => {
     const row = i + 1;
@@ -62,6 +76,7 @@ export function parseBitwardenJson(text: string): ImportResult {
     const item = raw as BitwardenJsonItem;
     const notes = str(item.notes);
     const favorite = item.favorite === true;
+    const folder = folders.get(str(item.folderId)) ?? "";
     const fields: Array<[string, string]> = Array.isArray(item.fields)
       ? item.fields
           .map((f: { name?: unknown; value?: unknown }): [string, string] => [
@@ -86,30 +101,39 @@ export function parseBitwardenJson(text: string): ImportResult {
             url,
             notes: joinNotes(notes, fieldLines([...loginExtras(urls), ...fields])),
             totp: str(login.totp),
-          })
+          }),
+          folder
         );
       }
       case 2:
-        return out.add(row, noteOrTypedItem(itemName(str(item.name)), favorite, notes, fields));
+        return out.add(
+          row,
+          noteOrTypedItem(itemName(str(item.name)), favorite, notes, fields),
+          folder
+        );
       default: {
         const kind = BITWARDEN_TYPES[Number(item.type)] ?? "Item";
         const details = flattenFields(item.card ?? item.identity ?? item.sshKey);
         if (!str(item.name) && details.length === 0 && !notes) {
           return out.skip(row, "Empty item");
         }
-        return out.add(row, {
-          type: "SECURE_NOTE",
-          name: itemName(str(item.name), "", kind),
-          favorite,
-          secret: {
-            content: joinNotes(
-              `Bitwarden ${kind.toLowerCase()}`,
-              fieldLines(details),
-              notes,
-              fieldLines(fields)
-            ),
+        return out.add(
+          row,
+          {
+            type: "SECURE_NOTE",
+            name: itemName(str(item.name), "", kind),
+            favorite,
+            secret: {
+              content: joinNotes(
+                `Bitwarden ${kind.toLowerCase()}`,
+                fieldLines(details),
+                notes,
+                fieldLines(fields)
+              ),
+            },
           },
-        });
+          folder
+        );
       }
     }
   });
@@ -126,6 +150,7 @@ export function parseBitwardenCsv(text: string): ImportResult {
     const favorite = truthy(cell(r, "favorite"));
     const fields = parseFieldLines(cell(r, "fields"));
     const type = cell(r, "type").trim().toLowerCase();
+    const folder = cell(r, "folder");
 
     if (type === "login") {
       const urls = cell(r, "login_uri")
@@ -141,11 +166,16 @@ export function parseBitwardenCsv(text: string): ImportResult {
           url,
           notes: joinNotes(notes, fieldLines([...loginExtras(urls), ...fields])),
           totp: cell(r, "login_totp"),
-        })
+        }),
+        folder
       );
     }
     if (type === "note") {
-      return out.add(row, noteOrTypedItem(itemName(cell(r, "name")), favorite, notes, fields));
+      return out.add(
+        row,
+        noteOrTypedItem(itemName(cell(r, "name")), favorite, notes, fields),
+        folder
+      );
     }
     if (!cell(r, "name") && !notes && fields.length === 0) return out.skip(row, "Empty row");
     return out.skip(row, `Unsupported Bitwarden type “${type || "(none)"}”`);

@@ -4,9 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
-  Code2,
-  FileText,
-  KeyRound,
   LayoutDashboard,
   Lock,
   Moon,
@@ -14,8 +11,6 @@ import {
   Sun,
   Vault,
   Folder as FolderIcon,
-  Timer,
-  Wifi,
 } from "lucide-react";
 import {
   Command,
@@ -34,17 +29,10 @@ import { getVaultKey } from "@/lib/crypto";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import { openItem } from "./item-payload";
 import { decryptFolders } from "./folder-payload";
+import { TYPE_META } from "./vault-item-types";
 import { getFoldersAction } from "@/server/folder-actions";
 import type { DecryptedFolder } from "@/types/vault";
 import type { VaultItemType } from "@/types/vault";
-
-const TYPE_META = {
-  LOGIN: { Icon: KeyRound, label: "Login" },
-  SECURE_NOTE: { Icon: FileText, label: "Secure Note" },
-  API_KEY: { Icon: Code2, label: "API Key" },
-  WIFI_PASSWORD: { Icon: Wifi, label: "WiFi Password" },
-  OTP_SECRET: { Icon: Timer, label: "Authenticator" },
-} as const;
 
 interface ItemSummary {
   id: string;

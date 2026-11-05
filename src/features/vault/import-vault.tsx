@@ -6,6 +6,7 @@ import { FileUp, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { ExportDecryptionError, getVaultKey } from "@/lib/crypto";
 import { createVaultItemsBatchAction } from "@/server/vault-item-actions";
+import { createFolderAction, getFoldersAction } from "@/server/folder-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useVaultUserId } from "@/providers/vault-user-provider";
@@ -14,11 +15,13 @@ import {
   detectImportFormat,
   IMPORT_FORMATS,
   ImportFormatError,
+  importFolderNames,
   parseImportFile,
   sealImportBatches,
   type ImportFormat,
   type ImportResult,
 } from "./import";
+import { resolveImportFolders } from "./import/resolve-folders";
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_SKIPPED_SHOWN = 20;
@@ -105,7 +108,12 @@ export function ImportVault() {
       const total = preview.items.length;
       let done = 0;
       try {
-        const batches = await sealImportBatches(preview.items, key, userId);
+        setProgress("Preparing folders…");
+        const folderIds = await resolveImportFolders(preview.items, key, userId, {
+          getFolders: getFoldersAction,
+          createFolder: createFolderAction,
+        });
+        const batches = await sealImportBatches(preview.items, key, userId, folderIds);
         for (const items of batches) {
           setProgress(`Importing… ${done} of ${total}`);
           const result = await createVaultItemsBatchAction({ items });
@@ -129,6 +137,7 @@ export function ImportVault() {
   }
 
   const counts = preview ? countByType(preview) : {};
+  const folderCount = preview ? importFolderNames(preview.items).length : 0;
 
   return (
     <div className="space-y-4">
@@ -229,6 +238,12 @@ export function ImportVault() {
                   .map(([type, n]) => plural(type, n))
                   .join(", ")}.`}
           </p>
+          {folderCount > 0 && (
+            <p className="text-muted-foreground text-xs">
+              Filed in {folderCount} folder{folderCount === 1 ? "" : "s"}. Folders you already have
+              (same name) are reused; the rest are created.
+            </p>
+          )}
           {preview.skipped.length > 0 && (
             <div className="space-y-1">
               <p className="text-sm">

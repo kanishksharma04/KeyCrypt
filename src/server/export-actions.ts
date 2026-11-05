@@ -26,6 +26,7 @@ export async function getVaultItemsForExportAction(): Promise<VaultItemRow[] | {
       ciphertext: true,
       iv: true,
       favorite: true,
+      folderId: true,
       createdAt: true,
       updatedAt: true,
     },

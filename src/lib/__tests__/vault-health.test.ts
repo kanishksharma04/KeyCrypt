@@ -54,6 +54,21 @@ describe("computeVaultHealth", () => {
     ).toEqual(["1", "2"]);
   });
 
+  it("doesn't flag logins without a password as weak, reused or breached", () => {
+    const health = computeVaultHealth(
+      [
+        { id: "1", name: "SSO app", password: "", updatedAt: NOW },
+        { id: "2", name: "TOTP only", password: "", updatedAt: NOW },
+      ],
+      new Map([
+        ["1", 5],
+        ["2", 5],
+      ])
+    );
+    expect(health.issues).toEqual([]);
+    expect(health.score).toBe(100);
+  });
+
   it("flags a password untouched for over a year as old", () => {
     const health = computeVaultHealth([
       { id: "1", name: "Ancient account", password: "Zx9!qLmP7&Tr2^Wc4nBv6y", updatedAt: OLD },

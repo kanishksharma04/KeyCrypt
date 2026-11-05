@@ -73,7 +73,40 @@ function TextField({
   );
 }
 
+/** Multi-line text (a secure note's content, or any item's notes) with a copy button. */
+function LongTextField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="py-3">
+      <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+        {label}
+      </p>
+      <div className="bg-muted relative rounded-lg p-3">
+        <pre className="max-h-64 overflow-y-auto pr-8 font-sans text-sm wrap-break-word whitespace-pre-wrap">
+          {value || "—"}
+        </pre>
+        {value && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-2 right-2"
+            onClick={() => void copyToClipboard(value)}
+            title={`Copy ${label.toLowerCase()}`}
+          >
+            <Copy className="size-3.5" aria-hidden="true" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The item's notes, if it has any (secure notes show theirs as content instead). */
+function notesOf(item: DecryptedVaultItem): string {
+  return item.type === "SECURE_NOTE" ? "" : item.secret.notes;
+}
+
 function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
+  const notes = notesOf(item);
   const { Icon, iconBg, iconColor, label } = TYPE_META[item.type];
 
   return (
@@ -134,27 +167,7 @@ function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
         )}
 
         {item.type === "SECURE_NOTE" && (
-          <div className="py-3">
-            <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-              Content
-            </p>
-            <div className="bg-muted relative rounded-lg p-3">
-              <pre className="max-h-64 overflow-y-auto font-sans text-sm break-words whitespace-pre-wrap">
-                {item.secret.content || "—"}
-              </pre>
-              {item.secret.content && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="absolute top-2 right-2"
-                  onClick={() => void copyToClipboard(item.secret.content)}
-                  title="Copy content"
-                >
-                  <Copy className="size-3.5" aria-hidden="true" />
-                </Button>
-              )}
-            </div>
-          </div>
+          <LongTextField label="Content" value={item.secret.content} />
         )}
 
         {item.type === "API_KEY" && (
@@ -206,6 +219,8 @@ function ViewItemContent({ item }: { item: DecryptedVaultItem }) {
             </div>
           </>
         )}
+
+        {notes && <LongTextField label="Notes" value={notes} />}
       </div>
     </>
   );

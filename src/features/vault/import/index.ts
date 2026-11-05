@@ -6,7 +6,7 @@ import { parseOnePasswordCsv } from "./onepassword";
 import { ImportFormatError, type ImportFormat, type ImportResult } from "./types";
 
 export * from "./types";
-export { sealImportBatches, IMPORT_BATCH_SIZE } from "./seal";
+export { folderKey, importFolderNames, sealImportBatches, IMPORT_BATCH_SIZE } from "./seal";
 
 export const IMPORT_FORMATS: ReadonlyArray<{ id: ImportFormat; label: string }> = [
   { id: "bitwarden-json", label: "Bitwarden (.json, unencrypted)" },

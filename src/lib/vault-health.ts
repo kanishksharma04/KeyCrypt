@@ -58,8 +58,11 @@ export function computeVaultHealth(
     };
   }
 
+  // A login with no password stored (SSO, passkey, TOTP only) has nothing to
+  // judge: it is neither weak nor "reused" by every other empty login.
   const passwordCounts = new Map<string, number>();
   for (const item of items) {
+    if (!item.password) continue;
     passwordCounts.set(item.password, (passwordCounts.get(item.password) ?? 0) + 1);
   }
 
@@ -67,10 +70,10 @@ export function computeVaultHealth(
   const issues: VaultHealthIssue[] = [];
 
   for (const item of items) {
-    if ((breaches?.get(item.id) ?? 0) > 0) {
+    if (item.password && (breaches?.get(item.id) ?? 0) > 0) {
       issues.push({ itemId: item.id, name: item.name, reason: "breached" });
     }
-    if (estimatePasswordStrength(item.password).level === 0) {
+    if (item.password && estimatePasswordStrength(item.password).level === 0) {
       issues.push({ itemId: item.id, name: item.name, reason: "weak" });
     }
     if ((passwordCounts.get(item.password) ?? 0) > 1) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activityLabel, describeBrowser, relativeTime } from "../activity";
+import { activityLabel, describeBrowser } from "../activity";
+import { relativeTime } from "../relative-time";
 
 const UA = {
   chromeMac:
@@ -59,6 +60,14 @@ describe("relativeTime", () => {
     [now - 3 * 3_600_000, "3h ago"],
     [now - 2 * 86_400_000, "2d ago"],
   ])("formats %s", (t, expected) => {
-    expect(relativeTime(new Date(t).toISOString(), now)).toBe(expected);
+    expect(relativeTime(new Date(t).toISOString(), { now })).toBe(expected);
+  });
+
+  it("shows a date past 30 days, or months and years with longAgo: ago", () => {
+    const at = (days: number) => new Date(now - days * 86_400_000).toISOString();
+    expect(relativeTime(at(45), { now })).toBe(new Date(at(45)).toLocaleDateString());
+    expect(relativeTime(at(95), { now, longAgo: "ago" })).toBe("3mo ago");
+    expect(relativeTime(at(800), { now, longAgo: "ago" })).toBe("2y ago");
+    expect(relativeTime(at(2), { now, longAgo: "ago" })).toBe("2d ago");
   });
 });

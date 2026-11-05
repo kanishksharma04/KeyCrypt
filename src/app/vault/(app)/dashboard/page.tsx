@@ -1,31 +1,9 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Code2, FileText, KeyRound, Star, Timer, Vault, Wifi } from "lucide-react";
+import { Star, Vault } from "lucide-react";
 import { getVaultStatsAction } from "@/server/settings-actions";
 import { VaultHealthScore } from "@/features/vault/vault-health-score";
-
-const TYPE_META = {
-  LOGIN: { label: "Logins", Icon: KeyRound, color: "text-primary", bg: "bg-primary/10" },
-  SECURE_NOTE: {
-    label: "Secure Notes",
-    Icon: FileText,
-    color: "text-green-500",
-    bg: "bg-green-500/10",
-  },
-  API_KEY: { label: "API Keys", Icon: Code2, color: "text-purple-500", bg: "bg-purple-500/10" },
-  WIFI_PASSWORD: {
-    label: "WiFi Passwords",
-    Icon: Wifi,
-    color: "text-orange-500",
-    bg: "bg-orange-500/10",
-  },
-  OTP_SECRET: {
-    label: "Authenticators",
-    Icon: Timer,
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10",
-  },
-} as const;
+import { TYPE_META } from "@/features/vault/vault-item-types";
 
 function StatCard({
   label,
@@ -110,14 +88,14 @@ export default async function DashboardPage() {
                   keyof typeof TYPE_META,
                   (typeof TYPE_META)[keyof typeof TYPE_META],
                 ][]
-              ).map(([type, { label, Icon, color, bg }]) => (
+              ).map(([type, { plural, Icon, iconColor, iconBg }]) => (
                 <StatCard
                   key={type}
-                  label={label}
+                  label={plural}
                   value={stats.byType[type]}
                   Icon={Icon}
-                  color={color}
-                  bg={bg}
+                  color={iconColor}
+                  bg={iconBg}
                 />
               ))}
             </div>

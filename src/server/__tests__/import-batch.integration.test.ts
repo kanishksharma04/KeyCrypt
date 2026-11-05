@@ -2,8 +2,8 @@ import { randomUUID } from "crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { deriveVaultKey, generateSalt } from "@/lib/crypto";
-import { MAX_ITEMS_PER_REKEY } from "@/schemas/server";
-import { createVaultItemsBatchAction } from "@/server/vault-item-actions";
+import { MAX_VAULT_ITEMS } from "@/schemas/server";
+import { createVaultItemAction, createVaultItemsBatchAction } from "@/server/vault-item-actions";
 import { sealImportBatches, type ImportedItem } from "@/features/vault/import";
 import { openItem } from "@/features/vault/item-payload";
 import { createTestUser, signInAs, signOutTestUser } from "@/test/integration/helpers";
@@ -96,9 +96,9 @@ describe("createVaultItemsBatchAction (import)", () => {
     expect((await db.vaultItem.findUniqueOrThrow({ where: { id: taken } })).userId).toBe(bob.id);
   });
 
-  it("refuses to grow a vault past the re-key limit", async () => {
+  it("refuses to grow a vault past the item cap, by import or by a single create", async () => {
     await db.vaultItem.createMany({
-      data: Array.from({ length: MAX_ITEMS_PER_REKEY - 1 }, () => ({
+      data: Array.from({ length: MAX_VAULT_ITEMS - 1 }, () => ({
         userId: alice.id,
         type: "LOGIN" as const,
         ciphertext: "YWJjZA==",
@@ -109,6 +109,43 @@ describe("createVaultItemsBatchAction (import)", () => {
       error: "A vault can hold up to 5,000 items.",
     });
     expect(await createVaultItemsBatchAction({ items: [sealedStub()] })).toEqual({ count: 1 });
+
+    // The vault is now full: a single create is refused as well.
+    const { id, type, ciphertext, iv } = sealedStub();
+    expect(await createVaultItemAction({ id, type, ciphertext, iv })).toEqual({
+      error: "A vault can hold up to 5,000 items.",
+    });
+    expect(await db.vaultItem.count({ where: { userId: alice.id } })).toBe(MAX_VAULT_ITEMS);
+  });
+
+  it("files items in the user's own folders and refuses anyone else's", async () => {
+    const folder = (userId: string) =>
+      db.folder.create({
+        data: { id: randomUUID(), userId, nameCiphertext: "YWJjZA==", nameIv: "aXYtaXYtaXYtaXYt" },
+      });
+    const mine = await folder(alice.id);
+    const bobs = await folder(bob.id);
+
+    const filed = sealedStub();
+    expect(
+      await createVaultItemsBatchAction({
+        items: [{ ...filed, folderId: mine.id }, { ...sealedStub(), folderId: null }, sealedStub()],
+      })
+    ).toEqual({ count: 3 });
+    const rows = await db.vaultItem.findMany({ where: { userId: alice.id } });
+    expect(rows.find((r) => r.id === filed.id)?.folderId).toBe(mine.id);
+    expect(rows.filter((r) => r.folderId === null)).toHaveLength(2);
+
+    // Another user's folder, or one that doesn't exist: nothing is created.
+    for (const folderId of [bobs.id, randomUUID()]) {
+      expect(
+        await createVaultItemsBatchAction({
+          items: [sealedStub(), { ...sealedStub(), folderId }],
+        })
+      ).toEqual({ error: "Folder not found" });
+    }
+    expect(await db.vaultItem.count({ where: { userId: alice.id } })).toBe(3);
+    expect(await db.vaultItem.count({ where: { folderId: bobs.id } })).toBe(0);
   });
 
   it("requires a session", async () => {

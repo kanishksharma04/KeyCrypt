@@ -9,7 +9,7 @@ import {
   INVALID_INPUT,
   createVaultItemInput,
   createVaultItemsBatchInput,
-  MAX_ITEMS_PER_REKEY,
+  MAX_VAULT_ITEMS,
   itemIdInput,
   toggleFavoriteInput,
   updateVaultItemInput,
@@ -48,6 +48,14 @@ export async function getVaultItemSummariesAction(): Promise<
   });
 }
 
+const ITEM_CAP_ERROR = `A vault can hold up to ${MAX_VAULT_ITEMS.toLocaleString("en")} items.`;
+
+/** Whether adding `adding` items would take the user's vault past MAX_VAULT_ITEMS. */
+async function wouldExceedItemCap(userId: string, adding: number): Promise<boolean> {
+  const existing = await db.vaultItem.count({ where: { userId } });
+  return existing + adding > MAX_VAULT_ITEMS;
+}
+
 export async function createVaultItemAction(input: {
   /** Generated in the browser (UUID v4) and bound into the item's AAD. */
   id: string;
@@ -62,6 +70,8 @@ export async function createVaultItemAction(input: {
 
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
+
+  if (await wouldExceedItemCap(session.user.id, 1)) return { error: ITEM_CAP_ERROR };
 
   let item: { id: string };
   try {
@@ -93,7 +103,8 @@ export async function createVaultItemAction(input: {
 
 /**
  * Import: create up to 50 items in one call. Each was encrypted in the browser
- * (crypto v2, AAD bound to its id); the server stores ciphertext only.
+ * (crypto v2, AAD bound to its id); the server stores ciphertext only. An item
+ * may name one of the user's folders (created beforehand by the browser).
  * All-or-nothing per batch.
  */
 export async function createVaultItemsBatchAction(input: {
@@ -103,6 +114,7 @@ export async function createVaultItemsBatchAction(input: {
     ciphertext: string;
     iv: string;
     favorite: boolean;
+    folderId?: string | null;
   }>;
 }): Promise<{ count: number } | { error: string }> {
   const parsed = createVaultItemsBatchInput.safeParse(input);
@@ -113,11 +125,13 @@ export async function createVaultItemsBatchAction(input: {
   if (!session) return { error: "Not authenticated" };
   const userId = session.user.id;
 
-  // Changing the master password re-encrypts every item in one request, which
-  // is capped; don't let an import grow the vault past that.
-  const existing = await db.vaultItem.count({ where: { userId } });
-  if (existing + items.length > MAX_ITEMS_PER_REKEY) {
-    return { error: `A vault can hold up to ${MAX_ITEMS_PER_REKEY.toLocaleString("en")} items.` };
+  if (await wouldExceedItemCap(userId, items.length)) return { error: ITEM_CAP_ERROR };
+
+  // Every folder referenced must be one of this user's.
+  const folderIds = [...new Set(items.flatMap((i) => (i.folderId ? [i.folderId] : [])))];
+  if (folderIds.length > 0) {
+    const owned = await db.folder.count({ where: { userId, id: { in: folderIds } } });
+    if (owned !== folderIds.length) return { error: "Folder not found" };
   }
 
   let count: number;
@@ -131,11 +145,16 @@ export async function createVaultItemsBatchAction(input: {
         ciphertext: item.ciphertext,
         iv: item.iv,
         favorite: item.favorite,
+        folderId: item.folderId ?? null,
       })),
     }));
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return { error: "An item with this id already exists." };
+    }
+    // A folder was deleted between the check and the insert.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+      return { error: "Folder not found" };
     }
     throw err;
   }

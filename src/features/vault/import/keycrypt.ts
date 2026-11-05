@@ -1,6 +1,10 @@
 import { decryptExport, EXPORT_FORMAT } from "@/lib/crypto";
 import type { VaultExportPayload } from "@/lib/vault-export";
 import { ImportCollector, asWifiSecurity, importedTotp, str } from "./normalize";
+import { ImportFormatError, type ImportResult } from "./types";
+
+// KeyCrypt's own password-protected export (Settings → Export, "keycrypt-export" v1).
+// Decrypted here with the export password; throws ExportDecryptionError if wrong.
 
 /** Rebuild an otpauth:// link from a stored OTP secret's fields (validated afterwards). */
 function totpUriFromSecret(s: Record<string, unknown>): string {
@@ -12,10 +16,6 @@ function totpUriFromSecret(s: Record<string, unknown>): string {
   });
   return `otpauth://totp/x?${q.toString()}`;
 }
-import { ImportFormatError, type ImportResult } from "./types";
-
-// KeyCrypt's own password-protected export (Settings → Export, "keycrypt-export" v1).
-// Decrypted here with the export password; throws ExportDecryptionError if wrong.
 
 export function isKeyCryptExport(text: string): boolean {
   try {
@@ -47,65 +47,88 @@ export async function parseKeyCryptExport(
       type?: unknown;
       name?: unknown;
       favorite?: unknown;
+      folder?: unknown;
       secret?: unknown;
     };
     const s = (item.secret ?? {}) as Record<string, unknown>;
     const name = str(item.name);
     const favorite = item.favorite === true;
+    // Exports made before folders were included have no folder.
+    const folder = str(item.folder);
     switch (item.type) {
       case "LOGIN":
-        return out.add(row, {
-          type: "LOGIN",
-          name,
-          favorite,
-          secret: {
-            username: str(s.username),
-            password: str(s.password),
-            url: str(s.url),
-            notes: str(s.notes),
-            ...(str(s.totp) && { totp: str(s.totp) }),
+        return out.add(
+          row,
+          {
+            type: "LOGIN",
+            name,
+            favorite,
+            secret: {
+              username: str(s.username),
+              password: str(s.password),
+              url: str(s.url),
+              notes: str(s.notes),
+              ...(str(s.totp) && { totp: str(s.totp) }),
+            },
           },
-        });
+          folder
+        );
       case "SECURE_NOTE":
-        return out.add(row, {
-          type: "SECURE_NOTE",
-          name,
-          favorite,
-          secret: { content: str(s.content) },
-        });
-      case "API_KEY":
-        return out.add(row, {
-          type: "API_KEY",
-          name,
-          favorite,
-          secret: { key: str(s.key), description: str(s.description), notes: str(s.notes) },
-        });
-      case "WIFI_PASSWORD":
-        return out.add(row, {
-          type: "WIFI_PASSWORD",
-          name,
-          favorite,
-          secret: {
-            ssid: str(s.ssid),
-            password: str(s.password),
-            securityType: asWifiSecurity(str(s.securityType)),
-            notes: str(s.notes),
+        return out.add(
+          row,
+          {
+            type: "SECURE_NOTE",
+            name,
+            favorite,
+            secret: { content: str(s.content) },
           },
-        });
+          folder
+        );
+      case "API_KEY":
+        return out.add(
+          row,
+          {
+            type: "API_KEY",
+            name,
+            favorite,
+            secret: { key: str(s.key), description: str(s.description), notes: str(s.notes) },
+          },
+          folder
+        );
+      case "WIFI_PASSWORD":
+        return out.add(
+          row,
+          {
+            type: "WIFI_PASSWORD",
+            name,
+            favorite,
+            secret: {
+              ssid: str(s.ssid),
+              password: str(s.password),
+              securityType: asWifiSecurity(str(s.securityType)),
+              notes: str(s.notes),
+            },
+          },
+          folder
+        );
       case "OTP_SECRET": {
         const params = importedTotp(totpUriFromSecret(s));
         if (!params) return out.skip(row, "Damaged authenticator key");
-        return out.add(row, {
-          type: "OTP_SECRET",
-          name,
-          favorite,
-          secret: {
-            ...params,
-            issuer: str(s.issuer),
-            account: str(s.account),
-            notes: str(s.notes),
+        return out.add(
+          row,
+          {
+            type: "OTP_SECRET",
+            name,
+            favorite,
+            secret: {
+              ...params,
+              issuer: str(s.issuer),
+              account: str(s.account),
+              notes: str(s.notes),
+            },
           },
-        });
+          folder
+        );
       }
       default:
         return out.skip(row, `Unknown item type “${str(item.type) || "(none)"}”`);

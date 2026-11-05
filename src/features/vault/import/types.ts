@@ -12,6 +12,8 @@ import type {
 interface Base {
   name: string;
   favorite: boolean;
+  /** The folder it was filed in, by name (trimmed, at most 100 characters); absent if none. */
+  folder?: string;
 }
 
 export type ImportedItem =

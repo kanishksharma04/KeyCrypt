@@ -63,7 +63,7 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
           return;
         }
 
-        // Only non-name fields go into the encrypted blob — name is plaintext for search
+        // The login's fields; sealItem below encrypts them together with the name.
         const secret: LoginSecret = {
           username: data.username,
           password: data.password,

@@ -54,7 +54,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Login credentials** — username, password, URL with one-click copy and site launch
 - **Secure notes** — encrypted free-form text for PINs, recovery codes, sensitive memos
 - **API keys** — key, description, notes with monospace display
-- **Wi-Fi passwords** — SSID, password, security type (WPA2 / WPA3 / Open)
+- **Wi-Fi passwords** — SSID, password, security type (WPA2 / WPA3 / WEP / Open)
 - **Authenticators (TOTP)** — a setup key or `otpauth://` link; the vault shows the live code with a countdown (SHA-1/256/512, 6–8 digits). Logins can hold a TOTP key too, and imports from Bitwarden, 1Password and LastPass carry it over. Codes are computed in the browser
 
 ### Security & crypto
@@ -64,7 +64,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - Argon2id key derivation (64 MiB, 3 iterations) in a Web Worker, wrapping a random 256-bit vault key
 - Nonce-based Content Security Policy (CSP) + HSTS in production
 - Auto-lock after 15 minutes of inactivity or 5 minutes in a hidden tab (also checked on wake from sleep)
-- Master password change with full client-side re-encryption of every item
+- Master password change re-wraps the vault key in the browser; items are not re-encrypted
 
 ### Vault UX
 
@@ -87,6 +87,8 @@ The vault key exists only in this page's memory. It is never written to disk or 
 ### Authentication
 
 - Email + password sign-up with optional email verification
+- Optional two-factor sign-in (TOTP authenticator app, 10 one-time backup codes)
+- Sign out of all devices; permanent account deletion from Settings
 - Password visibility toggle on sign-in, sign-up, and vault unlock forms
 - Sign-out from vault header or settings
 - User initials avatar derived from session
@@ -232,8 +234,9 @@ pnpm test:e2e
 ```
 
 Playwright migrates the database, runs `pnpm build && pnpm start` (production mode, so the
-CSP nonce and HSTS are live) and drives Chromium through sign-up, vault setup, all four item
-types, lock/unlock and a master-password change. SMTP is left unset so new accounts are
+CSP nonce and HSTS are live) and drives Chromium through sign-up, vault setup, the login, note, API-key and WiFi
+item types, lock/unlock and a master-password change; separate specs cover authenticators,
+folders, import, export, recovery, two-factor sign-in and account deletion. SMTP is left unset so new accounts are
 auto-verified, and rate limits are switched off with `E2E=1` + `E2E_DISABLE_RATE_LIMIT=1`.
 Never set those two variables in a real deployment.
 
@@ -316,6 +319,19 @@ Things to know:
 
 ## Changelog
 
+### November 2026
+
+- **Authenticator items** — a fifth item type for TOTP setup keys and `otpauth://` links, with live codes; logins can hold a TOTP key too
+- **Folders** — encrypted folder names; create, rename, delete, move and filter
+- **Import** — Bitwarden (JSON/CSV), 1Password, LastPass, Chrome/Edge CSV and KeyCrypt encrypted exports, parsed and encrypted in the browser. Folders from Bitwarden and KeyCrypt exports are kept (matched by name, created if missing)
+- **Export** — encrypted JSON and Bitwarden CSV now include each item's folder
+- **Browser extension (MVP)** — unlock locally and fill logins for the current site
+- **Self-hosting** — Docker image and compose file
+- Two-factor sign-in, recovery kit, account deletion, recent-activity log
+- Vault health ignores logins without a password (SSO, passkey or TOTP-only accounts)
+- The view dialog shows the notes of logins, API keys, WiFi and authenticator items
+- Vaults are capped at 5,000 items for single creates as well as imports
+
 ### August 11, 2026
 
 - **Command palette** — `⌘K` launcher for navigation, item search, and quick actions (new item, lock vault, toggle theme)
@@ -394,7 +410,7 @@ src/
 │   ├── auth.ts             # Auth.js configuration (Credentials provider, JWT sessions)
 │   ├── crypto/             # Web Crypto API — key derivation, encryption, verification (sole encryption surface)
 │   ├── vault-health.ts     # Client-side weak/reused/stale/breached password scoring
-│   ├── rate-limit.ts       # In-memory rate limiting
+│   ├── rate-limit.ts       # Rate limiting (Upstash Redis, in-memory fallback)
 │   └── db.ts               # Prisma client singleton
 ├── providers/              # ThemeProvider, VaultLockProvider, CommandPaletteProvider
 ├── schemas/                # Zod schemas for vault items and auth forms

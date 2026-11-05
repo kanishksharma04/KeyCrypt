@@ -1,7 +1,13 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { describe, expect, it } from "vitest";
-import { ExportDecryptionError, parseTotpInput, totpParamsToUri } from "@/lib/crypto";
+import {
+  encryptExport,
+  ExportDecryptionError,
+  parseTotpInput,
+  totpParamsToUri,
+} from "@/lib/crypto";
+import { buildExportPayload } from "@/lib/vault-export";
 import {
   countByType,
   detectImportFormat,
@@ -50,6 +56,7 @@ describe("Bitwarden JSON", () => {
       type: "LOGIN",
       name: "GitHub",
       favorite: true,
+      folder: "Work", // folderId resolved through the export's folder list
       secret: {
         username: "octocat",
         password: 'gh-S3cret, "quoted" ✓',
@@ -64,6 +71,7 @@ describe("Bitwarden JSON", () => {
       },
     });
     expect(byName(items, "Door codes").secret).toEqual({ content: "Front: 1234\nBack: 5678" });
+    expect(byName(items, "Door codes").folder).toBeUndefined();
     expect(byName(items, "Stripe key")).toMatchObject({
       type: "API_KEY",
       secret: { key: "sk_live_123", description: "Payments", notes: "live" },
@@ -103,6 +111,7 @@ describe("Bitwarden CSV", () => {
       type: "LOGIN",
       name: "GitHub",
       favorite: true,
+      folder: "Work",
       secret: {
         username: "octocat",
         password: 'pa,ss"word',
@@ -304,6 +313,33 @@ describe("KeyCrypt encrypted export", () => {
         favorite: false,
         secret: { ssid: "HomeNet", password: "hunter22-wifi", securityType: "WPA3", notes: "" },
       },
+    ]);
+  });
+
+  it("restores folders, trimming the name and ignoring an empty one", async () => {
+    const T = { createdAt: "2026-10-01T00:00:00.000Z", updatedAt: "2026-10-01T00:00:00.000Z" };
+    const note = (id: string, name: string, folderId?: string) => ({
+      ...T,
+      id,
+      name,
+      favorite: false,
+      folderId,
+      type: "SECURE_NOTE" as const,
+      secret: { content: name },
+    });
+    const payload = buildExportPayload(
+      [note("a", "In work", "w"), note("b", "In blank", "x"), note("c", "Loose")],
+      new Map([
+        ["w", "  Work  "],
+        ["x", "   "],
+      ])
+    );
+    const file = JSON.stringify(await encryptExport(payload, "pw-for-test"));
+    const { items } = await parseImportFile("keycrypt-export", file, "pw-for-test");
+    expect(items.map((i) => [i.name, i.folder])).toEqual([
+      ["In work", "Work"],
+      ["In blank", undefined],
+      ["Loose", undefined],
     ]);
   });
 

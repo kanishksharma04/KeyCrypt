@@ -13,25 +13,36 @@ export interface VaultExportPayload {
     type: DecryptedVaultItem["type"];
     name: string;
     favorite: boolean;
+    /** Folder name; "" when the item isn't in a folder. Absent in older exports. */
+    folder: string;
     createdAt: string;
     updatedAt: string;
     secret: DecryptedVaultItem["secret"];
   }>;
 }
 
+/** Folder id → decrypted folder name. */
+export type FolderNames = ReadonlyMap<string, string>;
+
+function folderOf(item: DecryptedVaultItem, folders: FolderNames): string {
+  return item.folderId ? (folders.get(item.folderId) ?? "") : "";
+}
+
 export function buildExportPayload(
   items: DecryptedVaultItem[],
+  folders: FolderNames = new Map(),
   now = new Date()
 ): VaultExportPayload {
   return {
     exportedAt: now.toISOString(),
-    items: items.map(({ type, name, favorite, createdAt, updatedAt, secret }) => ({
-      type,
-      name,
-      favorite,
-      createdAt,
-      updatedAt,
-      secret,
+    items: items.map((item) => ({
+      type: item.type,
+      name: item.name,
+      favorite: item.favorite,
+      folder: folderOf(item, folders),
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      secret: item.secret,
     })) as VaultExportPayload["items"],
   };
 }
@@ -68,9 +79,9 @@ function customFields(pairs: Array<[string, string]>): string {
     .join("\n");
 }
 
-function toRow(item: DecryptedVaultItem): CsvRow {
+function toRow(item: DecryptedVaultItem, folders: FolderNames): CsvRow {
   const base: CsvRow = {
-    folder: "",
+    folder: folderOf(item, folders),
     favorite: item.favorite ? "1" : "",
     type: "note",
     name: item.name,
@@ -130,10 +141,13 @@ function toRow(item: DecryptedVaultItem): CsvRow {
 }
 
 /** Plain-text CSV of every item, in Bitwarden's import column order. */
-export function toBitwardenCsv(items: DecryptedVaultItem[]): string {
+export function toBitwardenCsv(
+  items: DecryptedVaultItem[],
+  folders: FolderNames = new Map()
+): string {
   const lines = [BITWARDEN_CSV_COLUMNS.join(",")];
   for (const item of items) {
-    const row = toRow(item);
+    const row = toRow(item, folders);
     lines.push(BITWARDEN_CSV_COLUMNS.map((c) => csvField(row[c] ?? "")).join(","));
   }
   return lines.join("\r\n") + "\r\n";

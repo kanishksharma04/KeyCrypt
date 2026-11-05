@@ -39,6 +39,25 @@ const FEATURES = [
     description: "SSID, password, and security type — stored and copied in one tap.",
   },
   {
+    title: "Authenticators",
+    description:
+      "Two-factor setup keys with live codes and a countdown, computed in your browser. Logins can hold one too.",
+  },
+  {
+    title: "Folders",
+    description: "Group items into folders. Folder names are encrypted like everything else.",
+  },
+  {
+    title: "Import & export",
+    description:
+      "Bring your vault from Bitwarden, 1Password, LastPass or Chrome, and take it with you as an encrypted file or a Bitwarden CSV. Files are read in your browser, never uploaded.",
+  },
+  {
+    title: "Browser extension",
+    description:
+      "An early extension that unlocks your vault locally and fills logins for the site you're on.",
+  },
+  {
     title: "Password generator",
     description: "Configurable length and character sets with live entropy scoring.",
   },

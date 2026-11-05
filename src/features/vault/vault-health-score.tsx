@@ -118,8 +118,10 @@ export function VaultHealthScore() {
     try {
       const logins = await loadLoginSecrets(key, userId);
       if (!logins) throw new Error("load failed");
-      const counts = await countPasswordBreaches(logins.map((l) => l.password));
-      const breaches = new Map(logins.map((l, i) => [l.id, counts[i] ?? 0]));
+      // Logins without a password have nothing to look up.
+      const withPassword = logins.filter((l) => l.password);
+      const counts = await countPasswordBreaches(withPassword.map((l) => l.password));
+      const breaches = new Map(withPassword.map((l, i) => [l.id, counts[i] ?? 0]));
       setState({ health: computeVaultHealth(logins, breaches) });
       setBreachCheck({ status: "done" });
     } catch {

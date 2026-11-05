@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { deriveVaultKey, generateSalt, itemAad, decryptItem } from "@/lib/crypto";
 import { openItem } from "../../item-payload";
-import { IMPORT_BATCH_SIZE, sealImportBatches, type ImportedItem } from "..";
+import {
+  folderKey,
+  IMPORT_BATCH_SIZE,
+  importFolderNames,
+  sealImportBatches,
+  type ImportedItem,
+} from "..";
 
 const USER_ID = "cuser000000000000000000001";
 
@@ -39,5 +45,31 @@ describe("sealImportBatches", () => {
     await expect(
       openItem(key, { ...first, name: null }, "cuser000000000000000000002")
     ).rejects.toThrow();
+  });
+
+  it("files each item in the folder mapped from its name, case-insensitively", async () => {
+    const key = await deriveVaultKey("test-master", generateSalt(), 1_000);
+    const note = (name: string, folder?: string): ImportedItem => ({
+      type: "SECURE_NOTE",
+      name,
+      favorite: false,
+      ...(folder && { folder }),
+      secret: { content: name },
+    });
+    const items = [note("a", "Work"), note("b", "work"), note("c", "Home"), note("d")];
+    expect(importFolderNames(items)).toEqual(["Work", "Home"]);
+
+    const workId = "0b7f3c1e-2a4d-4e8f-9a1b-3c5d7e9f1a2b";
+    // "Home" has no folder id: imported without one.
+    const [batch] = await sealImportBatches(
+      items,
+      key,
+      USER_ID,
+      new Map([[folderKey("Work"), workId]])
+    );
+    expect(batch?.map((s) => s.folderId)).toEqual([workId, workId, null, null]);
+    // Without a map nothing is filed.
+    const [plain] = await sealImportBatches(items, key, USER_ID);
+    expect(plain?.every((s) => s.folderId === null)).toBe(true);
   });
 });
