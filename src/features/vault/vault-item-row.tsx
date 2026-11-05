@@ -5,7 +5,6 @@ import {
   Copy,
   Eye,
   ExternalLink,
-  Folder,
   FolderInput,
   MoreHorizontal,
   Pencil,
@@ -49,7 +48,7 @@ export function VaultItemRow({
   folderName,
 }: VaultItemRowProps) {
   const [pendingFav, startFavTransition] = useTransition();
-  const { Icon, iconBg, iconColor } = TYPE_META[item.type];
+  const { Icon, iconBg, iconColor, label: typeLabel } = TYPE_META[item.type];
 
   // Derived secondary display text (never secrets directly — shown as metadata)
   const secondaryText = (() => {
@@ -97,40 +96,57 @@ export function VaultItemRow({
     return [];
   })();
 
-  const externalUrl = item.type === "LOGIN" ? item.secret.url : "";
+  // Only web links are opened (imported items can hold any string here).
+  const externalUrl =
+    item.type === "LOGIN" && /^https?:\/\//i.test(item.secret.url) ? item.secret.url : "";
+
+  function toggleFavorite() {
+    startFavTransition(async () => {
+      const result = await toggleFavoriteAction(item.id, !item.favorite);
+      if (result.error) toast.error(result.error);
+    });
+  }
 
   return (
-    <div className="bg-card hover:bg-card/80 group flex items-center gap-3 rounded-xl border px-4 py-2.5 transition-all duration-150 hover:-translate-y-px hover:shadow-sm">
+    <div className="group hover:bg-row-hover focus-within:bg-row-hover relative flex items-center gap-3 px-3 py-3 transition-colors sm:gap-4 sm:px-5 sm:py-3.5">
       <div
         className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-150 group-hover:scale-105",
+          "flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent dark:border-white/5",
           iconBg
         )}
       >
-        <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
+        <Icon className={cn("size-[18px]", iconColor)} aria-hidden="true" />
       </div>
 
       <button
-        className="min-w-0 flex-1 cursor-pointer text-left"
+        type="button"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md text-left"
         onClick={onView}
         title="View item"
       >
-        <div className="flex items-baseline gap-2">
-          <p className="truncate text-sm font-medium">{item.name}</p>
-          <span className="text-muted-foreground shrink-0 text-xs">
-            {relativeTime(item.updatedAt, { longAgo: "ago" })}
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[15px] font-semibold">{item.name}</span>
+            {item.favorite && (
+              <Star className="fill-brand text-brand size-3 shrink-0" aria-label="Favorite" />
+            )}
           </span>
-          {folderName && (
-            <span className="text-muted-foreground bg-muted inline-flex max-w-32 shrink-0 items-center gap-1 rounded px-1.5 text-[11px]">
-              <Folder className="size-3 shrink-0" aria-hidden="true" />
-              <span className="truncate">{folderName}</span>
-            </span>
-          )}
-        </div>
-        {secondaryText && <p className="text-muted-foreground truncate text-xs">{secondaryText}</p>}
+          <span className="text-muted-foreground block truncate text-sm">
+            {secondaryText || typeLabel}
+          </span>
+        </span>
+        {folderName && (
+          <span className="bg-muted text-muted-foreground inline-flex max-w-24 shrink-0 rounded-md px-2 py-0.5 text-xs font-medium sm:max-w-40">
+            <span className="truncate">{folderName}</span>
+          </span>
+        )}
+        <span className="text-muted-foreground hidden w-28 shrink-0 text-right text-sm whitespace-nowrap md:block">
+          {relativeTime(item.updatedAt, { style: "long", longAgo: "ago" })}
+        </span>
       </button>
 
-      <div className="flex shrink-0 items-center gap-1">
+      {/* Touch screens: always shown. With a mouse: fades in over the time on hover/focus. */}
+      <div className="can-hover:bg-row-hover can-hover:absolute can-hover:top-1/2 can-hover:right-3 can-hover:-translate-y-1/2 can-hover:pl-2 can-hover:opacity-0 can-hover:sm:right-5 flex shrink-0 items-center justify-end gap-0.5 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
         {/* Primary copy */}
         {primaryCopy.text() && (
           <Button
@@ -150,7 +166,7 @@ export function VaultItemRow({
             href={externalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "hidden sm:flex")}
             title="Open website"
           >
             <ExternalLink className="size-3.5" aria-hidden="true" />
@@ -162,19 +178,15 @@ export function VaultItemRow({
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={() =>
-            startFavTransition(async () => {
-              const result = await toggleFavoriteAction(item.id, !item.favorite);
-              if (result.error) toast.error(result.error);
-            })
-          }
+          className="hidden sm:inline-flex"
+          onClick={toggleFavorite}
           disabled={pendingFav}
           title={item.favorite ? "Remove from favorites" : "Add to favorites"}
         >
           <Star
             className={cn(
               "size-3.5",
-              item.favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
+              item.favorite ? "fill-brand text-brand" : "text-muted-foreground"
             )}
             aria-hidden="true"
           />
@@ -200,6 +212,19 @@ export function VaultItemRow({
               <Pencil className="size-3.5" aria-hidden="true" />
               Edit
             </DropdownMenuItem>
+            <DropdownMenuItem className="sm:hidden" onClick={toggleFavorite} disabled={pendingFav}>
+              <Star className="size-3.5" aria-hidden="true" />
+              {item.favorite ? "Remove from favorites" : "Add to favorites"}
+            </DropdownMenuItem>
+            {externalUrl && (
+              <DropdownMenuItem
+                className="sm:hidden"
+                onClick={() => window.open(externalUrl, "_blank", "noopener,noreferrer")}
+              >
+                <ExternalLink className="size-3.5" aria-hidden="true" />
+                Open website
+              </DropdownMenuItem>
+            )}
             {onMove && (
               <DropdownMenuItem onClick={onMove}>
                 <FolderInput className="size-3.5" aria-hidden="true" />

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Plus, Star, X } from "lucide-react";
+import { ChevronDown, FolderCog, Search, Star, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DecryptedVaultItem, VaultItemType } from "@/types/vault";
@@ -55,9 +56,13 @@ interface VaultToolbarProps {
   loading: boolean;
   filteredCount: number;
   totalCount: number;
+  /** The folder filter, shown next to the search box. */
+  folderControls?: React.ReactNode;
+  /** Adds "Manage folders…" to the "New item" menu. */
+  onManageFolders?: () => void;
 }
 
-/** Favourites filter, search, "New item" menu and the item-count line. */
+/** Favourites filter, search, folder filter, item count and the "New item" menu. */
 export function VaultToolbar({
   search,
   onSearchChange,
@@ -67,6 +72,8 @@ export function VaultToolbar({
   loading,
   filteredCount,
   totalCount,
+  folderControls,
+  onManageFolders,
 }: VaultToolbarProps) {
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -90,68 +97,102 @@ export function VaultToolbar({
     return () => window.removeEventListener("keydown", handler);
   }, [onSearchChange]);
 
+  const countLabel =
+    !loading && filteredCount > 0
+      ? filteredCount === totalCount
+        ? `${totalCount} ${totalCount === 1 ? "item" : "items"}`
+        : `${filteredCount} of ${totalCount} items`
+      : null;
+
   return (
-    <>
-      {/* Toolbar */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant={favOnly ? "default" : "outline"}
-          size="icon-sm"
-          onClick={() => onFavOnlyChange(!favOnly)}
-          title={favOnly ? "Show all items" : "Show favorites only"}
-        >
-          <Star className={cn("size-3.5", favOnly && "fill-current")} aria-hidden="true" />
-          <span className="sr-only">Filter favorites</span>
-        </Button>
-        <div className="group relative max-w-xs flex-1">
-          <Input
-            ref={searchRef}
-            placeholder="Search items…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pr-8"
-            aria-label="Search vault items"
-          />
-          {search ? (
-            <button
-              onClick={() => onSearchChange("")}
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
-              aria-label="Clear search"
-            >
-              <X className="size-3.5" />
-            </button>
-          ) : (
-            <kbd className="bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 hidden h-5 -translate-y-1/2 items-center rounded border px-1.5 font-mono text-[10px] opacity-100 transition-opacity duration-150 select-none group-focus-within:opacity-0 sm:flex">
-              /
-            </kbd>
-          )}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger className={cn(buttonVariants({ size: "sm" }))}>
-            <Plus className="size-4" aria-hidden="true" />
-            New item
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {(
-              Object.entries(TYPE_META) as [VaultItemType, (typeof TYPE_META)[VaultItemType]][]
-            ).map(([type, { Icon, label }]) => (
-              <DropdownMenuItem key={type} onClick={() => onCreate(type)}>
-                <Icon className="size-3.5" aria-hidden="true" />
-                {label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+    <div className="flex flex-wrap items-center gap-2.5 md:flex-nowrap">
+      {/* Favourites + search + folder filter */}
+      <Button
+        variant="outline"
+        size="icon-lg"
+        onClick={() => onFavOnlyChange(!favOnly)}
+        title={favOnly ? "Show all items" : "Show favorites only"}
+        aria-pressed={favOnly}
+        className={cn(
+          "bg-card dark:bg-card size-10 shrink-0 rounded-xl",
+          favOnly && "border-brand/50 text-brand"
+        )}
+      >
+        <Star className={cn("size-4", favOnly && "fill-current")} aria-hidden="true" />
+        <span className="sr-only">Filter favorites</span>
+      </Button>
+      <div className="relative min-w-0 flex-1 basis-[calc(100%-3.25rem)] md:max-w-[33rem] md:basis-auto">
+        <Search
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+          aria-hidden="true"
+        />
+        <Input
+          ref={searchRef}
+          // Shown by the span below, so the keyboard hint can drop off on phones.
+          placeholder=""
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="bg-card dark:bg-card h-10 rounded-xl pr-9 pl-10 md:text-[15px]"
+          aria-label="Search vault items"
+        />
+        {!search && (
+          <span
+            aria-hidden="true"
+            className="text-muted-foreground pointer-events-none absolute inset-y-0 right-9 left-10 flex items-center truncate text-base md:text-[15px]"
+          >
+            Search your vault...
+            <span className="ml-1 hidden md:inline">(press / to focus)</span>
+          </span>
+        )}
+        {search && (
+          <button
+            type="button"
+            onClick={() => onSearchChange("")}
+            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded"
+            aria-label="Clear search"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="order-last min-w-0 flex-1 md:order-none md:w-44 md:flex-none">
+        {folderControls}
       </div>
 
-      {/* Item count */}
-      {!loading && filteredCount > 0 && (
-        <p className="text-muted-foreground px-0.5 text-xs">
-          {filteredCount === totalCount
-            ? `${totalCount} ${totalCount === 1 ? "item" : "items"}`
-            : `${filteredCount} of ${totalCount} items`}
-        </p>
-      )}
-    </>
+      {/* Count + New item */}
+      <p className="text-muted-foreground order-last shrink-0 px-1 text-sm whitespace-nowrap tabular-nums md:order-none md:ml-auto">
+        {countLabel}
+      </p>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            buttonVariants(),
+            "order-last h-10 shrink-0 rounded-xl px-4 text-[15px] font-semibold md:order-none"
+          )}
+        >
+          New item
+          <ChevronDown className="size-4" aria-hidden="true" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-48">
+          {(Object.entries(TYPE_META) as [VaultItemType, (typeof TYPE_META)[VaultItemType]][]).map(
+            ([type, { Icon, label, iconColor }]) => (
+              <DropdownMenuItem key={type} onClick={() => onCreate(type)}>
+                <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
+                {label}
+              </DropdownMenuItem>
+            )
+          )}
+          {onManageFolders && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onManageFolders}>
+                <FolderCog className="size-4" aria-hidden="true" />
+                Manage folders…
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

@@ -17,8 +17,13 @@ export default async function VaultAppLayout({ children }: { children: React.Rea
   });
   if (!vaultMeta) redirect("/vault/setup");
 
-  const displayName = session.user.name ?? session.user.email ?? "?";
-  const initials = displayName.split(/[\s@]/)[0]?.[0]?.toUpperCase() ?? "?";
+  // "Kanishk Sharma" → "KS"; without a name, the email's first letter.
+  const nameWords = (session.user.name ?? "").trim().split(/\s+/).filter(Boolean);
+  const initials =
+    (nameWords.length > 1
+      ? `${nameWords[0]?.[0] ?? ""}${nameWords.at(-1)?.[0] ?? ""}`
+      : (nameWords[0] ?? session.user.email ?? "?").slice(0, 1)
+    ).toUpperCase() || "?";
   const email = session.user.email ?? "";
 
   return (

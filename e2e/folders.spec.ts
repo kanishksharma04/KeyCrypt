@@ -54,7 +54,8 @@ test("folders: create, move, filter, rename, palette, delete", async ({ page }) 
   await addNote(page, "Gym locker");
 
   // ── Create two folders ─────────────────────────────────────────────────────
-  await page.getByRole("button", { name: "Manage folders" }).click();
+  await page.getByRole("button", { name: "New item" }).click();
+  await page.getByRole("menuitem", { name: "Manage folders…" }).click();
   let d = page.getByRole("dialog");
   for (const name of ["Workplace Zeta", "Personal Omega"]) {
     await d.getByRole("textbox", { name: "New folder name" }).fill(name);
@@ -91,7 +92,8 @@ test("folders: create, move, filter, rename, palette, delete", async ({ page }) 
   await filter.selectOption({ label: "All folders" });
 
   // ── Rename ─────────────────────────────────────────────────────────────────
-  await page.getByRole("button", { name: "Manage folders" }).click();
+  await page.getByRole("button", { name: "New item" }).click();
+  await page.getByRole("menuitem", { name: "Manage folders…" }).click();
   d = page.getByRole("dialog");
   await d.getByRole("button", { name: "Rename Workplace Zeta" }).click();
   await d.getByRole("textbox", { name: "New name for Workplace Zeta" }).fill("Office Kappa");
@@ -115,7 +117,8 @@ test("folders: create, move, filter, rename, palette, delete", async ({ page }) 
   await expect(row(page, "Gym locker")).toHaveCount(0);
 
   // ── Delete the folder: its item stays, unfiled ─────────────────────────────
-  await page.getByRole("button", { name: "Manage folders" }).click();
+  await page.getByRole("button", { name: "New item" }).click();
+  await page.getByRole("menuitem", { name: "Manage folders…" }).click();
   d = page.getByRole("dialog");
   await d.getByRole("button", { name: "Delete Office Kappa" }).click();
   await d.getByRole("button", { name: "Delete Office Kappa" }).click();

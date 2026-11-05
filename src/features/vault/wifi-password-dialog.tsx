@@ -104,7 +104,7 @@ function WifiPasswordForm({
           }
         }
 
-        toast.success(mode === "create" ? "WiFi password saved" : "WiFi password updated");
+        toast.success(mode === "create" ? "Wi-Fi password saved" : "Wi-Fi password updated");
         onClose();
       } catch {
         toast.error("Failed to save. Please try again.");
@@ -114,7 +114,7 @@ function WifiPasswordForm({
 
   return (
     <ItemDialogShell
-      title={mode === "create" ? "Add WiFi password" : "Edit WiFi password"}
+      title={mode === "create" ? "Add Wi-Fi password" : "Edit Wi-Fi password"}
       formId="wifi-form"
       onSubmit={onSubmit}
       serverError={serverError}
@@ -126,7 +126,7 @@ function WifiPasswordForm({
         </label>
         <Input
           id="wifi-name"
-          placeholder="e.g. Home WiFi"
+          placeholder="e.g. Home Wi-Fi"
           autoFocus
           aria-invalid={!!errors.name}
           aria-describedby={errors.name ? "wifi-name-error" : undefined}

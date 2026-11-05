@@ -61,7 +61,7 @@ test("imports Chrome CSV and a KeyCrypt export, and every item decrypts", async 
   await page.locator("#import-export-password").fill("fixture-export-password");
   await page.getByRole("button", { name: "Preview import" }).click();
   await expect(
-    page.getByText("Ready to import 4 items: 1 login, 1 secure note, 1 API key, 1 WiFi password.")
+    page.getByText("Ready to import 4 items: 1 login, 1 secure note, 1 API key, 1 Wi-Fi password.")
   ).toBeVisible();
   await page.getByRole("button", { name: "Import 4 items" }).click();
   await expect(page.getByText("Imported 4 items.")).toBeVisible();

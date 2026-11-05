@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FolderCog, FolderOpen, KeyRound, Loader2, Plus, Star } from "lucide-react";
+import { KeyRound, Loader2, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { deleteVaultItemAction } from "@/server/vault-item-actions";
 import { Button } from "@/components/ui/button";
@@ -129,46 +129,49 @@ export function VaultList({
         loading={loading}
         filteredCount={filtered.length}
         totalCount={decrypted.length}
+        onManageFolders={() => setManageFolders(true)}
+        folderControls={
+          <select
+            aria-label="Folder filter"
+            className={`${SELECT_CLASS} bg-card dark:bg-card h-10 w-full rounded-xl pr-8 md:text-[15px]`}
+            value={folderFilter}
+            onChange={(e) => setFolderFilter(e.target.value)}
+          >
+            <option value="all">All folders</option>
+            <option value="none">No folder</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        }
       />
-
-      {/* Folder filter */}
-      <div className="flex items-center gap-2">
-        <FolderOpen className="text-muted-foreground size-4" aria-hidden="true" />
-        <select
-          aria-label="Folder filter"
-          className={SELECT_CLASS}
-          value={folderFilter}
-          onChange={(e) => setFolderFilter(e.target.value)}
-        >
-          <option value="all">All folders</option>
-          <option value="none">No folder</option>
-          {folders.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
-            </option>
-          ))}
-        </select>
-        <Button variant="ghost" size="sm" onClick={() => setManageFolders(true)}>
-          <FolderCog className="size-3.5" aria-hidden="true" />
-          Manage folders
-        </Button>
-      </div>
 
       {/* List */}
       {loading ? (
-        <div className="space-y-2" aria-label="Loading vault items">
+        <div
+          className="bg-card divide-y overflow-hidden rounded-2xl border"
+          aria-label="Loading vault items"
+        >
           {Array.from({ length: Math.min(Math.max(items.length, 1), 8) }, (_, i) => (
-            <Skeleton key={i} className="h-15 w-full rounded-xl" />
+            <div key={i} className="flex items-center gap-4 px-4 py-3.5 sm:px-5">
+              <Skeleton className="size-10 shrink-0 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3.5 w-40 max-w-full" />
+                <Skeleton className="h-3 w-28 max-w-full" />
+              </div>
+            </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
         !search && !favOnly && folderFilter === "all" ? (
-          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-20 text-center">
-            <div className="bg-primary/10 flex size-16 items-center justify-center rounded-2xl">
-              <KeyRound className="text-primary size-8" aria-hidden="true" />
+          <div className="bg-card flex flex-col items-center gap-4 rounded-2xl border border-dashed px-6 py-20 text-center">
+            <div className="bg-brand-soft flex size-16 items-center justify-center rounded-2xl">
+              <KeyRound className="text-brand size-7" aria-hidden="true" />
             </div>
             <div className="space-y-1.5">
-              <p className="text-base font-semibold">Your vault is empty</p>
+              <p className="font-serif text-xl font-semibold">Your vault is empty</p>
               <p className="text-muted-foreground mx-auto max-w-xs text-sm">
                 Add your first item to start encrypting your digital life.
               </p>
@@ -179,7 +182,7 @@ export function VaultList({
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <div className="bg-card flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-16 text-center">
             <div className="bg-muted flex size-12 items-center justify-center rounded-xl">
               {favOnly && !search ? (
                 <Star className="text-muted-foreground size-5" aria-hidden="true" />
@@ -211,7 +214,7 @@ export function VaultList({
           </div>
         )
       ) : (
-        <div className="space-y-2">
+        <div className="bg-card divide-y overflow-hidden rounded-2xl border">
           {filtered.map((item, i) => (
             <div
               key={item.id}

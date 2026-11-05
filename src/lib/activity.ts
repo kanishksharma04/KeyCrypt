@@ -25,7 +25,7 @@ const ITEM_TYPES: Record<string, string> = {
   LOGIN: "login",
   SECURE_NOTE: "secure note",
   API_KEY: "API key",
-  WIFI_PASSWORD: "WiFi password",
+  WIFI_PASSWORD: "Wi-Fi password",
   OTP_SECRET: "authenticator",
 };
 

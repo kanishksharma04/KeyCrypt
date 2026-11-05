@@ -30,7 +30,7 @@ const TYPE_LABELS: Record<string, [string, string]> = {
   LOGIN: ["login", "logins"],
   SECURE_NOTE: ["secure note", "secure notes"],
   API_KEY: ["API key", "API keys"],
-  WIFI_PASSWORD: ["WiFi password", "WiFi passwords"],
+  WIFI_PASSWORD: ["Wi-Fi password", "Wi-Fi passwords"],
   OTP_SECRET: ["authenticator", "authenticators"],
 };
 

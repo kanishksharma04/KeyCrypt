@@ -1,19 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Lock, LayoutDashboard, Search, Settings, Vault } from "lucide-react";
+import { useState } from "react";
+import { signOut } from "next-auth/react";
+import { useTheme } from "next-themes";
+import { Lock, LogOut, Moon, Search, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SignOutButton } from "@/components/shared/sign-out-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { KeyCryptLogo } from "@/components/shared/keycrypt-logo";
+import { clearVaultKey } from "@/lib/crypto";
 import { useVaultLock } from "@/providers/vault-lock-provider";
 import { useCommandPalette } from "@/providers/command-palette-provider";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/vault", label: "Vault", Icon: Vault },
-  { href: "/vault/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-  { href: "/vault/settings", label: "Settings", Icon: Settings },
+  { href: "/vault", label: "Vault" },
+  { href: "/vault/dashboard", label: "Dashboard" },
+  { href: "/vault/settings", label: "Settings" },
 ] as const;
 
 interface VaultHeaderProps {
@@ -21,89 +31,117 @@ interface VaultHeaderProps {
   email: string;
 }
 
+function NavLinks({ className }: { className?: string }) {
+  const pathname = usePathname();
+  return (
+    <nav aria-label="Vault navigation" className={cn("flex items-stretch", className)}>
+      {NAV_LINKS.map(({ href, label }) => {
+        const isActive = href === "/vault" ? pathname === "/vault" : pathname.startsWith(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "relative flex flex-1 items-center justify-center px-3 text-[15px] font-medium transition-colors sm:flex-none",
+              "after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors",
+              isActive
+                ? "text-foreground after:bg-brand"
+                : "text-muted-foreground hover:text-foreground after:bg-transparent"
+            )}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function AccountMenu({ initials, email }: VaultHeaderProps) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [signingOut, setSigningOut] = useState(false);
+  const isDark = resolvedTheme !== "light";
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    // Drop the in-memory vault key before the sign-out redirect.
+    clearVaultKey();
+    await signOut({ callbackUrl: "/auth/signin" });
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="bg-brand-soft text-brand hover:ring-brand/40 flex size-9 items-center justify-center rounded-lg text-sm font-semibold ring-1 ring-transparent transition-shadow outline-none focus-visible:ring-2"
+        aria-label="Account menu"
+        title={email}
+      >
+        {initials}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-56">
+        <div className="px-2 py-1.5">
+          <p className="text-muted-foreground text-xs">Signed in as</p>
+          <p className="truncate text-sm font-medium">{email}</p>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setTheme(isDark ? "light" : "dark")}>
+          {isDark ? (
+            <Sun className="size-3.5" aria-hidden="true" />
+          ) : (
+            <Moon className="size-3.5" aria-hidden="true" />
+          )}
+          {isDark ? "Light theme" : "Dark theme"}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void handleSignOut()} disabled={signingOut}>
+          <LogOut className="size-3.5" aria-hidden="true" />
+          {signingOut ? "Signing out…" : "Sign out"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function VaultHeader({ initials, email }: VaultHeaderProps) {
   const { lock } = useVaultLock();
   const { open: openPalette } = useCommandPalette();
-  const pathname = usePathname();
 
   return (
-    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 border-b backdrop-blur-md">
-      <div className="container mx-auto flex h-12 max-w-4xl items-center gap-4 px-4">
-        {/* Logo */}
-        <Link
-          href="/"
-          className="text-foreground flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80 focus-visible:rounded-md"
-          aria-label="KeyCrypt home"
-        >
-          <Image
-            src="/logos/wordmark-black.png"
-            alt="KeyCrypt"
-            width={437}
-            height={158}
-            className="h-7 w-auto dark:hidden"
-            priority
-          />
-          <Image
-            src="/logos/wordmark-white.png"
-            alt="KeyCrypt"
-            width={428}
-            height={158}
-            className="hidden h-7 w-auto dark:block"
-            priority
-          />
-        </Link>
+    <header className="bg-background/85 supports-backdrop-filter:bg-background/70 sticky top-0 z-40 border-b backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-stretch gap-6 px-4 sm:px-6">
+        <KeyCryptLogo className="self-center" />
 
-        {/* Nav links */}
-        <nav aria-label="Vault navigation" className="flex flex-1 items-center gap-1">
-          {NAV_LINKS.map(({ href, label, Icon }) => {
-            const isActive = href === "/vault" ? pathname === "/vault" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-150",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                )}
-                aria-current={isActive ? "page" : undefined}
-              >
-                <Icon className="size-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <NavLinks className="hidden sm:flex" />
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {/* Command palette trigger */}
           <button
+            type="button"
             onClick={openPalette}
-            className="text-muted-foreground hover:border-ring/40 hover:text-foreground flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors duration-150"
+            className="text-muted-foreground hover:text-foreground hover:border-ring/40 bg-card/60 flex h-9 items-center gap-2 rounded-lg border px-2.5 text-sm transition-colors sm:min-w-36 sm:px-3"
           >
-            <Search className="size-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="bg-muted hidden items-center rounded border px-1 font-mono text-[10px] sm:flex">
+            <Search className="size-4" aria-hidden="true" />
+            <span className="sr-only sm:not-sr-only">Search</span>
+            <kbd className="bg-muted text-muted-foreground ml-auto hidden h-5 items-center rounded border px-1.5 font-mono text-[10px] sm:flex">
               ⌘K
             </kbd>
           </button>
-          {/* User avatar */}
-          <div
-            className="bg-primary/10 text-primary hover:ring-primary/30 flex size-6 cursor-default items-center justify-center rounded-full text-xs font-semibold ring-2 ring-transparent transition-all duration-150"
-            title={email}
+          <Button
+            variant="outline"
+            size="icon-lg"
+            className="rounded-lg"
+            onClick={lock}
+            title="Lock vault"
           >
-            {initials}
-          </div>
-          {/* Lock */}
-          <Button variant="ghost" size="icon-sm" onClick={lock} title="Lock vault">
             <Lock className="size-4" aria-hidden="true" />
             <span className="sr-only">Lock vault</span>
           </Button>
-          {/* Sign out */}
-          <SignOutButton display="icon" />
+          <AccountMenu initials={initials} email={email} />
         </div>
       </div>
+
+      {/* Phones: the tabs get their own row under the logo. */}
+      <NavLinks className="h-11 border-t sm:hidden" />
     </header>
   );
 }

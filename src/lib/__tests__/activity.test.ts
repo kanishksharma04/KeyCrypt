@@ -70,4 +70,22 @@ describe("relativeTime", () => {
     expect(relativeTime(at(800), { now, longAgo: "ago" })).toBe("2y ago");
     expect(relativeTime(at(2), { now, longAgo: "ago" })).toBe("2d ago");
   });
+
+  it("writes units out in the long style", () => {
+    const ago = (ms: number) => new Date(now - ms).toISOString();
+    const long = (ms: number) => relativeTime(ago(ms), { now, style: "long", longAgo: "ago" });
+    expect(long(10_000)).toBe("just now");
+    expect(long(60_000)).toBe("1 minute ago");
+    expect(long(2 * 60_000)).toBe("2 minutes ago");
+    expect(long(3_600_000)).toBe("1 hour ago");
+    expect(long(86_400_000)).toBe("Yesterday");
+    expect(long(3 * 86_400_000)).toBe("3 days ago");
+    expect(long(8 * 86_400_000)).toBe("1 week ago");
+    expect(long(15 * 86_400_000)).toBe("2 weeks ago");
+    expect(long(95 * 86_400_000)).toBe("3 months ago");
+    expect(long(800 * 86_400_000)).toBe("2 years ago");
+    expect(relativeTime(ago(45 * 86_400_000), { now, style: "long" })).toBe(
+      new Date(ago(45 * 86_400_000)).toLocaleDateString()
+    );
+  });
 });

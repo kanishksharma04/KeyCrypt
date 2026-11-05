@@ -133,7 +133,7 @@ test("sign up, store four items, change master password, and read them all back"
     await d.locator("#ak-key").fill(API_KEY.key);
     await d.locator("#ak-description").fill(API_KEY.description);
   });
-  await createItem(page, "WiFi Password", async (d) => {
+  await createItem(page, "Wi-Fi password", async (d) => {
     await d.locator("#wifi-name").fill(WIFI.name);
     await d.locator("#wifi-ssid").fill(WIFI.ssid);
     await d.locator("#wifi-password").fill(WIFI.password);

@@ -1,42 +1,50 @@
-import { Code2, FileText, KeyRound, Timer, Wifi } from "lucide-react";
+import { Braces, File, Lock, Smartphone, Wifi } from "lucide-react";
 
 // Icon, labels and colours per item type: vault list, view dialog, command
 // palette and dashboard. No client-only imports, so server components can use it.
+// Tiles are neutral (iconBg); the type shows in the icon colour and, on the
+// dashboard, the bar colour.
 
 export const TYPE_META = {
   LOGIN: {
-    Icon: KeyRound,
+    Icon: Lock,
     label: "Login",
     plural: "Logins",
-    iconBg: "bg-primary/10",
-    iconColor: "text-primary",
+    iconBg: "bg-muted",
+    iconColor: "text-brand",
+    barColor: "bg-brand",
   },
   SECURE_NOTE: {
-    Icon: FileText,
-    label: "Secure Note",
-    plural: "Secure Notes",
-    iconBg: "bg-green-500/10",
-    iconColor: "text-green-500",
+    Icon: File,
+    label: "Secure note",
+    plural: "Secure notes",
+    iconBg: "bg-muted",
+    iconColor: "text-type-note",
+    barColor: "bg-type-note",
   },
   API_KEY: {
-    Icon: Code2,
-    label: "API Key",
-    plural: "API Keys",
-    iconBg: "bg-purple-500/10",
-    iconColor: "text-purple-500",
+    Icon: Braces,
+    label: "API key",
+    plural: "API keys",
+    iconBg: "bg-muted",
+    iconColor: "text-type-api",
+    barColor: "bg-type-api",
   },
   WIFI_PASSWORD: {
     Icon: Wifi,
-    label: "WiFi Password",
-    plural: "WiFi Passwords",
-    iconBg: "bg-orange-500/10",
-    iconColor: "text-orange-500",
+    label: "Wi-Fi password",
+    plural: "Wi-Fi passwords",
+    iconBg: "bg-muted",
+    iconColor: "text-type-wifi",
+    barColor: "bg-type-wifi",
   },
   OTP_SECRET: {
-    Icon: Timer,
+    Icon: Smartphone,
     label: "Authenticator",
-    plural: "Authenticators",
-    iconBg: "bg-cyan-500/10",
-    iconColor: "text-cyan-500",
+    // Singular on purpose: the dashboard's "Items by type" row reads "Authenticator".
+    plural: "Authenticator",
+    iconBg: "bg-muted",
+    iconColor: "text-type-otp",
+    barColor: "bg-type-otp",
   },
 } as const;
