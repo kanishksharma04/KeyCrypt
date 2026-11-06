@@ -15,6 +15,7 @@ import { INVALID_INPUT, changeMasterPasswordInput } from "@/schemas/server";
 export interface VaultStats {
   total: number;
   favorites: number;
+  folders: number;
   byType: Record<VaultItemType, number>;
   lastModified: string | null; // ISO date string
 }
@@ -25,9 +26,10 @@ export async function getVaultStatsAction(): Promise<VaultStats | null> {
 
   const userId = session.user.id;
 
-  const [groups, favoriteCount, lastItem] = await Promise.all([
+  const [groups, favoriteCount, folderCount, lastItem] = await Promise.all([
     db.vaultItem.groupBy({ by: ["type"], where: { userId }, _count: true }),
     db.vaultItem.count({ where: { userId, favorite: true } }),
+    db.folder.count({ where: { userId } }),
     db.vaultItem.findFirst({
       where: { userId },
       orderBy: { updatedAt: "desc" },
@@ -51,6 +53,7 @@ export async function getVaultStatsAction(): Promise<VaultStats | null> {
   return {
     total,
     favorites: favoriteCount,
+    folders: folderCount,
     byType,
     lastModified: lastItem?.updatedAt.toISOString() ?? null,
   };

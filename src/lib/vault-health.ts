@@ -9,7 +9,7 @@ const OLD_THRESHOLD_MS = 365 * 24 * 60 * 60 * 1000;
 export interface VaultHealthIssue {
   itemId: string;
   name: string;
-  reason: "breached" | "weak" | "reused" | "old";
+  reason: "breached" | "weak" | "reused" | "old" | "no2fa";
 }
 
 export interface VaultHealth {
@@ -18,6 +18,8 @@ export interface VaultHealth {
   weakCount: number;
   reusedCount: number;
   oldCount: number;
+  /** Logins with a password but no authenticator (TOTP) key saved. */
+  missingTotpCount: number;
   /** null until the user runs the opt-in breached-password check. */
   breachedCount: number | null;
   issues: VaultHealthIssue[];
@@ -28,6 +30,11 @@ interface HealthInput {
   name: string;
   password: string;
   updatedAt: string;
+  /**
+   * Whether the login holds an authenticator key. Leave out when unknown:
+   * only `false` counts as "no 2FA code saved".
+   */
+  hasTotp?: boolean;
 }
 
 // Most serious first; the dashboard shows the top few.
@@ -36,6 +43,7 @@ const SEVERITY: Record<VaultHealthIssue["reason"], number> = {
   weak: 1,
   reused: 2,
   old: 3,
+  no2fa: 4,
 };
 
 /**
@@ -53,6 +61,7 @@ export function computeVaultHealth(
       weakCount: 0,
       reusedCount: 0,
       oldCount: 0,
+      missingTotpCount: 0,
       breachedCount: breaches ? 0 : null,
       issues: [],
     };
@@ -82,6 +91,9 @@ export function computeVaultHealth(
     if (now - new Date(item.updatedAt).getTime() > OLD_THRESHOLD_MS) {
       issues.push({ itemId: item.id, name: item.name, reason: "old" });
     }
+    if (item.password && item.hasTotp === false) {
+      issues.push({ itemId: item.id, name: item.name, reason: "no2fa" });
+    }
   }
 
   issues.sort((a, b) => SEVERITY[a.reason] - SEVERITY[b.reason]);
@@ -90,6 +102,7 @@ export function computeVaultHealth(
   const weakCount = issues.filter((i) => i.reason === "weak").length;
   const reusedCount = issues.filter((i) => i.reason === "reused").length;
   const oldCount = issues.filter((i) => i.reason === "old").length;
+  const missingTotpCount = issues.filter((i) => i.reason === "no2fa").length;
 
   // Ratio-weighted, not a flat per-item deduction — a vault with one weak
   // password out of fifty shouldn't score the same as one where every item is weak.
@@ -98,7 +111,9 @@ export function computeVaultHealth(
     (breached / items.length) * 35 +
     (weakCount / items.length) * 30 +
     (reusedCount / items.length) * 25 +
-    (oldCount / items.length) * 10;
+    (oldCount / items.length) * 10 +
+    // A light nudge: plenty of sites don't offer 2FA at all.
+    (missingTotpCount / items.length) * 5;
   const score = Math.max(0, Math.min(100, Math.round(100 - penalty)));
 
   return {
@@ -107,6 +122,7 @@ export function computeVaultHealth(
     weakCount,
     reusedCount,
     oldCount,
+    missingTotpCount,
     breachedCount: breaches ? breached : null,
     issues,
   };

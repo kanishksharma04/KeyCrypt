@@ -6,6 +6,8 @@ import { activityLabel, describeBrowser } from "@/lib/activity";
 
 export interface ActivityEntry {
   id: string;
+  /** The audit action key, e.g. "auth.signin" (picks the dashboard icon). */
+  action: string;
   label: string;
   ip: string | null;
   /** e.g. "Chrome on macOS"; null if the browser was not recorded. */
@@ -27,6 +29,7 @@ export async function getRecentActivityAction(): Promise<ActivityEntry[] | { err
 
   return rows.map((r) => ({
     id: r.id,
+    action: r.action,
     label: activityLabel(r.action, r.metadata),
     ip: r.ip,
     browser: describeBrowser(r.userAgent),

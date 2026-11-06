@@ -2,14 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Clock, Loader2, RefreshCw, ShieldCheck, ShieldX } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  Copy,
+  Loader2,
+  ShieldCheck,
+  ShieldX,
+  Smartphone,
+} from "lucide-react";
 import {
   countPasswordBreaches,
   getVaultKey,
   isVaultUnlocked,
   loadPasswordStrengthEstimator,
 } from "@/lib/crypto";
-import { Button } from "@/components/ui/button";
 import { openItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
 import { computeVaultHealth, type VaultHealth } from "@/lib/vault-health";
@@ -18,30 +25,39 @@ import type { LoginSecret } from "@/types/vault";
 import { cn } from "@/lib/utils";
 
 const REASON_META = {
-  breached: { label: "Found in a data breach", Icon: ShieldX, color: "text-red-600" },
-  weak: { label: "Weak password", Icon: AlertTriangle, color: "text-red-500" },
-  reused: { label: "Reused password", Icon: RefreshCw, color: "text-amber-500" },
-  old: { label: "Not updated in a year", Icon: Clock, color: "text-muted-foreground" },
+  breached: { label: "Found in a data breach", Icon: ShieldX, color: "text-destructive" },
+  weak: { label: "Weak password", Icon: AlertTriangle, color: "text-brand" },
+  reused: { label: "Reused password", Icon: Copy, color: "text-brand" },
+  old: { label: "Not updated in a year", Icon: Clock, color: "text-brand" },
+  no2fa: { label: "No 2FA code saved", Icon: Smartphone, color: "text-brand" },
 } as const;
 
-const MAX_VISIBLE_ISSUES = 5;
+type Reason = keyof typeof REASON_META;
+
+const MAX_LISTED_ISSUES = 8;
+
+function rating(score: number) {
+  if (score >= 80) return { word: "Good", color: "text-success" };
+  if (score >= 50) return { word: "Fair", color: "text-warning" };
+  return { word: "Poor", color: "text-destructive" };
+}
 
 function ScoreRing({ score }: { score: number }) {
-  const radius = 40;
+  const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
   const ringColor =
-    score >= 80 ? "text-green-500" : score >= 50 ? "text-amber-500" : "text-red-500";
+    score >= 80 ? "text-success" : score >= 50 ? "text-warning" : "text-destructive";
 
   return (
-    <div className="relative flex size-24 shrink-0 items-center justify-center">
-      <svg viewBox="0 0 100 100" className="size-24 -rotate-90">
-        <circle cx="50" cy="50" r={radius} strokeWidth="8" className="stroke-muted fill-none" />
+    <div className="relative flex size-28 shrink-0 items-center justify-center">
+      <svg viewBox="0 0 100 100" className="size-28 -rotate-90" aria-hidden="true">
+        <circle cx="50" cy="50" r={radius} strokeWidth="6" className="stroke-muted fill-none" />
         <circle
           cx="50"
           cy="50"
           r={radius}
-          strokeWidth="8"
+          strokeWidth="6"
           strokeLinecap="round"
           stroke="currentColor"
           strokeDasharray={circumference}
@@ -49,7 +65,12 @@ function ScoreRing({ score }: { score: number }) {
           className={cn("fill-none transition-all duration-700 ease-out", ringColor)}
         />
       </svg>
-      <span className="absolute text-xl font-black tabular-nums">{score}</span>
+      <div className="absolute flex flex-col items-center">
+        <span className="font-serif text-[2.25rem] leading-none font-semibold tabular-nums">
+          {score}
+        </span>
+        <span className="text-muted-foreground mt-0.5 text-[11px]">out of 100</span>
+      </div>
     </div>
   );
 }
@@ -76,7 +97,13 @@ async function loadLoginSecrets(key: CryptoKey, userId: string) {
           { ...row, type: "LOGIN" },
           userId
         );
-        return { id: row.id, name, password: secret.password, updatedAt: row.updatedAt };
+        return {
+          id: row.id,
+          name,
+          password: secret.password,
+          updatedAt: row.updatedAt,
+          hasTotp: !!secret.totp?.trim(),
+        };
       } catch {
         // Skip items that fail to decrypt rather than let one bad item block the score.
         return null;
@@ -99,6 +126,7 @@ export function VaultHealthScore() {
   const [loading, setLoading] = useState(() => isVaultUnlocked());
 
   const [breachCheck, setBreachCheck] = useState<BreachCheck>({ status: "idle" });
+  const [review, setReview] = useState<ReadonlySet<Reason>>(new Set());
 
   useEffect(() => {
     const key = getVaultKey();
@@ -122,8 +150,10 @@ export function VaultHealthScore() {
       const withPassword = logins.filter((l) => l.password);
       const counts = await countPasswordBreaches(withPassword.map((l) => l.password));
       const breaches = new Map(withPassword.map((l, i) => [l.id, counts[i] ?? 0]));
-      setState({ health: computeVaultHealth(logins, breaches) });
+      const health = computeVaultHealth(logins, breaches);
+      setState({ health });
       setBreachCheck({ status: "done" });
+      if (health.breachedCount) setReview((r) => new Set(r).add("breached"));
     } catch {
       setBreachCheck({
         status: "error",
@@ -133,7 +163,15 @@ export function VaultHealthScore() {
   }
 
   if (loading) {
-    return <div className="bg-card h-32 animate-pulse rounded-xl border" aria-hidden="true" />;
+    return (
+      <div
+        className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+        aria-hidden="true"
+      >
+        <div className="bg-card h-60 animate-pulse rounded-2xl border" />
+        <div className="bg-card h-60 animate-pulse rounded-2xl border" />
+      </div>
+    );
   }
 
   if (!state) return null;
@@ -141,97 +179,151 @@ export function VaultHealthScore() {
 
   if (health.total === 0) {
     return (
-      <div className="bg-card flex items-center gap-3 rounded-xl border border-dashed p-5">
+      <div className="bg-card flex items-center gap-3 rounded-2xl border border-dashed p-6">
         <ShieldCheck className="text-muted-foreground size-6 shrink-0" aria-hidden="true" />
-        <p className="text-muted-foreground text-sm">
-          Add a login item to see your vault health score.
-        </p>
+        <div>
+          <h2 className="text-sm font-semibold">Vault health</h2>
+          <p className="text-muted-foreground text-sm">
+            Add a login item to see your vault health score.
+          </p>
+        </div>
       </div>
     );
   }
 
-  const topIssues = health.issues.slice(0, MAX_VISIBLE_ISSUES);
+  const { word, color } = rating(health.score);
+  const factors: Array<{ reason: Reason; label: string; count: number | null }> = [
+    { reason: "weak", label: "Weak passwords", count: health.weakCount },
+    { reason: "reused", label: "Reused passwords", count: health.reusedCount },
+    { reason: "breached", label: "Breached passwords", count: health.breachedCount },
+    { reason: "no2fa", label: "Logins without a 2FA code saved", count: health.missingTotpCount },
+    // Shown only when it applies; it still counts towards the score.
+    ...(health.oldCount > 0
+      ? [{ reason: "old" as const, label: "Not updated in a year", count: health.oldCount }]
+      : []),
+  ];
+
+  function toggleReview(reason: Reason) {
+    setReview((r) => {
+      const next = new Set(r);
+      if (next.has(reason)) next.delete(reason);
+      else next.add(reason);
+      return next;
+    });
+  }
+
+  const linkClass = "text-brand rounded text-sm underline-offset-4 hover:underline";
 
   return (
-    <div className="bg-card rounded-xl border p-5">
-      <div className="flex items-center gap-5">
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      {/* Score */}
+      <section className="bg-card flex min-w-0 flex-col items-center justify-center gap-4 rounded-2xl border px-6 py-7 text-center">
         <ScoreRing score={health.score} />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold">Vault health</h2>
-          <p className="text-muted-foreground mt-0.5 text-xs">
+        <div className="space-y-0.5">
+          <h2 className={cn("text-base font-semibold", color)}>Vault health: {word}</h2>
+          <p className="text-muted-foreground text-sm">
             {health.issues.length === 0
-              ? "No issues found — your logins look strong."
-              : [
-                  ...(health.breachedCount ? [`${health.breachedCount} breached`] : []),
-                  `${health.weakCount} weak`,
-                  `${health.reusedCount} reused`,
-                  `${health.oldCount} stale`,
-                ].join(" · ")}
+              ? "No issues found. Your logins look strong."
+              : health.score >= 80
+                ? "A few items could use attention."
+                : "Several items need attention."}
           </p>
         </div>
-        {health.score === 100 && (
-          <ShieldCheck className="size-8 shrink-0 text-green-500" aria-hidden="true" />
-        )}
-      </div>
+      </section>
 
-      {topIssues.length > 0 && (
-        <ul className="mt-4 space-y-1 border-t pt-4">
-          {topIssues.map((issue, i) => {
-            const { label, Icon, color } = REASON_META[issue.reason];
+      {/* What's affecting it */}
+      <section className="bg-card min-w-0 rounded-2xl border px-5 py-5 sm:px-6">
+        <h2 className="mb-1 text-[15px] font-semibold">What&apos;s affecting your score</h2>
+        <ul className="divide-y">
+          {factors.map(({ reason, label, count }) => {
+            const issues = health.issues.filter((i) => i.reason === reason);
+            const open = review.has(reason) && issues.length > 0;
+            const isBreach = reason === "breached";
+            const Icon = isBreach && count === 0 ? ShieldCheck : REASON_META[reason].Icon;
+            const iconColor = isBreach
+              ? count === null
+                ? "text-muted-foreground"
+                : count === 0
+                  ? "text-success"
+                  : "text-destructive"
+              : REASON_META[reason].color;
             return (
-              <li key={`${issue.itemId}-${issue.reason}-${i}`}>
-                <Link
-                  href={`/vault?open=${issue.itemId}`}
-                  className="hover:bg-accent/50 flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors"
-                >
-                  <Icon className={cn("size-3.5 shrink-0", color)} aria-hidden="true" />
-                  <span className="truncate font-medium">{issue.name}</span>
-                  <span className="text-muted-foreground ml-auto shrink-0 text-xs">{label}</span>
-                </Link>
+              <li key={reason} className="py-2.5">
+                <div className="flex min-h-7 items-center gap-3">
+                  <Icon className={cn("size-4 shrink-0", iconColor)} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 text-sm sm:text-[15px]">{label}</span>
+                  <span className="text-sm font-semibold tabular-nums">{count ?? "—"}</span>
+                  <span className="flex w-16 justify-end">
+                    {isBreach && (count === null || count === 0) ? (
+                      <button
+                        type="button"
+                        onClick={() => void checkBreaches()}
+                        disabled={breachCheck.status === "checking"}
+                        aria-label="Check for breached passwords"
+                        className={cn(
+                          linkClass,
+                          "inline-flex items-center gap-1 disabled:opacity-60"
+                        )}
+                      >
+                        {breachCheck.status === "checking" && (
+                          <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                        )}
+                        {count === null ? "Check" : "Recheck"}
+                      </button>
+                    ) : issues.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleReview(reason)}
+                        aria-expanded={open}
+                        className={linkClass}
+                      >
+                        {open ? "Hide" : "Review"}
+                      </button>
+                    ) : null}
+                  </span>
+                </div>
+
+                {isBreach && (
+                  <p role="status" className="text-muted-foreground mt-1 pl-7 text-xs empty:hidden">
+                    {breachCheck.status === "idle" &&
+                      "Opt-in: only the first 5 characters of each password's SHA-1 hash are sent to Have I Been Pwned."}
+                    {breachCheck.status === "done" &&
+                      (health.breachedCount
+                        ? `${health.breachedCount} of your passwords appeared in known data breaches. Change them.`
+                        : "None of your passwords appear in known data breaches.")}
+                    {breachCheck.status === "error" && (
+                      <span className="text-destructive">{breachCheck.message}</span>
+                    )}
+                  </p>
+                )}
+
+                {open && (
+                  <ul className="mt-2 space-y-0.5 pl-5">
+                    {issues.slice(0, MAX_LISTED_ISSUES).map((issue, i) => (
+                      <li key={`${issue.itemId}-${i}`}>
+                        <Link
+                          href={`/vault?open=${issue.itemId}`}
+                          className="hover:bg-muted flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors"
+                        >
+                          <span className="truncate font-medium">{issue.name}</span>
+                          <span className="text-muted-foreground ml-auto shrink-0 text-xs">
+                            {REASON_META[issue.reason].label}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                    {issues.length > MAX_LISTED_ISSUES && (
+                      <li className="text-muted-foreground px-2 pt-1 text-xs">
+                        +{issues.length - MAX_LISTED_ISSUES} more
+                      </li>
+                    )}
+                  </ul>
+                )}
               </li>
             );
           })}
-          {health.issues.length > topIssues.length && (
-            <li className="text-muted-foreground px-2 pt-1 text-xs">
-              +{health.issues.length - topIssues.length} more
-            </li>
-          )}
         </ul>
-      )}
-
-      <div className="mt-4 space-y-2 border-t pt-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void checkBreaches()}
-            disabled={breachCheck.status === "checking"}
-          >
-            {breachCheck.status === "checking" ? (
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <ShieldX className="size-3.5" aria-hidden="true" />
-            )}
-            Check for breached passwords
-          </Button>
-          <p role="status" className="text-xs">
-            {breachCheck.status === "done" &&
-              (health.breachedCount
-                ? `${health.breachedCount} of your passwords appeared in known data breaches. Change them.`
-                : "None of your passwords appear in known data breaches.")}
-            {breachCheck.status === "error" && (
-              <span className="text-destructive">{breachCheck.message}</span>
-            )}
-          </p>
-        </div>
-        <p className="text-muted-foreground text-xs">
-          Checks your passwords against Have I Been Pwned&apos;s Pwned Passwords list. Each password
-          is hashed (SHA-1) in this browser and only the first 5 characters of the hash are sent to
-          api.pwnedpasswords.com; the matches that come back are compared here. Your passwords and
-          their full hashes never leave this device, and KeyCrypt&apos;s server isn&apos;t involved.
-        </p>
-      </div>
+      </section>
     </div>
   );
 }

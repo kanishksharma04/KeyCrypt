@@ -28,8 +28,15 @@ const STRONG_SHARED = "Same-Strong-Passw0rd!xyz";
 let key: CryptoKey;
 
 /** A v2 row: the name is encrypted with the secret; the server sends name: null. */
-async function row(id: string, name: string, password: string, updatedAt = NOW) {
-  const secret: LoginSecret = { username: "u", password, url: "", notes: "" };
+async function row(
+  id: string,
+  name: string,
+  password: string,
+  updatedAt = NOW,
+  // Every login holds an authenticator key unless a test says otherwise.
+  totp = "otpauth://totp/Test?secret=JBSWY3DPEHPK3PXP"
+) {
+  const secret: LoginSecret = { username: "u", password, url: "", notes: "", totp };
   const { ciphertext, iv } = await sealItem(key, { id, type: "LOGIN", name, secret }, USER_ID);
   return { id, name: null, ciphertext, iv, updatedAt };
 }
@@ -45,6 +52,18 @@ afterEach(() => {
   getLoginItems.mockReset();
   vi.unstubAllGlobals();
 });
+
+/** The number shown on a "What's affecting your score" row. */
+function factorCount(label: string): string | null | undefined {
+  return screen.getByText(label).parentElement?.querySelector(".tabular-nums")?.textContent;
+}
+
+/** Expand every "Review" list. */
+function openAllReviews() {
+  for (const button of screen.queryAllByRole("button", { name: "Review" })) {
+    fireEvent.click(button);
+  }
+}
 
 /** Fake Pwned Passwords range API that knows these breached passwords. */
 function stubPwnedPasswords(breached: string[]) {
@@ -73,13 +92,22 @@ describe("VaultHealthScore", () => {
 
     renderScore();
 
-    expect(await screen.findByText("1 weak · 2 reused · 1 stale")).toBeTruthy();
+    expect(await screen.findByText("Weak passwords")).toBeTruthy();
+    expect(factorCount("Weak passwords")).toBe("1");
+    expect(factorCount("Reused passwords")).toBe("2");
+    expect(factorCount("Not updated in a year")).toBe("1");
+    expect(factorCount("Breached passwords")).toBe("—"); // breach check is opt-in
+    expect(factorCount("Logins without a 2FA code saved")).toBe("0");
+    // Issue lists are collapsed until "Review" is pressed.
+    expect(screen.queryByText("Forum")).toBeNull();
+    openAllReviews();
     expect(screen.getByText("Weak password")).toBeTruthy();
     // Names arrive encrypted (name: null) and are decrypted in the browser.
     expect(screen.getByText("Forum")).toBeTruthy();
     expect(screen.getByText("Old bank")).toBeTruthy();
     expect(screen.getAllByText("Reused password")).toHaveLength(2);
-    expect(screen.getByText("Not updated in a year")).toBeTruthy();
+    // "Not updated in a year" is both the row label and the issue's reason.
+    expect(screen.getAllByText("Not updated in a year")).toHaveLength(2);
     // Each issue links to its item.
     const links = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
     expect(links).toEqual(
@@ -100,14 +128,17 @@ describe("VaultHealthScore", () => {
 
     renderScore();
 
-    expect(await screen.findByText("No issues found — your logins look strong.")).toBeTruthy();
+    expect(await screen.findByText("No issues found. Your logins look strong.")).toBeTruthy();
     expect(screen.getByText("100")).toBeTruthy();
+    expect(screen.getByText("Vault health: Good")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Review" })).toBeNull();
   });
 
   it("judges strength with zxcvbn: a l33t common password is weak", async () => {
     getLoginItems.mockResolvedValue([await row("c1", "Router", "P@ssw0rd!")]);
     renderScore();
-    expect(await screen.findByText("Weak password")).toBeTruthy();
+    expect(await screen.findByText("Weak passwords")).toBeTruthy();
+    expect(factorCount("Weak passwords")).toBe("1");
   });
 
   it("checks for breached passwords only when asked, and counts them in the score", async () => {
@@ -118,9 +149,9 @@ describe("VaultHealthScore", () => {
     ]);
 
     renderScore();
-    expect(await screen.findByText("No issues found — your logins look strong.")).toBeTruthy();
+    expect(await screen.findByText("No issues found. Your logins look strong.")).toBeTruthy();
     expect(screen.getByText("100")).toBeTruthy();
-    expect(screen.getByText(/only the first 5 characters of the hash/)).toBeTruthy();
+    expect(screen.getByText(/only the first 5 characters of each password/)).toBeTruthy();
     expect(api).not.toHaveBeenCalled(); // opt-in
 
     fireEvent.click(screen.getByRole("button", { name: "Check for breached passwords" }));
@@ -128,7 +159,9 @@ describe("VaultHealthScore", () => {
     expect(
       await screen.findByText("1 of your passwords appeared in known data breaches. Change them.")
     ).toBeTruthy();
-    expect(screen.getByText("1 breached · 0 weak · 0 reused · 0 stale")).toBeTruthy();
+    expect(factorCount("Breached passwords")).toBe("1");
+    expect(factorCount("Weak passwords")).toBe("0");
+    // A check that finds breaches opens that list straight away.
     expect(screen.getByText("Found in a data breach")).toBeTruthy();
     expect(screen.getByText("Old forum")).toBeTruthy();
     // penalty = (1/2) * 35 → 82.5 → 83
@@ -152,6 +185,19 @@ describe("VaultHealthScore", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Check for breached passwords" }));
     expect(await screen.findByText("Couldn't check right now. Try again later.")).toBeTruthy();
+  });
+
+  it("counts logins without an authenticator key", async () => {
+    getLoginItems.mockResolvedValue([
+      await row("c1", "Mail", "Unique-Strong-Passw0rd!1"),
+      await row("c2", "Shop", "Unique-Strong-Passw0rd!2", NOW, ""),
+    ]);
+    renderScore();
+    expect(await screen.findByText("Logins without a 2FA code saved")).toBeTruthy();
+    expect(factorCount("Logins without a 2FA code saved")).toBe("1");
+    openAllReviews();
+    expect(screen.getByText("Shop")).toBeTruthy();
+    expect(screen.getByText("No 2FA code saved")).toBeTruthy();
   });
 
   it("prompts to add a login when there are none", async () => {

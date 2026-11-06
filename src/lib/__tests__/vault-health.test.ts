@@ -17,6 +17,7 @@ describe("computeVaultHealth", () => {
       weakCount: 0,
       reusedCount: 0,
       oldCount: 0,
+      missingTotpCount: 0,
       breachedCount: null,
       issues: [],
     });
@@ -131,6 +132,33 @@ describe("computeVaultHealth", () => {
       new Map([["b", 3]])
     );
     expect(health.issues.map((i) => i.reason)).toEqual(["breached", "weak", "old"]);
+  });
+
+  it("counts logins with a password but no authenticator key, lightly", () => {
+    const health = computeVaultHealth([
+      {
+        id: "1",
+        name: "Mail",
+        password: "Unique-Strong-Passw0rd!1",
+        updatedAt: NOW,
+        hasTotp: true,
+      },
+      {
+        id: "2",
+        name: "Shop",
+        password: "Unique-Strong-Passw0rd!2",
+        updatedAt: NOW,
+        hasTotp: false,
+      },
+      // No password (SSO, passkey): nothing for a second factor to protect here.
+      { id: "3", name: "SSO", password: "", updatedAt: NOW, hasTotp: false },
+      // Unknown (not passed): not counted.
+      { id: "4", name: "Bank", password: "Unique-Strong-Passw0rd!4", updatedAt: NOW },
+    ]);
+    expect(health.missingTotpCount).toBe(1);
+    expect(health.issues).toEqual([{ itemId: "2", name: "Shop", reason: "no2fa" }]);
+    // penalty = (1/4) * 5 = 1.25 → 98.75 → 99
+    expect(health.score).toBe(99);
   });
 
   it("never scores below 0", () => {
