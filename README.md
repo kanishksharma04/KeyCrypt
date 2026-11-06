@@ -331,6 +331,7 @@ Things to know:
 - Vault health ignores logins without a password (SSO, passkey or TOTP-only accounts)
 - The view dialog shows the notes of logins, API keys, WiFi and authenticator items
 - Vaults are capped at 5,000 items for single creates as well as imports
+- **Redesign** — warm paper/charcoal palette with a bronze accent and a serif display face (Fraunces); new landing page, unlock screen, vault list and dashboard (health factors with per-issue review, folder count, items by type, recent activity), all responsive down to phone widths
 
 ### August 11, 2026
 
