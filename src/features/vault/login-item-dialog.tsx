@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import { PasswordGeneratorPopover } from "./password-generator";
+import { PasswordStrengthMeter } from "./password-strength-meter";
 import { toast } from "sonner";
 import { loginItemSchema, type LoginItemInput } from "@/schemas/vault";
 import { createVaultItemAction, updateVaultItemAction } from "@/server/vault-item-actions";
@@ -47,11 +48,14 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors },
   } = useForm<LoginItemInput>({
     resolver: zodResolver(loginItemSchema),
     defaultValues: { ...EMPTY_VALUES, ...initialValues },
   });
+
+  const password = useWatch({ control, name: "password" });
 
   const onSubmit = handleSubmit((data) => {
     setServerError(undefined);
@@ -186,6 +190,7 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
             </Button>
           </div>
         </div>
+        <PasswordStrengthMeter password={password ?? ""} />
       </div>
 
       <div className="space-y-1">

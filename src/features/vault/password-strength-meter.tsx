@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // The one strength meter for typed passwords (master password setup and
-// change). Scores come from the shared estimatePasswordStrength in
+// change, and a login's password). Scores come from the shared estimatePasswordStrength in
 // @/lib/crypto, the same function vault health uses.
 
 const BAR_COLORS = ["bg-destructive", "bg-orange-500", "bg-yellow-500", "bg-emerald-500"] as const;
