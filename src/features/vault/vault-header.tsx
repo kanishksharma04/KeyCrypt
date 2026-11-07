@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { Lock, LogOut, Moon, Search, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LogOut, Moon, Search, Sun } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { KeyCryptLogo } from "@/components/shared/keycrypt-logo";
+import { PadlockIcon } from "@/components/shared/design-icons";
 import { clearVaultKey } from "@/lib/crypto";
 import { useVaultLock } from "@/providers/vault-lock-provider";
 import { useCommandPalette } from "@/providers/command-palette-provider";
@@ -34,7 +34,7 @@ interface VaultHeaderProps {
 function NavLinks({ className }: { className?: string }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Vault navigation" className={cn("flex items-stretch", className)}>
+    <nav aria-label="Vault navigation" className={cn("flex items-stretch sm:gap-6", className)}>
       {NAV_LINKS.map(({ href, label }) => {
         const isActive = href === "/vault" ? pathname === "/vault" : pathname.startsWith(href);
         return (
@@ -43,11 +43,12 @@ function NavLinks({ className }: { className?: string }) {
             href={href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "relative flex flex-1 items-center justify-center px-3 text-[15px] font-medium transition-colors sm:flex-none",
-              "after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors",
+              "relative flex flex-1 items-center justify-center px-3 text-sm transition-colors sm:flex-none sm:px-0.5",
+              // The design's 2px accent underline sits under the label, not at the header edge.
+              "after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:transition-colors sm:after:inset-x-0.5 sm:after:top-[calc(50%+18px)] sm:after:bottom-auto",
               isActive
-                ? "text-foreground after:bg-brand"
-                : "text-muted-foreground hover:text-foreground after:bg-transparent"
+                ? "text-foreground after:bg-brand font-semibold"
+                : "text-muted-foreground hover:text-foreground font-medium after:bg-transparent"
             )}
           >
             {label}
@@ -73,7 +74,7 @@ function AccountMenu({ initials, email }: VaultHeaderProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="bg-brand-soft text-brand hover:ring-brand/40 flex size-9 items-center justify-center rounded-lg text-sm font-semibold ring-1 ring-transparent transition-shadow outline-none focus-visible:ring-2"
+        className="bg-brand-soft text-brand hover:ring-brand/40 flex size-[38px] shrink-0 items-center justify-center rounded-[10px] text-[13px] font-bold ring-1 ring-transparent transition-shadow outline-none focus-visible:ring-2"
         aria-label="Account menu"
         title={email}
       >
@@ -107,35 +108,35 @@ export function VaultHeader({ initials, email }: VaultHeaderProps) {
   const { open: openPalette } = useCommandPalette();
 
   return (
-    <header className="bg-background/85 supports-backdrop-filter:bg-background/70 sticky top-0 z-40 border-b backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-stretch gap-6 px-4 sm:px-6">
-        <KeyCryptLogo className="self-center" />
+    <header className="bg-card sticky top-0 z-40 border-b">
+      <div className="mx-auto flex h-[68px] max-w-[1120px] items-stretch gap-4 px-4 sm:gap-7 sm:px-7">
+        <div className="flex items-stretch gap-9">
+          <KeyCryptLogo size="sm" className="self-center" />
+          <NavLinks className="hidden sm:flex" />
+        </div>
 
-        <NavLinks className="hidden sm:flex" />
-
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2.5">
           {/* Command palette trigger */}
           <button
             type="button"
             onClick={openPalette}
-            className="text-muted-foreground hover:text-foreground hover:border-ring/40 bg-card/60 flex h-9 items-center gap-2 rounded-lg border px-2.5 text-sm transition-colors sm:min-w-36 sm:px-3"
+            className="bg-secondary text-faint hover:text-foreground hover:border-ring/40 flex h-[38px] items-center gap-2.5 rounded-[10px] border px-3 transition-colors"
           >
-            <Search className="size-4" aria-hidden="true" />
-            <span className="sr-only sm:not-sr-only">Search</span>
-            <kbd className="bg-muted text-muted-foreground ml-auto hidden h-5 items-center rounded border px-1.5 font-mono text-[10px] sm:flex">
+            <Search className="size-4" strokeWidth={1.6} aria-hidden="true" />
+            <span className="sr-only text-[13px] sm:not-sr-only">Search</span>
+            <kbd className="text-faint hidden rounded-[5px] border px-1.5 py-px font-sans text-[11px] sm:block">
               ⌘K
             </kbd>
           </button>
-          <Button
-            variant="outline"
-            size="icon-lg"
-            className="rounded-lg"
+          <button
+            type="button"
             onClick={lock}
             title="Lock vault"
+            className="bg-secondary text-muted-foreground hover:text-foreground hover:border-ring/40 flex size-[38px] shrink-0 items-center justify-center rounded-[10px] border transition-colors"
           >
-            <Lock className="size-4" aria-hidden="true" />
+            <PadlockIcon className="size-[17px]" />
             <span className="sr-only">Lock vault</span>
-          </Button>
+          </button>
           <AccountMenu initials={initials} email={email} />
         </div>
       </div>

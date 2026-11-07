@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ChevronDown, FolderCog, Search, Star, X } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -105,7 +105,7 @@ export function VaultToolbar({
       : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 md:flex-nowrap">
+    <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
       {/* Favourites + search + folder filter */}
       <Button
         variant="outline"
@@ -114,16 +114,21 @@ export function VaultToolbar({
         title={favOnly ? "Show all items" : "Show favorites only"}
         aria-pressed={favOnly}
         className={cn(
-          "bg-card dark:bg-card size-10 shrink-0 rounded-xl",
-          favOnly && "border-brand/50 text-brand"
+          "bg-secondary dark:bg-secondary border-border text-brand size-[38px] shrink-0 rounded-[10px]",
+          favOnly && "border-brand/50 bg-brand-soft dark:bg-brand-soft"
         )}
       >
-        <Star className={cn("size-4", favOnly && "fill-current")} aria-hidden="true" />
+        <Star
+          className={cn("size-[17px]", favOnly && "fill-current")}
+          strokeWidth={1.6}
+          aria-hidden="true"
+        />
         <span className="sr-only">Filter favorites</span>
       </Button>
       <div className="relative min-w-0 flex-1 basis-[calc(100%-3.25rem)] md:max-w-[33rem] md:basis-auto">
         <Search
-          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+          className="text-faint pointer-events-none absolute top-1/2 left-[13px] size-4 -translate-y-1/2"
+          strokeWidth={1.6}
           aria-hidden="true"
         />
         <Input
@@ -132,15 +137,15 @@ export function VaultToolbar({
           placeholder=""
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="bg-card dark:bg-card h-10 rounded-xl pr-9 pl-10 md:text-[15px]"
+          className="bg-card dark:bg-card border-border h-10 rounded-[10px] pr-9 pl-[38px] md:text-sm"
           aria-label="Search vault items"
         />
         {!search && (
           <span
             aria-hidden="true"
-            className="text-muted-foreground pointer-events-none absolute inset-y-0 right-9 left-10 flex items-center truncate text-base md:text-[15px]"
+            className="text-faint pointer-events-none absolute inset-y-0 right-9 left-[38px] flex items-center truncate text-base md:text-sm"
           >
-            Search your vault...
+            Search your vault…
             <span className="ml-1 hidden md:inline">(press / to focus)</span>
           </span>
         )}
@@ -160,18 +165,13 @@ export function VaultToolbar({
       </div>
 
       {/* Count + New item */}
-      <p className="text-muted-foreground order-last shrink-0 px-1 text-sm whitespace-nowrap tabular-nums md:order-none md:ml-auto">
+      <p className="text-faint order-last shrink-0 px-1 text-[13px] whitespace-nowrap tabular-nums md:order-none md:ml-auto">
         {countLabel}
       </p>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(
-            buttonVariants(),
-            "order-last h-10 shrink-0 rounded-xl px-4 text-[15px] font-semibold md:order-none"
-          )}
-        >
+        <DropdownMenuTrigger className="bg-brand text-brand-foreground hover:bg-brand/90 focus-visible:ring-ring/50 order-last inline-flex h-10 shrink-0 items-center gap-2 rounded-[10px] px-4 text-[13.5px] font-bold transition-colors outline-none focus-visible:ring-3 md:order-none">
           New item
-          <ChevronDown className="size-4" aria-hidden="true" />
+          <ChevronDown className="size-[13px]" strokeWidth={2} aria-hidden="true" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-48">
           {(Object.entries(TYPE_META) as [VaultItemType, (typeof TYPE_META)[VaultItemType]][]).map(

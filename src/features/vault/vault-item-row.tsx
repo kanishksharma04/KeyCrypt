@@ -108,39 +108,39 @@ export function VaultItemRow({
   }
 
   return (
-    <div className="group hover:bg-row-hover focus-within:bg-row-hover relative flex items-center gap-3 px-3 py-3 transition-colors sm:gap-4 sm:px-5 sm:py-3.5">
+    <div className="group hover:bg-row-hover focus-within:bg-row-hover relative flex items-center gap-3 px-3 py-3.5 transition-colors sm:gap-3.5 sm:px-5 sm:py-4">
       <div
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent dark:border-white/5",
+          "flex size-[38px] shrink-0 items-center justify-center rounded-[10px]",
           iconBg
         )}
       >
-        <Icon className={cn("size-[18px]", iconColor)} aria-hidden="true" />
+        <Icon className={cn("size-[18px]", iconColor)} strokeWidth={1.6} aria-hidden="true" />
       </div>
 
       <button
         type="button"
-        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md text-left"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md text-left sm:gap-3.5"
         onClick={onView}
         title="View item"
       >
         <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[15px] font-semibold">{item.name}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-[14.5px] font-semibold">{item.name}</span>
             {item.favorite && (
               <Star className="fill-brand text-brand size-3 shrink-0" aria-label="Favorite" />
             )}
           </span>
-          <span className="text-muted-foreground block truncate text-sm">
+          <span className="text-faint mt-0.5 block truncate text-[13px]">
             {secondaryText || typeLabel}
           </span>
         </span>
         {folderName && (
-          <span className="bg-muted text-muted-foreground inline-flex max-w-24 shrink-0 rounded-md px-2 py-0.5 text-xs font-medium sm:max-w-40">
+          <span className="bg-muted text-muted-foreground inline-flex max-w-24 shrink-0 rounded-full px-2.5 py-1 text-[11.5px] leading-none font-semibold sm:max-w-40">
             <span className="truncate">{folderName}</span>
           </span>
         )}
-        <span className="text-muted-foreground hidden w-28 shrink-0 text-right text-sm whitespace-nowrap md:block">
+        <span className="text-faint hidden w-28 shrink-0 text-right text-[12.5px] whitespace-nowrap md:block">
           {relativeTime(item.updatedAt, { style: "long", longAgo: "ago" })}
         </span>
       </button>

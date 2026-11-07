@@ -1,4 +1,5 @@
-import { Braces, File, Lock, Smartphone, Wifi } from "lucide-react";
+import { Braces, File, Wifi } from "lucide-react";
+import { AuthenticatorIcon, PadlockIcon } from "@/components/shared/design-icons";
 
 // Icon, labels and colours per item type: vault list, view dialog, command
 // palette and dashboard. No client-only imports, so server components can use it.
@@ -7,12 +8,12 @@ import { Braces, File, Lock, Smartphone, Wifi } from "lucide-react";
 
 export const TYPE_META = {
   LOGIN: {
-    Icon: Lock,
+    Icon: PadlockIcon,
     label: "Login",
     plural: "Logins",
     iconBg: "bg-muted",
-    iconColor: "text-brand",
-    barColor: "bg-brand",
+    iconColor: "text-type-login",
+    barColor: "bg-type-login",
   },
   SECURE_NOTE: {
     Icon: File,
@@ -39,7 +40,7 @@ export const TYPE_META = {
     barColor: "bg-type-wifi",
   },
   OTP_SECRET: {
-    Icon: Smartphone,
+    Icon: AuthenticatorIcon,
     label: "Authenticator",
     // Singular on purpose: the dashboard's "Items by type" row reads "Authenticator".
     plural: "Authenticator",
