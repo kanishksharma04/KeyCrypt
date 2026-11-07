@@ -119,7 +119,7 @@ export function VaultList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-[18px]">
       <VaultToolbar
         search={search}
         onSearchChange={setSearch}
@@ -133,7 +133,7 @@ export function VaultList({
         folderControls={
           <select
             aria-label="Folder filter"
-            className={`${SELECT_CLASS} bg-card dark:bg-card h-10 w-full rounded-xl pr-8 md:text-[15px]`}
+            className={`${SELECT_CLASS} bg-card dark:bg-card border-border h-10 w-full rounded-[10px] pr-8 pl-3.5 md:text-sm`}
             value={folderFilter}
             onChange={(e) => setFolderFilter(e.target.value)}
           >
@@ -151,12 +151,12 @@ export function VaultList({
       {/* List */}
       {loading ? (
         <div
-          className="bg-card divide-y overflow-hidden rounded-2xl border"
+          className="bg-card divide-y overflow-hidden rounded-[16px] border"
           aria-label="Loading vault items"
         >
           {Array.from({ length: Math.min(Math.max(items.length, 1), 8) }, (_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3.5 sm:px-5">
-              <Skeleton className="size-10 shrink-0 rounded-xl" />
+            <div key={i} className="flex items-center gap-3.5 px-3 py-3.5 sm:px-5 sm:py-4">
+              <Skeleton className="size-[38px] shrink-0 rounded-[10px]" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-3.5 w-40 max-w-full" />
                 <Skeleton className="h-3 w-28 max-w-full" />
@@ -214,7 +214,7 @@ export function VaultList({
           </div>
         )
       ) : (
-        <div className="bg-card divide-y overflow-hidden rounded-2xl border">
+        <div className="bg-card divide-y overflow-hidden rounded-[16px] border">
           {filtered.map((item, i) => (
             <div
               key={item.id}
@@ -239,6 +239,14 @@ export function VaultList({
         item={viewItem}
         onOpenChange={(open) => {
           if (!open) setViewItem(null);
+        }}
+        onEdit={(item) => {
+          setViewItem(null);
+          setEditItem(item);
+        }}
+        onDelete={(item) => {
+          setViewItem(null);
+          setDeleteTarget({ id: item.id, name: item.name });
         }}
       />
 
