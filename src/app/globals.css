@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* The extension has its own build; its node_modules/keycrypt symlink points back
+   at this project, which sends Tailwind's source scan (and Turbopack) into a loop. */
+@source not "../../extension";
+
 @custom-variant dark (&:is(.dark *));
 /* Devices with a real hover (mouse/trackpad); touch screens skip these styles. */
 @custom-variant can-hover {
@@ -10,122 +14,139 @@
   }
 }
 
+/*
+ * Colours are taken from "KeyCrypt UI Design.html": the landing page's light
+ * palette (warm paper, ink, bronze) and the app's dark palette (charcoal
+ * surfaces, amber accent). Design name → token:
+ *   bg → background · surface → card · surface-2 → secondary/popover
+ *   surface-3 → muted · text-muted → muted-foreground · text-faint → faint
+ *   accent → brand · accent-deep → brand-deep · accent-soft/tint → brand-soft
+ */
+
 /* ─── Light mode: warm paper, ink buttons, bronze accent ─────────────────── */
 :root {
-  /* KeyCrypt semantic tokens — light */
   --color-success: #3f8f5a;
   --color-danger: #c2412d;
-  --color-warning: #b7791f;
+  --color-warning: #a8701f;
 
-  /* Bronze accent: eyebrows, icons, active nav, focus ring */
-  --brand: #8a5a2b;
-  --brand-soft: #f2e4d3;
+  --brand: #9a6a3c;
+  --brand-deep: #7c5430;
+  --brand-soft: #f1e6d7;
   --brand-foreground: #1c1a17;
+  --faint: #938c7d;
+  --border-strong: #d9cfba;
 
   /* Item-type accents (icons, dashboard bars) */
+  --type-login: #9a6a3c;
   --type-note: #4a6fb5;
   --type-api: #7c55b8;
   --type-wifi: #2f8f7e;
   --type-otp: #3f8f5a;
 
   /* shadcn variables — light */
-  --background: #f9f7f2;
+  --background: #faf8f3;
   --foreground: #1c1a17;
   --card: #ffffff;
   --card-foreground: #1c1a17;
   --popover: #ffffff;
   --popover-foreground: #1c1a17;
   --primary: #1c1a17;
-  --primary-foreground: #f9f7f2;
-  --secondary: #f2ede3;
+  --primary-foreground: #faf8f3;
+  --secondary: #f3eee3;
   --secondary-foreground: #1c1a17;
-  --muted: #f2ede3;
-  --muted-foreground: #6b655c;
-  --accent: #f2ede3;
+  --muted: #f3eee3;
+  --muted-foreground: #6b6358;
+  --accent: #f3eee3;
   --accent-foreground: #1c1a17;
   --destructive: #c2412d;
-  --border: #e8e2d6;
-  --input: #e2dbcd;
-  --ring: #8a5a2b;
+  --border: #e7e0d1;
+  --input: #d9cfba;
+  --ring: #9a6a3c;
   --radius: 0.625rem;
-  --sidebar: #f9f7f2;
+  --sidebar: #faf8f3;
   --sidebar-foreground: #1c1a17;
   --sidebar-primary: #1c1a17;
-  --sidebar-primary-foreground: #f9f7f2;
-  --sidebar-accent: #f2ede3;
+  --sidebar-primary-foreground: #faf8f3;
+  --sidebar-accent: #f3eee3;
   --sidebar-accent-foreground: #1c1a17;
-  --sidebar-border: #e8e2d6;
-  --sidebar-ring: #8a5a2b;
+  --sidebar-border: #e7e0d1;
+  --sidebar-ring: #9a6a3c;
 }
 
 /* ─── Dark mode: charcoal surfaces, amber accent ─────────────────────────── */
 .dark {
-  /* KeyCrypt semantic tokens — dark */
-  --color-success: #7fbf8e;
-  --color-danger: #ef6b5b;
-  --color-warning: #e0a458;
+  --color-success: #7fb88a;
+  --color-danger: #d98f85;
+  --color-warning: #d9ae6b;
 
-  --brand: #d49a5e;
-  --brand-soft: #2c241c;
-  --brand-foreground: #1a1206;
+  --brand: #d59a5d;
+  --brand-deep: #b87b3e;
+  --brand-soft: rgb(213 154 93 / 0.14);
+  --brand-foreground: #1c1409;
+  --faint: #716c63;
+  --border-strong: #3a3741;
 
-  --type-note: #93a8d8;
-  --type-api: #b79ad9;
-  --type-wifi: #6cc3b0;
-  --type-otp: #8fc489;
+  --type-login: #d59a5d;
+  --type-note: #8faedd;
+  --type-api: #b393d9;
+  --type-wifi: #6fc2b0;
+  --type-otp: #93c08a;
 
   /* shadcn variables — dark */
-  --background: #131215;
-  --foreground: #f2f0ec;
-  --card: #1b1a1f;
-  --card-foreground: #f2f0ec;
-  --popover: #1f1e24;
-  --popover-foreground: #f2f0ec;
-  --primary: #d49a5e;
-  --primary-foreground: #1a1206;
-  --secondary: #26252b;
-  --secondary-foreground: #f2f0ec;
-  --muted: #26252b;
-  --muted-foreground: #a19ea6;
-  --accent: #26252b;
-  --accent-foreground: #f2f0ec;
-  --destructive: #ef6b5b;
-  --border: #2b2a31;
-  --input: #2f2e35;
-  --ring: #d49a5e;
-  --sidebar: #1b1a1f;
-  --sidebar-foreground: #f2f0ec;
-  --sidebar-primary: #d49a5e;
-  --sidebar-primary-foreground: #1a1206;
-  --sidebar-accent: #26252b;
-  --sidebar-accent-foreground: #f2f0ec;
-  --sidebar-border: #2b2a31;
-  --sidebar-ring: #d49a5e;
+  --background: #121113;
+  --foreground: #f3efe7;
+  --card: #1a1920;
+  --card-foreground: #f3efe7;
+  --popover: #201f27;
+  --popover-foreground: #f3efe7;
+  --primary: #d59a5d;
+  --primary-foreground: #1c1409;
+  --secondary: #201f27;
+  --secondary-foreground: #f3efe7;
+  --muted: #26242d;
+  --muted-foreground: #9d978c;
+  --accent: #26242d;
+  --accent-foreground: #f3efe7;
+  --destructive: #d98f85;
+  --border: #2c2a32;
+  --input: #2c2a32;
+  --ring: #d59a5d;
+  --sidebar: #1a1920;
+  --sidebar-foreground: #f3efe7;
+  --sidebar-primary: #d59a5d;
+  --sidebar-primary-foreground: #1c1409;
+  --sidebar-accent: #26242d;
+  --sidebar-accent-foreground: #f3efe7;
+  --sidebar-border: #2c2a32;
+  --sidebar-ring: #d59a5d;
 }
 
 /* The marketing page is always shown in the light palette (see src/app/page.tsx). */
 .theme-light {
   color-scheme: light;
-  --brand: #8a5a2b;
-  --brand-soft: #f2e4d3;
+  --brand: #9a6a3c;
+  --brand-deep: #7c5430;
+  --brand-soft: #f1e6d7;
   --brand-foreground: #1c1a17;
-  --background: #f9f7f2;
+  --faint: #938c7d;
+  --border-strong: #d9cfba;
+  --background: #faf8f3;
   --foreground: #1c1a17;
   --card: #ffffff;
   --card-foreground: #1c1a17;
   --popover: #ffffff;
   --popover-foreground: #1c1a17;
   --primary: #1c1a17;
-  --primary-foreground: #f9f7f2;
-  --secondary: #f2ede3;
+  --primary-foreground: #faf8f3;
+  --secondary: #f3eee3;
   --secondary-foreground: #1c1a17;
-  --muted: #f2ede3;
-  --muted-foreground: #6b655c;
-  --accent: #f2ede3;
+  --muted: #f3eee3;
+  --muted-foreground: #6b6358;
+  --accent: #f3eee3;
   --accent-foreground: #1c1a17;
-  --border: #e8e2d6;
-  --input: #e2dbcd;
-  --ring: #8a5a2b;
+  --border: #e7e0d1;
+  --input: #d9cfba;
+  --ring: #9a6a3c;
 }
 
 /* ─── Tailwind theme bridge ───────────────────────────────────────────────── */
@@ -135,13 +156,17 @@
   --color-warning: var(--color-warning);
   --color-brand: var(--brand);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-deep: var(--brand-deep);
+  --color-faint: var(--faint);
+  --color-border-strong: var(--border-strong);
+  --color-type-login: var(--type-login);
   --color-brand-foreground: var(--brand-foreground);
   --color-type-note: var(--type-note);
   --color-type-api: var(--type-api);
   --color-type-wifi: var(--type-wifi);
   --color-type-otp: var(--type-otp);
   /* A solid, slightly lifted card colour: hovered list rows and what sits on them. */
-  --color-row-hover: color-mix(in oklab, var(--card), var(--foreground) 4%);
+  --color-row-hover: var(--secondary);
   --font-sans: var(--font-inter);
   --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 
