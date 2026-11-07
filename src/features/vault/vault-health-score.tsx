@@ -2,15 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  Clock,
-  Copy,
-  Loader2,
-  ShieldCheck,
-  ShieldX,
-  Smartphone,
-} from "lucide-react";
+import { AlertTriangle, Clock, Copy, Loader2, ShieldCheck, ShieldX } from "lucide-react";
+import { AuthenticatorIcon } from "@/components/shared/design-icons";
 import {
   countPasswordBreaches,
   getVaultKey,
@@ -26,10 +19,10 @@ import { cn } from "@/lib/utils";
 
 const REASON_META = {
   breached: { label: "Found in a data breach", Icon: ShieldX, color: "text-destructive" },
-  weak: { label: "Weak password", Icon: AlertTriangle, color: "text-brand" },
-  reused: { label: "Reused password", Icon: Copy, color: "text-brand" },
-  old: { label: "Not updated in a year", Icon: Clock, color: "text-brand" },
-  no2fa: { label: "No 2FA code saved", Icon: Smartphone, color: "text-brand" },
+  weak: { label: "Weak password", Icon: AlertTriangle, color: "text-warning" },
+  reused: { label: "Reused password", Icon: Copy, color: "text-warning" },
+  old: { label: "Not updated in a year", Icon: Clock, color: "text-warning" },
+  no2fa: { label: "No 2FA code saved", Icon: AuthenticatorIcon, color: "text-warning" },
 } as const;
 
 type Reason = keyof typeof REASON_META;
@@ -43,21 +36,22 @@ function rating(score: number) {
 }
 
 function ScoreRing({ score }: { score: number }) {
-  const radius = 42;
+  // 130px ring, 10px stroke, as in the design.
+  const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
   const ringColor =
     score >= 80 ? "text-success" : score >= 50 ? "text-warning" : "text-destructive";
 
   return (
-    <div className="relative flex size-28 shrink-0 items-center justify-center">
-      <svg viewBox="0 0 100 100" className="size-28 -rotate-90" aria-hidden="true">
-        <circle cx="50" cy="50" r={radius} strokeWidth="6" className="stroke-muted fill-none" />
+    <div className="relative flex size-[130px] shrink-0 items-center justify-center">
+      <svg viewBox="0 0 130 130" className="size-[130px] -rotate-90" aria-hidden="true">
+        <circle cx="65" cy="65" r={radius} strokeWidth="10" className="stroke-muted fill-none" />
         <circle
-          cx="50"
-          cy="50"
+          cx="65"
+          cy="65"
           r={radius}
-          strokeWidth="6"
+          strokeWidth="10"
           strokeLinecap="round"
           stroke="currentColor"
           strokeDasharray={circumference}
@@ -66,10 +60,10 @@ function ScoreRing({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="font-serif text-[2.25rem] leading-none font-semibold tabular-nums">
+        <span className="font-serif text-[32px] leading-none font-semibold tabular-nums">
           {score}
         </span>
-        <span className="text-muted-foreground mt-0.5 text-[11px]">out of 100</span>
+        <span className="text-faint mt-1 text-[11px]">out of 100</span>
       </div>
     </div>
   );
@@ -168,8 +162,8 @@ export function VaultHealthScore() {
         className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
         aria-hidden="true"
       >
-        <div className="bg-card h-60 animate-pulse rounded-2xl border" />
-        <div className="bg-card h-60 animate-pulse rounded-2xl border" />
+        <div className="bg-card h-60 animate-pulse rounded-[16px] border" />
+        <div className="bg-card h-60 animate-pulse rounded-[16px] border" />
       </div>
     );
   }
@@ -179,7 +173,7 @@ export function VaultHealthScore() {
 
   if (health.total === 0) {
     return (
-      <div className="bg-card flex items-center gap-3 rounded-2xl border border-dashed p-6">
+      <div className="bg-card flex items-center gap-3 rounded-[16px] border border-dashed p-6">
         <ShieldCheck className="text-muted-foreground size-6 shrink-0" aria-hidden="true" />
         <div>
           <h2 className="text-sm font-semibold">Vault health</h2>
@@ -212,16 +206,16 @@ export function VaultHealthScore() {
     });
   }
 
-  const linkClass = "text-brand rounded text-sm underline-offset-4 hover:underline";
+  const linkClass = "text-brand rounded text-[13px] underline-offset-4 hover:underline";
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       {/* Score */}
-      <section className="bg-card flex min-w-0 flex-col items-center justify-center gap-4 rounded-2xl border px-6 py-7 text-center">
+      <section className="bg-card flex min-w-0 flex-col items-center justify-center rounded-[16px] border p-6 text-center sm:p-7">
         <ScoreRing score={health.score} />
-        <div className="space-y-0.5">
-          <h2 className={cn("text-base font-semibold", color)}>Vault health: {word}</h2>
-          <p className="text-muted-foreground text-sm">
+        <div className="mt-3.5">
+          <h2 className={cn("text-[15px] font-semibold", color)}>Vault health: {word}</h2>
+          <p className="text-faint mt-1 text-[13px]">
             {health.issues.length === 0
               ? "No issues found. Your logins look strong."
               : health.score >= 80
@@ -232,8 +226,8 @@ export function VaultHealthScore() {
       </section>
 
       {/* What's affecting it */}
-      <section className="bg-card min-w-0 rounded-2xl border px-5 py-5 sm:px-6">
-        <h2 className="mb-1 text-[15px] font-semibold">What&apos;s affecting your score</h2>
+      <section className="bg-card min-w-0 rounded-[16px] border p-5 sm:p-7">
+        <h2 className="mb-4 text-sm font-semibold">What&apos;s affecting your score</h2>
         <ul className="divide-y">
           {factors.map(({ reason, label, count }) => {
             const issues = health.issues.filter((i) => i.reason === reason);
@@ -248,12 +242,16 @@ export function VaultHealthScore() {
                   : "text-destructive"
               : REASON_META[reason].color;
             return (
-              <li key={reason} className="py-2.5">
-                <div className="flex min-h-7 items-center gap-3">
-                  <Icon className={cn("size-4 shrink-0", iconColor)} aria-hidden="true" />
-                  <span className="min-w-0 flex-1 text-sm sm:text-[15px]">{label}</span>
+              <li key={reason} className="py-3">
+                <div className="flex min-h-6 items-center gap-3">
+                  <Icon
+                    className={cn("size-[18px] shrink-0", iconColor)}
+                    strokeWidth={1.6}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1 text-sm">{label}</span>
                   <span className="text-sm font-semibold tabular-nums">{count ?? "—"}</span>
-                  <span className="flex w-16 justify-end">
+                  <span className="flex w-[60px] justify-end">
                     {isBreach && (count === null || count === 0) ? (
                       <button
                         type="button"
@@ -284,7 +282,7 @@ export function VaultHealthScore() {
                 </div>
 
                 {isBreach && (
-                  <p role="status" className="text-muted-foreground mt-1 pl-7 text-xs empty:hidden">
+                  <p role="status" className="text-faint mt-1 pl-[30px] text-xs empty:hidden">
                     {breachCheck.status === "idle" &&
                       "Opt-in: only the first 5 characters of each password's SHA-1 hash are sent to Have I Been Pwned."}
                     {breachCheck.status === "done" &&
