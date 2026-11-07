@@ -309,11 +309,12 @@ Things to know:
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (optional, recommended) |
 | `TOTP_ENCRYPTION_KEY`      | `openssl rand -base64 32` (enables 2FA)          |
 
-3. Apply migrations to the production database from your machine with
-   `DATABASE_URL=<direct, non-pooler connection string> pnpm db:deploy`
-   (`pnpm build` does not run migrations). If the database was created with `db:push`,
-   baseline it first with `pnpm prisma migrate resolve --applied 0_init`.
-4. Deploy.
+3. Deploy. Production builds run `pnpm vercel-build` (`scripts/vercel-build.mjs`), which
+   applies pending migrations with `prisma migrate deploy` before `next build`, over the
+   direct connection (`DIRECT_URL` if set, otherwise the Neon pooler URL without
+   `-pooler`). Preview builds skip migrations. `pnpm build` itself never migrates.
+   If the database was created with `db:push`, baseline it once first:
+   `DATABASE_URL=<direct connection string> pnpm prisma migrate resolve --applied 0_init`.
 
 ---
 
