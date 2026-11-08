@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Fraunces, Inter } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -14,12 +14,22 @@ const inter = Inter({
   display: "swap",
 });
 
-// Display serif for headings and the wordmark (font-serif).
+// Display serif for headings and the wordmark (font-serif). The landing page
+// also uses its italics and the SOFT/WONK axes.
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
   display: "swap",
-  axes: ["opsz"],
+  style: ["normal", "italic"],
+  axes: ["opsz", "SOFT", "WONK"],
+});
+
+// Annotations on the landing page (font-plex).
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -57,7 +67,11 @@ export default async function RootLayout({
   const nonce = (await headers()).get("x-nonce") ?? "";
 
   return (
-    <html lang="en" className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${fraunces.variable} ${plexMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="flex min-h-full flex-col antialiased">
         <ThemeProvider nonce={nonce}>
           {children}
