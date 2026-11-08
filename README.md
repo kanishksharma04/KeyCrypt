@@ -197,6 +197,7 @@ Open [http://localhost:3000](http://localhost:3000).
 pnpm dev          # Start development server (Turbopack)
 pnpm build        # Production build
 pnpm start        # Start production server
+pnpm check:env    # List missing or malformed production settings (names only)
 pnpm typecheck    # TypeScript type check
 pnpm lint         # ESLint
 pnpm test         # Vitest unit tests (no database)
@@ -210,6 +211,24 @@ pnpm db:migrate   # Create + apply a new migration in development (prisma migrat
 pnpm db:push      # Throwaway local databases only — no migration history
 pnpm db:studio    # Open Prisma Studio
 ```
+
+### Checking production settings
+
+```bash
+pnpm check:env              # real environment + .env.production.local, .env.local, .env.production, .env
+pnpm check:env --no-dotenv  # real environment only
+pnpm check:env --warn-only  # report, but always exit 0
+```
+
+It lists, by name only, which settings are missing or malformed; it never prints a value.
+**Required:** `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, `AUTH_URL`.
+**Recommended:** `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, `TOTP_ENCRYPTION_KEY`. Values are checked with the same
+rules as `src/lib/env.ts` (valid URLs, a 32-character `AUTH_SECRET`, a 32-byte base64
+`TOTP_ENCRYPTION_KEY`, both Upstash settings or neither). It exits 1 when a required setting is
+missing or any setting is malformed. The same report is printed by Vercel production builds
+(`scripts/vercel-build.mjs`) and logged once when a production server starts
+(`src/instrumentation.ts`); neither stops the build or the server.
 
 ### Integration tests
 

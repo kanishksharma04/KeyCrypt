@@ -16,6 +16,7 @@
 // step) and deploys again. Any other migration failure fails the build.
 
 import { execSync, spawnSync } from "node:child_process";
+import { checkEnv, formatEnvReport } from "../src/lib/env-check.mjs";
 
 function run(command, env = process.env) {
   console.log(`> ${command}`);
@@ -44,6 +45,13 @@ function needsBaseline(output) {
 }
 
 run("prisma generate");
+
+// Report missing production settings by name (never values). Report only: the
+// build carries on, and src/lib/env.ts still fails start-up without the essentials.
+if (process.env.VERCEL_ENV === "production") {
+  console.log("Production settings (pnpm check:env):");
+  console.log(formatEnvReport(checkEnv(process.env)));
+}
 
 if (process.env.VERCEL_ENV === "production") {
   const pooled = process.env.DATABASE_URL;
