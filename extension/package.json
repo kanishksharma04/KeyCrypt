@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "KeyCrypt browser extension (Manifest V3): unlock locally and fill logins.",
+  "license": "MIT",
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc --noEmit"

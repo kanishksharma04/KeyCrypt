@@ -2,6 +2,7 @@
   "name": "keycrypt",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "exports": {
     "./crypto": "./src/lib/crypto/index.ts"
   },
