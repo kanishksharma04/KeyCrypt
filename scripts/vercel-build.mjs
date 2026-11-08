@@ -1,9 +1,15 @@
 // Vercel build (`vercel-build` in package.json; Vercel runs it instead of `build`).
 //
 // Production deployments apply pending Prisma migrations before building, so the
-// deployed code never runs against an older schema. Preview deployments only
-// build: they may share the production database, and a branch's migrations must
-// not reach it before the branch is merged.
+// deployed code never runs against an older schema.
+//
+// Preview deployments only build, unless opted in with PREVIEW_MIGRATIONS=1 on
+// the Preview environment. Then they migrate their own database first, so a
+// branch's migration is tried on a preview database before it reaches
+// production. The build refuses (and fails) when the preview database looks like
+// the production one: PRODUCTION_DATABASE_HOST must be set on Preview to the
+// production database's host name, and must differ from the preview's hosts.
+// See planMigrations() in scripts/lib/migration-plan.mjs.
 //
 // Prisma Migrate needs a direct connection (it takes an advisory lock, which a
 // PgBouncer pooler does not support). It uses DIRECT_URL when set; otherwise the
@@ -17,6 +23,7 @@
 
 import { execSync, spawnSync } from "node:child_process";
 import { checkEnv, formatEnvReport } from "../src/lib/env-check.mjs";
+import { needsBaseline, planMigrations } from "./lib/migration-plan.mjs";
 
 function run(command, env = process.env) {
   console.log(`> ${command}`);
@@ -32,18 +39,6 @@ function capture(command, env) {
   return { ok: result.status === 0, output };
 }
 
-function needsBaseline(output) {
-  // First attempt: applying 0_init hits objects that db push already created.
-  const initClashes =
-    output.includes("P3018") &&
-    /Migration name: 0_init\b/.test(output) &&
-    /already exists/.test(output);
-  // Later attempts: that failed 0_init is now recorded and blocks deploy (P3009).
-  const failedInitRecorded =
-    output.includes("P3009") && /The `0_init` migration started at .* failed/.test(output);
-  return initClashes || failedInitRecorded;
-}
-
 run("prisma generate");
 
 // Report missing production settings by name (never values). Report only: the
@@ -53,13 +48,11 @@ if (process.env.VERCEL_ENV === "production") {
   console.log(formatEnvReport(checkEnv(process.env)));
 }
 
-if (process.env.VERCEL_ENV === "production") {
-  const pooled = process.env.DATABASE_URL;
-  if (!pooled) throw new Error("DATABASE_URL is not set; cannot apply migrations.");
-  const env = {
-    ...process.env,
-    DATABASE_URL: process.env.DIRECT_URL || pooled.replace("-pooler.", "."),
-  };
+const plan = planMigrations(process.env);
+
+if (plan.migrate) {
+  console.log(`Applying migrations to the ${plan.target} database.`);
+  const env = { ...process.env, DATABASE_URL: plan.url };
 
   const deploy = capture("prisma migrate deploy", env);
   if (!deploy.ok) {
@@ -69,7 +62,7 @@ if (process.env.VERCEL_ENV === "production") {
     run("prisma migrate deploy", env);
   }
 } else {
-  console.log(`Skipping prisma migrate deploy (VERCEL_ENV=${process.env.VERCEL_ENV ?? "unset"}).`);
+  console.log(`Skipping prisma migrate deploy (${plan.reason}).`);
 }
 
 run("next build");

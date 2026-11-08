@@ -331,9 +331,31 @@ Things to know:
 3. Deploy. Production builds run `pnpm vercel-build` (`scripts/vercel-build.mjs`), which
    applies pending migrations with `prisma migrate deploy` before `next build`, over the
    direct connection (`DIRECT_URL` if set, otherwise the Neon pooler URL without
-   `-pooler`). Preview builds skip migrations. `pnpm build` itself never migrates.
-   If the database was created with `db:push`, baseline it once first:
+   `-pooler`). `pnpm build` itself never migrates. If the database was created with
+   `db:push`, the build baselines `0_init` automatically (only when that is the sole
+   failure); by hand it is
    `DATABASE_URL=<direct connection string> pnpm prisma migrate resolve --applied 0_init`.
+   The build log also lists missing production settings by name (`pnpm check:env`).
+
+### Migrating preview deployments
+
+Preview builds skip migrations unless you opt in. Opted in, each preview build applies the
+branch's pending migrations to a **separate preview database** before `next build`, so a new
+migration runs somewhere real before it reaches production. Set these in Vercel for the
+**Preview** environment only:
+
+| Variable                   | Value                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`             | A database just for previews, e.g. a Neon branch (`DIRECT_URL` optional, as in production)        |
+| `PREVIEW_MIGRATIONS`       | `1`                                                                                               |
+| `PRODUCTION_DATABASE_HOST` | The **production** database's host name, e.g. `ep-xyz-123.eu-central-1.aws.neon.tech` (no secret) |
+
+The build compares that host with the preview's `DATABASE_URL` and migration connection
+(ignoring Neon's `-pooler` suffix) and **fails without migrating** if they match, if
+`PRODUCTION_DATABASE_HOST` is missing, or if the preview `DATABASE_URL` is missing. Without
+`PREVIEW_MIGRATIONS=1`, previews build without migrating, as before; don't opt in while
+Preview still shares the production database. Connection strings are never printed. The
+logic is `planMigrations()` in `scripts/lib/migration-plan.mjs`.
 
 ---
 
