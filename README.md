@@ -69,8 +69,8 @@ The vault key exists only in this page's memory. It is never written to disk or 
 ### Vault UX
 
 - **Command palette** — `⌘K` / `Ctrl+K` for quick navigation, item search, and actions (new item, lock vault, toggle theme)
-- **Vault health score** — client-side detection of weak (zxcvbn), reused, and stale passwords, plus an opt-in breached-password check (k-anonymity, Have I Been Pwned); decrypted data never leaves the browser
-- **View dialog** — reveal fields with eye toggle, one-click copy with ✓ checkmark feedback
+- **Vault health score** — client-side detection of weak (zxcvbn), reused and stale passwords and logins without a saved 2FA code, plus an opt-in breached-password check (k-anonymity, Have I Been Pwned); decrypted data never leaves the browser
+- **Item details panel** — opens from the right with every field; reveal toggles, one-click copy with ✓ checkmark feedback, edit and delete
 - **Password generator** — configurable length, character sets, live entropy score
 - **Recovery kit** — a one-time recovery key (shown at setup, regenerable in Settings) that unlocks the vault and lets you set a new master password if you forget it
 - **Export** — Settings → Export, built in the browser: an encrypted JSON file (`keycrypt-export` v1, PBKDF2 600k + AES-256-GCM under a separate export password), or a plain Bitwarden-format CSV after re-entering your account password
@@ -80,7 +80,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Favorites filter** — star items and filter to pinned items only
 - **Search** — live filter across name, username, URL, SSID; press `/` to focus, `Escape` to clear
 - **Item count** — shows `3 items` or `2 of 5 items` when filtered
-- **Relative timestamps** — `2h ago`, `3d ago` on every vault card
+- **Relative timestamps** — `2 hours ago`, `3 days ago` on every item row
 - **Smart empty states** — contextual messaging and CTAs for empty vault, no results, no favorites
 - **Auto-focus** — name field focused on every create dialog open
 
@@ -95,26 +95,36 @@ The vault key exists only in this page's memory. It is never written to disk or 
 
 ### UI & theming
 
-- Dark / light / system theme with animated sun ↔ moon toggle
-- Shimmer skeleton loading states
-- Staggered card entrance animations
-- Hover lift on vault cards, feature cards, and dashboard stats
-- Smooth dialog fade + scale with backdrop blur
-- Responsive — works on mobile and desktop
+- **Palette and type** — warm paper / charcoal palette with a bronze accent; Fraunces for display
+  headings, Inter for text, IBM Plex Mono for annotations on the landing page
+- **Landing page** — laid out like a technical journal: a masthead, numbered sections, margin
+  notes, a printed "Fig. 1" of a `VaultItem` row as the database stores it, and the "What the
+  server can see" list (always in the light palette)
+- **Vault** — a header with search (`⌘K`), lock and theme switch; a toolbar with search,
+  favourites filter and "New item"; compact item rows with a type icon, name, detail and relative
+  time, whose actions appear on hover or focus
+- **Item details** — a 420 px side panel from the right (full width on phones)
+- **Dashboard** — vault health with per-factor breakdown and per-issue review, stat cards, items
+  by type and recent activity
+- **Gate screens** — restyled sign-in, sign-up, setup and unlock screens
+- Dark / light / system theme; skeleton rows while loading; `prefers-reduced-motion` respected
+- Responsive down to phone widths
 
 ---
 
 ## Tech stack
 
-| Layer           | Choice                                          |
-| --------------- | ----------------------------------------------- |
-| Framework       | Next.js 16 (App Router, React 19)               |
-| Language        | TypeScript (strict)                             |
-| Styling         | Tailwind CSS v4 + shadcn/ui + base-nova         |
-| Auth            | Auth.js v5 (Credentials provider, JWT sessions) |
-| Database        | PostgreSQL via Prisma 6 (Neon recommended)      |
-| Crypto          | Web Crypto API (browser-native, zero deps)      |
-| Package manager | pnpm                                            |
+| Layer             | Choice                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework         | Next.js 16 (App Router, React 19)                                                                                                        |
+| Language          | TypeScript (strict)                                                                                                                      |
+| Styling           | Tailwind CSS v4 + shadcn/ui + base-nova                                                                                                  |
+| Auth              | Auth.js v5 (Credentials provider, JWT sessions)                                                                                          |
+| Database          | PostgreSQL via Prisma 6 (Neon recommended)                                                                                               |
+| Crypto            | Web Crypto API (AES-256-GCM, HKDF, SHA) + `hash-wasm` (Argon2id, in a Web Worker); `@node-rs/argon2` for account passwords on the server |
+| Password strength | zxcvbn (`@zxcvbn-ts`, lazy-loaded)                                                                                                       |
+| Testing           | Vitest (unit, integration against Postgres), Playwright (end-to-end, extension)                                                          |
+| Package manager   | pnpm                                                                                                                                     |
 
 ---
 
@@ -157,6 +167,9 @@ SMTP_USER=""
 SMTP_PASS=""
 EMAIL_FROM="KeyCrypt <noreply@yourdomain.com>"
 ```
+
+Run `pnpm check:env` to list, by name, any required or recommended setting that is missing
+(see [Checking production settings](#checking-production-settings)).
 
 ### 3. Apply the database migrations
 
@@ -361,108 +374,61 @@ logic is `planMigrations()` in `scripts/lib/migration-plan.mjs`.
 
 ## Changelog
 
-### November 2026
-
-- **Authenticator items** — a fifth item type for TOTP setup keys and `otpauth://` links, with live codes; logins can hold a TOTP key too
-- **Folders** — encrypted folder names; create, rename, delete, move and filter
-- **Import** — Bitwarden (JSON/CSV), 1Password, LastPass, Chrome/Edge CSV and KeyCrypt encrypted exports, parsed and encrypted in the browser. Folders from Bitwarden and KeyCrypt exports are kept (matched by name, created if missing)
-- **Export** — encrypted JSON and Bitwarden CSV now include each item's folder
-- **Browser extension (MVP)** — unlock locally and fill logins for the current site
-- **Self-hosting** — Docker image and compose file
-- Two-factor sign-in, recovery kit, account deletion, recent-activity log
-- Vault health ignores logins without a password (SSO, passkey or TOTP-only accounts)
-- The view dialog shows the notes of logins, API keys, WiFi and authenticator items
-- Vaults are capped at 5,000 items for single creates as well as imports
-- **Redesign** — warm paper/charcoal palette with a bronze accent and a serif display face (Fraunces); new landing page, unlock screen, vault list and dashboard (health factors with per-issue review, folder count, items by type, recent activity), all responsive down to phone widths
-
-### August 11, 2026
-
-- **Command palette** — `⌘K` launcher for navigation, item search, and quick actions (new item, lock vault, toggle theme)
-- **Vault health score** — dashboard widget flagging weak (zxcvbn), reused, stale and (opt-in) breached passwords, computed client-side
-- Removed the white background baked into the favicon
-
-### June 30, 2026
-
-#### New interactions
-
-- `Escape` clears and blurs the vault search input
-- `/` focuses the search input from anywhere in the vault
-- Copy buttons show a `✓` checkmark for 1.5 s after copying
-- Password visibility toggles on sign-in, sign-up, and vault unlock forms
-- View dialog for all vault item types with reveal toggles and per-field copy buttons
-
-#### Vault list improvements
-
-- Relative timestamps (`2h ago`, `3d ago`) on every item card
-- Item count label — `5 items` or `2 of 5 items` when filtered
-- Smart empty states with contextual messaging for favorites filter vs. search vs. empty vault
-- Skeleton count matches actual item count instead of a fixed 3
-- Favorites-only filter toggle in the toolbar
-- Clear (×) button on the search input
-- Auto-focus name field when any create dialog opens
-
-#### Header & navigation
-
-- Sign-out button in vault header
-- User initials avatar with email tooltip
-- Lock vault button
-
-#### Brand & assets
-
-- Full PNG brand asset suite — wordmark, app icon, favicon, Apple touch icon, OG image
-- Custom favicon replacing default Next.js placeholder
-- OpenGraph and Twitter card metadata for rich link previews
-
-#### Bug fixes
-
-- Fixed vault page crash caused by `useSession` without `SessionProvider` — session data now passed as props from the server layout
-- Fixed strength meter bars rendering on empty master password field
-
-#### Premium UI polish
-
-- Shimmer gradient skeleton replacing flat `animate-pulse`
-- Staggered `fade-in-up` entrance on vault item list (35 ms delay per card)
-- Hover lift (`-translate-y-px`) + icon scale on vault cards, landing feature cards, dashboard stat cards
-- Dialog: deeper backdrop (`bg-black/40 backdrop-blur-sm`), `shadow-xl`, `slide-in-from-bottom` entrance, 200 ms ease
-- Dropdown: `shadow-lg`, tighter `zoom-in-[0.97]`, `slide-in-from-top-1`, 150 ms ease
-- Input: hover border feedback (`hover:border-ring/40`) on all text inputs
-- Theme toggle: rotate crossfade animation (sun `0° → -90°`, moon `90° → 0°`)
-- Settings section cards: subtle `shadow-xs` elevation layer
-- Full `prefers-reduced-motion` support across all animations
+Release notes live in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
 ## Project structure
 
 ```
-src/
-├── app/                    # Next.js App Router pages & layouts
-│   ├── auth/               # Sign-in, sign-up, forgot/reset password, verify email
-│   ├── vault/
-│   │   ├── (app)/          # Authenticated vault — list, dashboard, settings
-│   │   └── (gate)/         # Vault setup & unlock screens
-│   ├── layout.tsx          # Root layout with CSP nonce + OG metadata
-│   └── page.tsx            # Public landing page
-├── components/
-│   ├── shared/             # ThemeToggle, KeyCryptLogo, PageHeader
-│   └── ui/                 # shadcn/ui primitives — Button, Input, Dialog, Command, …
-├── features/
-│   ├── auth/               # Sign-in/up forms, field errors, forgot/reset password
-│   └── vault/              # VaultList, VaultHeader, CommandPalette, VaultHealthScore, item dialogs, password generator
-├── lib/
-│   ├── auth.ts             # Auth.js configuration (Credentials provider, JWT sessions)
-│   ├── crypto/             # Web Crypto API — key derivation, encryption, verification (sole encryption surface)
-│   ├── vault-health.ts     # Client-side weak/reused/stale/breached password scoring
-│   ├── rate-limit.ts       # Rate limiting (Upstash Redis, in-memory fallback)
-│   └── db.ts               # Prisma client singleton
-├── providers/              # ThemeProvider, VaultLockProvider, CommandPaletteProvider
-├── schemas/                # Zod schemas for vault items and auth forms
-├── server/                 # Server actions — vault CRUD, auth, settings
-└── types/                  # Shared TypeScript types
+.
+├── src/
+│   ├── app/                    # Next.js App Router pages & layouts
+│   │   ├── api/
+│   │   │   ├── auth/           # Auth.js route handler
+│   │   │   └── ext/            # JSON API for the browser extension (session cookie, ciphertext only)
+│   │   ├── auth/               # Sign-in, sign-up, forgot/reset password, verify email
+│   │   ├── vault/
+│   │   │   ├── (app)/          # Unlocked vault — list, dashboard, settings
+│   │   │   └── (gate)/         # Vault setup & unlock screens
+│   │   ├── layout.tsx          # Root layout with fonts, CSP nonce + OG metadata
+│   │   └── page.tsx            # Landing page (composes src/features/landing)
+│   ├── components/
+│   │   ├── shared/             # ThemeToggle, KeyCryptLogo, design icons, sign-out button
+│   │   └── ui/                 # shadcn/ui primitives — Button, Input, Dialog, Command, …
+│   ├── features/
+│   │   ├── auth/               # Sign-in/up forms, forgot/reset password
+│   │   ├── landing/            # One component per landing-page section
+│   │   └── vault/              # Vault list, header, toolbar, item rows and details panel, dialogs,
+│   │                           # health score, import/export, recovery kit, two-factor settings
+│   ├── lib/
+│   │   ├── crypto/             # All cryptography (public API in index.ts) — KDF, wrapping, AAD, recovery
+│   │   ├── auth.ts             # Auth.js configuration (Credentials provider, JWT sessions)
+│   │   ├── env.ts              # Start-up validation of environment variables
+│   │   ├── env-check.mjs       # Missing/malformed production settings (pnpm check:env)
+│   │   ├── vault-health.ts     # Client-side weak/reused/stale/breached password scoring
+│   │   ├── rate-limit.ts       # Rate limiting (Upstash Redis, in-memory fallback)
+│   │   └── db.ts               # Prisma client singleton
+│   ├── providers/              # ThemeProvider, VaultLockProvider, CommandPaletteProvider
+│   ├── schemas/                # Zod schemas for server actions, vault items and auth forms
+│   ├── server/                 # Server actions — vault, items, folders, auth, two-factor, export, account, settings
+│   ├── types/                  # Shared TypeScript types
+│   ├── instrumentation.ts      # Logs missing production settings at start-up
+│   └── proxy.ts                # Next 16 proxy: session check, route guards, CSP nonce
+├── extension/                  # Manifest V3 browser extension (imports keycrypt/crypto)
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/             # Prisma Migrate history (0_init = baseline)
+├── e2e/                        # Playwright specs (app, Docker smoke test, extension)
+├── docs/                       # threat-model.md
+├── scripts/                    # vercel-build.mjs, check-env.mjs
+├── CHANGELOG.md
+├── LICENSE                     # MIT
+└── SECURITY.md
 ```
 
 ---
 
 ## License
 
-MIT © [Kanishk Sharma](https://github.com/kanishksharma04)
+[MIT](LICENSE) © [Kanishk Sharma](https://github.com/kanishksharma04)
