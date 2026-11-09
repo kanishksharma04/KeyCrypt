@@ -106,7 +106,9 @@ vault key (random AES-256-GCM) ──► items, folder names, verification blob
 - **Associated data (AAD)** binds each ciphertext to its row: `kc:v2|<userId>|<itemId>|<type>`.
   Item ids are random UUIDs generated in the browser before encryption, and the server refuses
   duplicates. A server that swaps ciphertexts between items, item types or users makes decryption
-  fail instead of showing the wrong secret.
+  fail instead of showing the wrong secret. The AAD has no version, so it does **not** stop the
+  server returning an older ciphertext of the same item (see
+  [Attacks not covered](#attacks-not-covered)).
 - **Folder names** are encrypted the same way, with AAD `kc:v2-folder|<userId>|<folderId>`.
   The different prefix stops a folder name being passed off as an item.
 
@@ -165,20 +167,20 @@ browser.
 
 ## Attacks covered
 
-| Attack                                          | Mitigation                                                                                                                                              |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database or backup leak                         | Only ciphertext, wrapped keys and hashes. Offline guessing of a master password costs one Argon2id (64 MiB) per guess.                                  |
-| Passive malicious operator                      | Same as above. The server never receives the master password, vault key or plaintext.                                                                   |
-| Swapping or replaying ciphertext between rows   | AES-GCM with AAD bound to user, item or folder id, and type. Tampered data fails to decrypt.                                                            |
-| Server supplying weak or extreme KDF parameters | The browser bounds-checks KDF parameters before deriving; new writes must be Argon2id.                                                                  |
-| Network eavesdropping or tampering              | HTTPS with HSTS in production. Even without TLS, vault data is ciphertext (but see "malicious JavaScript").                                             |
-| Credential stuffing and brute force on sign-in  | Argon2id account hashes, per-IP and per-email rate limits, the same response for unknown emails, optional TOTP.                                         |
-| Stolen session cookie                           | The vault still needs the master password. Destructive actions need the account password. Sessions can be revoked everywhere.                           |
-| Other users (IDOR)                              | Every server action and query is scoped by the session user's id; ids in updates and deletes are filtered by owner. Covered by integration tests.       |
-| XSS                                             | React escaping, a nonce-based CSP with no `unsafe-inline` scripts, `frame-ancestors 'none'`, and `connect-src` limited to the app and HIBP.             |
-| Clickjacking                                    | `frame-ancestors 'none'` and `X-Frame-Options`.                                                                                                         |
-| Shoulder surfing and walk-away                  | Secrets hidden until revealed. Auto-lock after 15 minutes of inactivity or 5 minutes in a hidden tab. The clipboard is cleared 30 seconds after a copy. |
-| Forgotten master password                       | The recovery key (if saved). Without it, the vault can't be recovered by anyone, including the operator.                                                |
+| Attack                                          | Mitigation                                                                                                                                                                                                       |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database or backup leak                         | Only ciphertext, wrapped keys and hashes. Offline guessing of a master password costs one Argon2id (64 MiB) per guess.                                                                                           |
+| Passive malicious operator                      | Same as above. The server never receives the master password, vault key or plaintext.                                                                                                                            |
+| Swapping or replaying ciphertext between rows   | Between rows only: AES-GCM with AAD bound to user, item or folder id, and type, so a ciphertext moved to another row fails to decrypt. Replaying an older ciphertext of the same row is not covered (see below). |
+| Server supplying weak or extreme KDF parameters | The browser bounds-checks KDF parameters before deriving; new writes must be Argon2id.                                                                                                                           |
+| Network eavesdropping or tampering              | HTTPS with HSTS in production. Even without TLS, vault data is ciphertext (but see "malicious JavaScript").                                                                                                      |
+| Credential stuffing and brute force on sign-in  | Argon2id account hashes, per-IP and per-email rate limits, the same response for unknown emails, optional TOTP.                                                                                                  |
+| Stolen session cookie                           | The vault still needs the master password. Destructive actions need the account password. Sessions can be revoked everywhere.                                                                                    |
+| Other users (IDOR)                              | Every server action and query is scoped by the session user's id; ids in updates and deletes are filtered by owner. Covered by integration tests.                                                                |
+| XSS                                             | React escaping, a nonce-based CSP with no `unsafe-inline` scripts, `frame-ancestors 'none'`, and `connect-src` limited to the app and HIBP.                                                                      |
+| Clickjacking                                    | `frame-ancestors 'none'` and `X-Frame-Options`.                                                                                                                                                                  |
+| Shoulder surfing and walk-away                  | Secrets hidden until revealed. Auto-lock after 15 minutes of inactivity or 5 minutes in a hidden tab. The clipboard is cleared 30 seconds after a copy.                                                          |
+| Forgotten master password                       | The recovery key (if saved). Without it, the vault can't be recovered by anyone, including the operator.                                                                                                         |
 
 ## Attacks not covered
 
@@ -200,10 +202,29 @@ browser.
   the activity log (IP addresses, browsers) are visible to the server, as listed above.
 - **Plain CSV exports and imported files.** Once a plain export, or an export from another
   password manager, is on disk, it is protected only by the device.
-- **Denial of service and data loss.** The operator can delete or withhold ciphertext. Keep
+- **Rolling an item back to an older version.** A malicious or compromised server can serve an
+  older ciphertext of the same item (for example a password you have since changed). The AAD binds
+  the ciphertext to user, item and type but not to a version, so the old ciphertext decrypts and
+  the browser shows it as current.
+- **Withholding or deleting items.** The server can leave items, or folders, out of the list it
+  returns, or delete them, and the browser can't tell: there is no authenticated list of which
+  items a vault should contain.
+- **Changing plain-text metadata.** Favourite flags, folder membership and the created/updated
+  timestamps are stored in plain text and are not authenticated, so the server can change them
+  without the browser noticing. Item types are bound by the AAD; a changed type makes decryption
+  fail.
+- **Denial of service and data loss.** The operator can stop serving the vault altogether. Keep
   encrypted exports as backups.
 - **Side channels in the browser**, such as memory inspection while the vault is unlocked.
   JavaScript strings holding decrypted values can't be reliably wiped.
+
+## Future work
+
+- **Vault integrity against a malicious server.** The planned fix for rollback, withholding and
+  metadata changes is a per-item version (a counter bumped on every edit) inside the item AAD, plus
+  a list of the vault's items (id, type, version and the metadata above) signed or MACed with a key
+  derived from the vault key and checked by the browser on every load. Until then, those attacks
+  are not covered.
 
 ## Reporting
 

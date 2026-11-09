@@ -58,12 +58,14 @@ Especially interesting:
 
 - anything that lets the server, or someone with database access, read vault contents, item
   names, folder names or the master password,
-- ways to make the browser accept tampered or swapped ciphertext,
+- ways to make the browser accept tampered ciphertext, or ciphertext swapped between rows,
 - authentication or authorisation bypasses (reading or changing another user's data),
 - weaknesses in key derivation, key wrapping, the recovery key or the export format.
 
 Out of scope: attacks the [threat model](docs/threat-model.md#attacks-not-covered) lists as not
-covered (a compromised device, phishing, a malicious server shipping malicious JavaScript),
+covered (a compromised device, phishing, a malicious server shipping malicious JavaScript, or
+a malicious server rolling an item back to an older ciphertext, withholding items or changing
+plain-text metadata),
 denial of service through volume, missing best-practice headers without a demonstrated impact, and
 reports from automated scanners without a working attack.
 

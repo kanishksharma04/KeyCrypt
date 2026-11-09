@@ -53,6 +53,20 @@ describe("docs/threat-model.md matches the code", () => {
     expect(folderAad({ userId: "U", folderId: "F" })).toBe("kc:v2-folder|U|F");
     expect(doc).toContain("`kc:v2-folder|<userId>|<folderId>`");
   });
+
+  it("lists rollback, withheld items and metadata changes as not covered while the AAD has no version", () => {
+    // The item AAD has no version field. If one is added, revisit "Attacks not covered".
+    expect(itemAad({ userId: "U", itemId: "I", type: "T" }).split("|")).toHaveLength(4);
+    const notCovered = doc.slice(
+      doc.indexOf("## Attacks not covered"),
+      doc.indexOf("\n## ", doc.indexOf("## Attacks not covered") + 1)
+    );
+    expect(notCovered).toContain("**Rolling an item back to an older version.**");
+    expect(notCovered).toContain("**Withholding or deleting items.**");
+    expect(notCovered).toContain("**Changing plain-text metadata.**");
+    expect(doc).toMatch(/\| Swapping or replaying ciphertext between rows +\| Between rows only:/);
+    expect(doc).toContain("## Future work");
+  });
 });
 
 describe("public/.well-known/security.txt (RFC 9116)", () => {
