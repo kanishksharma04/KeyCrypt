@@ -27,7 +27,7 @@ The full [threat model](docs/threat-model.md) covers assets, attackers, trust bo
 The server also handles your email and name, your account password while you sign in, sign up,
 reset it or confirm it (it stores only the Argon2id hash), the session cookie, and client IPs and
 emails for rate limiting. From the ciphertext it can tell how many items you have and roughly how
-large each one is. Each audit entry records the IP address and browser (user agent) of the request; you can see them under Settings → Recent activity.
+large each one is. Each audit entry records the IP address and browser (user agent) of the request; you can see them under Settings → Recent activity. Failed server requests are logged as one scrubbed line, without request bodies, headers or cookies (see [Monitoring](#monitoring)).
 
 **Breached-password check (opt-in).** The "Check for breached passwords" button in vault health
 asks [Have I Been Pwned](https://haveibeenpwned.com/Passwords) directly from your browser. Each
@@ -322,6 +322,42 @@ Things to know:
   the container starts (`SKIP_MIGRATIONS=1` turns that off).
 - **Smoke test** a running instance: `DOCKER_APP_URL=http://localhost:3000 pnpm test:docker`
   (creates a throwaway account).
+
+---
+
+## Monitoring
+
+Server errors are reported without sending vault data anywhere and without any third-party
+service. For every failed server request (page render, route handler or server action),
+`onRequestError` in `src/instrumentation.ts` writes **one JSON line to stdout**, which shows up in
+Vercel's runtime logs and in `docker logs`:
+
+```json
+{
+  "level": "error",
+  "event": "request_error",
+  "route": "/vault/settings",
+  "routeType": "action",
+  "method": "POST",
+  "name": "TypeError",
+  "message": "Cannot read properties of undefined (reading 'id')",
+  "digest": "3562928504",
+  "timestamp": "2026-11-09T21:39:57.000Z"
+}
+```
+
+- **Logged:** the route pattern (never the concrete path, whose query string can hold reset or
+  verification tokens), method, error name, Next.js digest, time, and the error message cut to
+  300 characters after emails, URLs with credentials, query strings, JWTs and long token- or
+  ciphertext-like strings are redacted (`scrubErrorMessage` in `src/lib/error-report.ts`).
+- **Never logged:** request bodies, headers, cookies, form data or server-action arguments; the
+  reporter is never given them.
+- In production, Next.js's own unscrubbed print of the same error (message and stack trace) is
+  suppressed, so each error appears once. Use the digest to match a log line to what a user saw;
+  run `pnpm dev` locally for full stack traces.
+- The error pages (`src/app/error.tsx`, `src/app/global-error.tsx`) show a plain message and the
+  digest, never the error message. **Errors in the browser are not reported anywhere**, because
+  they could contain decrypted vault data.
 
 ---
 

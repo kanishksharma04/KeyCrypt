@@ -164,7 +164,13 @@ folder names.
 - the TOTP secret (encrypted with a server key the server holds) and backup-code hashes;
 - an **audit log** of account events with timestamp, **IP address and browser (user agent)**,
   item type on create and export format, kept for **180 days**;
-- session cookies, client IPs and emails (for rate limiting), and normal request logs.
+- session cookies, client IPs and emails (for rate limiting), and normal request logs;
+- **server error logs**: one JSON line per failed request on the server's stdout (route pattern,
+  method, error name, digest, time and the error message, cut to 300 characters with emails, URLs
+  with credentials, query strings, tokens and ciphertext-like strings redacted). Request bodies,
+  headers, cookies, form data and server-action arguments are never logged, and nothing is sent to
+  a third party. Errors in the browser are never reported, since they could contain decrypted
+  data (`src/lib/error-report.ts`).
 
 **Have I Been Pwned** (only if the user runs the breach check) sees the first 5 hex characters of
 each password's SHA-1 and the user's IP address. The full hash and the password stay in the
