@@ -84,7 +84,11 @@ test("exports the vault as encrypted JSON and as plain CSV", async ({ page }) =>
   for (const s of [LOGIN.name, LOGIN.password, NOTE.content]) expect(fileText).not.toContain(s);
 
   const file: unknown = JSON.parse(fileText);
-  expect(file).toMatchObject({ format: "keycrypt-export", version: 1 });
+  expect(file).toMatchObject({
+    format: "keycrypt-export",
+    version: 2,
+    kdf: { name: "argon2id", memoryKiB: 65_536, iterations: 3, parallelism: 1 },
+  });
   await expect(decryptExport(file, "Wrong-Export-Pass-0!")).rejects.toThrow();
 
   const payload = await decryptExport<VaultExportPayload>(file, EXPORT_PASSWORD);
