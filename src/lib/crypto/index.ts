@@ -53,6 +53,7 @@ export {
 
 export {
   deriveKek,
+  deriveArgon2idEncryptionKey,
   parseKdfConfig,
   KdfConfigError,
   DEFAULT_ARGON2ID_PARAMS,
@@ -77,7 +78,7 @@ export {
   EXPORT_FORMAT,
   EXPORT_VERSION,
 } from "./export";
-export type { EncryptedExportFile } from "./export";
+export type { EncryptedExportFile, EncryptedExportFileV1 } from "./export";
 
 export {
   generatePassword,

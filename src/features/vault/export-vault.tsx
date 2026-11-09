@@ -97,7 +97,7 @@ export function ExportVault() {
   const exportEncrypted = handleSubmit(({ exportPassword }) =>
     run("encrypted-json", async () => {
       const { items, folders } = await loadDecryptedVault(userId);
-      // PBKDF2 (600k) + AES-256-GCM under the export password, with a fresh salt.
+      // Argon2id (vault parameters) + AES-256-GCM under the export password, with a fresh salt.
       const file = await encryptExport(buildExportPayload(items, folders), exportPassword);
       await recordExport("encrypted-json");
       downloadFile(

@@ -3,7 +3,7 @@ import type { VaultExportPayload } from "@/lib/vault-export";
 import { ImportCollector, asWifiSecurity, importedTotp, str } from "./normalize";
 import { ImportFormatError, type ImportResult } from "./types";
 
-// KeyCrypt's own password-protected export (Settings → Export, "keycrypt-export" v1).
+// KeyCrypt's own password-protected export (Settings → Export, "keycrypt-export" v2, or v1 from before Argon2id).
 // Decrypted here with the export password; throws ExportDecryptionError if wrong.
 
 /** Rebuild an otpauth:// link from a stored OTP secret's fields (validated afterwards). */

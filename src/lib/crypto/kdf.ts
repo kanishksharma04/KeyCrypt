@@ -163,6 +163,29 @@ async function argon2idOffMainThread(
   return argon2idRaw(password, salt, params);
 }
 
+const AES_256_GCM = { name: "AES-GCM", length: 256 } as const;
+
+/** Argon2id (off the main thread), imported as a non-extractable AES-256-GCM key. */
+async function argon2idAesKey(
+  password: string,
+  salt: Uint8Array<ArrayBuffer>,
+  params: Argon2idParams,
+  usages: KeyUsage[]
+): Promise<CryptoKey> {
+  const raw = await argon2idOffMainThread(password, salt, params);
+  try {
+    return await globalThis.crypto.subtle.importKey(
+      "raw",
+      new Uint8Array(raw),
+      AES_256_GCM,
+      false,
+      usages
+    );
+  } finally {
+    raw.fill(0); // best effort: don't leave key bytes in JS memory
+  }
+}
+
 // ─── KEK ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -175,21 +198,10 @@ export async function deriveKek(
   config: KdfConfig = DEFAULT_KDF_CONFIG
 ): Promise<CryptoKey> {
   const usages: KeyUsage[] = ["wrapKey", "unwrapKey"];
-  const aes = { name: "AES-GCM", length: 256 } as const;
+  const aes = AES_256_GCM;
 
   if (config.kdf === "argon2id") {
-    const raw = await argon2idOffMainThread(masterPassword, salt, config.params);
-    try {
-      return await globalThis.crypto.subtle.importKey(
-        "raw",
-        new Uint8Array(raw),
-        aes,
-        false,
-        usages
-      );
-    } finally {
-      raw.fill(0); // best effort: don't leave key bytes in JS memory
-    }
+    return argon2idAesKey(masterPassword, salt, config.params, usages);
   }
 
   const material = await globalThis.crypto.subtle.importKey(
@@ -206,4 +218,19 @@ export async function deriveKek(
     false,
     usages
   );
+}
+
+// ─── Password-encrypted files (exports) ──────────────────────────────────────
+
+/**
+ * Derive a non-extractable AES-256-GCM encrypt/decrypt key from a password with
+ * Argon2id, for data encrypted directly under a password (the encrypted
+ * export). Callers bounds-check `params` first (parseKdfConfig).
+ */
+export async function deriveArgon2idEncryptionKey(
+  password: string,
+  salt: Uint8Array<ArrayBuffer>,
+  params: Argon2idParams = DEFAULT_ARGON2ID_PARAMS
+): Promise<CryptoKey> {
+  return argon2idAesKey(password, salt, params, ["encrypt", "decrypt"]);
 }

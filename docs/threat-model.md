@@ -130,8 +130,13 @@ vault key (random AES-256-GCM) ──► items, folder names, verification blob
 
 ### Exports
 
-- **Encrypted export**: PBKDF2-SHA-256 (600,000 iterations, fresh salt) under a separate export
-  password, then AES-256-GCM. It is built in the browser.
+- **Encrypted export** (`keycrypt-export` v2): the key is derived from a separate export password
+  with Argon2id and the vault's parameters (64 MiB, 3 iterations, parallelism 1, fresh 16-byte
+  salt), in the KDF Web Worker, then the payload is encrypted with AES-256-GCM. The KDF and its
+  parameters are recorded in the file header and bounds-checked with the vault KDF limits before
+  deriving, so a crafted file can't make the browser hang or run out of memory. It is built in the
+  browser. Files in the older v1 format (PBKDF2-SHA-256, 600,000 iterations) can still be
+  imported, but are no longer written.
 - **CSV export**: plain text, after an account-password confirmation. The user is warned.
 
 ### Browser extension
