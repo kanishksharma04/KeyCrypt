@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
+import { routeAccess } from "@/lib/routes";
 
 // Edge-safe Auth.js instance: verifies the session JWT (signature + expiry)
 // without touching the database. Invalid or tampered tokens yield req.auth = null
 // and their cookies are cleared on the response.
 const { auth } = NextAuth(authConfig);
 
-// Protected route prefixes
-const PROTECTED = ["/vault"];
-// Routes that redirect to vault when already signed in
-const AUTH_ONLY = ["/auth/signin", "/auth/signup"];
+// Which routes need a session, which are for signed-out visitors only, and
+// which are public (including /, /privacy and /terms): src/lib/routes.ts.
 
 // ─── CSP ──────────────────────────────────────────────────────────────────────
 
@@ -57,8 +56,9 @@ export const proxy = auth((req) => {
   // on the Node side, by auth() in each route. Keep the proxy cheap: no Prisma here.
   const isSignedIn = !!req.auth;
 
-  const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
-  const isAuthOnly = AUTH_ONLY.some((p) => pathname.startsWith(p));
+  const access = routeAccess(pathname);
+  const isProtected = access === "protected";
+  const isAuthOnly = access === "auth-only";
 
   if (isProtected && !isSignedIn) {
     const url = req.nextUrl.clone();

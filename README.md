@@ -290,6 +290,7 @@ runs `prisma migrate deploy`, then starts the server.
    AUTH_SECRET=...            # openssl rand -base64 32
    POSTGRES_PASSWORD=...      # a long random password
    TOTP_ENCRYPTION_KEY=...    # optional, enables two-factor sign-in: openssl rand -base64 32
+   OPERATOR_CONTACT=you@example.com   # optional, shown on /privacy and /terms
    APP_URL=https://vault.example.com   # optional, default http://localhost:3000
    APP_PORT=3000              # optional, host port
    ```
@@ -308,6 +309,7 @@ runs `prisma migrate deploy`, then starts the server.
 | `POSTGRES_PASSWORD`                                              | yes      | Password of the bundled Postgres; `DATABASE_URL` is built from it                                                                      |
 | `APP_URL`                                                        | no       | Public URL. Used for `AUTH_URL` and baked into the build as `NEXT_PUBLIC_APP_URL`, so **rebuild** (`--build`) after changing it        |
 | `TOTP_ENCRYPTION_KEY`                                            | no       | 32 random bytes, base64. Without it two-factor sign-in is unavailable. Changing it breaks existing 2FA codes (backup codes still work) |
+| `OPERATOR_CONTACT`                                               | no       | Who runs this instance (email or `https://` URL), shown on `/privacy` and `/terms`. Without it they show a neutral placeholder         |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`             | no       | Shared rate-limit store. Not needed for a single container                                                                             |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | no       | Email verification and password reset. Without SMTP, new accounts are verified automatically                                           |
 
@@ -370,16 +372,17 @@ Vercel's runtime logs and in `docker logs`:
 1. Push to GitHub and import the repo in the [Vercel dashboard](https://vercel.com/new).
 2. Set these environment variables:
 
-| Variable                   | Value                                            |
-| -------------------------- | ------------------------------------------------ |
-| `DATABASE_URL`             | Neon pooler connection string                    |
-| `AUTH_SECRET`              | `openssl rand -base64 32`                        |
-| `AUTH_URL`                 | `https://your-app.vercel.app`                    |
-| `AUTH_TRUST_HOST`          | `true`                                           |
-| `NEXT_PUBLIC_APP_URL`      | `https://your-app.vercel.app`                    |
-| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST URL (optional, recommended)   |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (optional, recommended) |
-| `TOTP_ENCRYPTION_KEY`      | `openssl rand -base64 32` (enables 2FA)          |
+| Variable                   | Value                                                                  |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `DATABASE_URL`             | Neon pooler connection string                                          |
+| `AUTH_SECRET`              | `openssl rand -base64 32`                                              |
+| `AUTH_URL`                 | `https://your-app.vercel.app`                                          |
+| `AUTH_TRUST_HOST`          | `true`                                                                 |
+| `NEXT_PUBLIC_APP_URL`      | `https://your-app.vercel.app`                                          |
+| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST URL (optional, recommended)                         |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (optional, recommended)                       |
+| `TOTP_ENCRYPTION_KEY`      | `openssl rand -base64 32` (enables 2FA)                                |
+| `OPERATOR_CONTACT`         | Your contact email or URL, shown on `/privacy` and `/terms` (optional) |
 
 3. Deploy. Production builds run `pnpm vercel-build` (`scripts/vercel-build.mjs`), which
    applies pending migrations with `prisma migrate deploy` before `next build`, over the

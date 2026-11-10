@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ExternalLink, Wordmark } from "./primitives";
 import { MONO, REPO, WRAP } from "./styles";
@@ -18,14 +19,14 @@ export function Colophon() {
           <p className={cn(MONO, "text-faint mb-4")}>Product</p>
           <ul className="space-y-2.5 text-sm">
             <li>
-              <a href="#contents" className="hover:text-brand-deep transition-colors">
+              <Link href="/#contents" className="hover:text-brand-deep transition-colors">
                 Contents
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#security" className="hover:text-brand-deep transition-colors">
+              <Link href="/#security" className="hover:text-brand-deep transition-colors">
                 Security
-              </a>
+              </Link>
             </li>
             <li>
               <ExternalLink href={`${REPO}/tree/main/extension`}>Browser extension</ExternalLink>
@@ -63,7 +64,13 @@ export function Colophon() {
       >
         <span>© {new Date().getFullYear()} KeyCrypt · Open source, MIT</span>
         {/* Vulnerability disclosure (RFC 9116). */}
-        <span className="flex gap-4">
+        <span className="flex flex-wrap gap-4">
+          <Link href="/privacy" className="hover:text-brand-deep transition-colors">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-brand-deep transition-colors">
+            Terms
+          </Link>
           <ExternalLink href={`${REPO}/blob/main/SECURITY.md`}>Security policy</ExternalLink>
           <a href="/.well-known/security.txt" className="hover:text-brand-deep transition-colors">
             security.txt

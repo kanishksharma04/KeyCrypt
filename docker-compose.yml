@@ -47,6 +47,8 @@ services:
       NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3000}
       # Optional; leave empty to disable.
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-}
+      # Optional: who runs this instance (email or https:// URL), shown on /privacy and /terms.
+      OPERATOR_CONTACT: ${OPERATOR_CONTACT:-}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
       SMTP_HOST: ${SMTP_HOST:-}
