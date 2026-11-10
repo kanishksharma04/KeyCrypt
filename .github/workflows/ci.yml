@@ -68,13 +68,24 @@ jobs:
       - name: Lint
         run: pnpm lint --max-warnings 0
 
-      - name: Unit tests
-        run: pnpm test
+      # Fails below the thresholds in vitest.config.ts (src/lib, stricter for src/lib/crypto).
+      - name: Unit tests with coverage
+        run: pnpm test:coverage
 
-      - name: Integration tests
-        run: pnpm test:integration
+      # Fails below the thresholds in vitest.integration.config.ts (src/server).
+      - name: Integration tests with coverage
+        run: pnpm test:integration --coverage
         env:
           DATABASE_URL_TEST: postgresql://keycrypt:keycrypt@localhost:5432/keycrypt_test
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Build
         run: pnpm build

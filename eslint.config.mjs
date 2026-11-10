@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated coverage reports (pnpm test:coverage)
+    "coverage/**",
     // Built browser extension
     "extension/dist/**",
     "extension/dist-e2e/**",

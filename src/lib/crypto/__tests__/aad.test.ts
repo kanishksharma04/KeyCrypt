@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { decryptItem, encryptItem, generateItemId, generateVaultKey, itemAad } from "../index";
+import {
+  decryptItem,
+  encryptItem,
+  folderAad,
+  generateItemId,
+  generateVaultKey,
+  itemAad,
+} from "../index";
 
 const ALICE = "cuseralice000000000000001";
 const BOB = "cuserbob00000000000000001";
@@ -53,6 +60,21 @@ describe("item AAD (crypto v2)", () => {
     expect(ids.size).toBe(100);
     for (const id of ids) {
       expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    }
+  });
+});
+
+describe("folder AAD", () => {
+  it("rejects empty components and components containing the separator", () => {
+    for (const [userId, folderId] of [
+      ["", "f1"],
+      ["u1", ""],
+      ["u1|kc:v2", "f1"],
+      ["u1", "f1|LOGIN"],
+    ]) {
+      expect(() => folderAad({ userId: userId!, folderId: folderId! })).toThrow(
+        "Invalid AAD component"
+      );
     }
   });
 });

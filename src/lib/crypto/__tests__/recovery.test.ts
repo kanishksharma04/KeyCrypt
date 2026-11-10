@@ -84,3 +84,13 @@ describe("recovery KEK (HKDF-SHA-256)", () => {
     expect([...kek.usages].sort()).toEqual(["unwrapKey", "wrapKey"]);
   });
 });
+
+describe("recovery KEK input checks", () => {
+  it("refuses a recovery key of the wrong length", async () => {
+    for (const length of [0, 15, 17, 32]) {
+      await expect(deriveRecoveryKek(new Uint8Array(length), USER)).rejects.toBeInstanceOf(
+        RecoveryKeyFormatError
+      );
+    }
+  });
+});

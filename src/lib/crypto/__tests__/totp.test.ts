@@ -83,3 +83,12 @@ describe("server-side encryption of the secret", () => {
     );
   });
 });
+
+describe("server TOTP key checks", () => {
+  it("refuses a TOTP_ENCRYPTION_KEY that isn't base64", async () => {
+    await expect(
+      encryptTotpSecret(generateTotpSecret(), "not base64!!", USER)
+    ).rejects.toBeInstanceOf(TotpKeyError);
+    await expect(decryptTotpSecret("aaaa.bbbb", "%%%%", USER)).rejects.toBeInstanceOf(TotpKeyError);
+  });
+});

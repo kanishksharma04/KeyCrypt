@@ -214,6 +214,7 @@ pnpm check:env    # List missing or malformed production settings (names only)
 pnpm typecheck    # TypeScript type check
 pnpm lint         # ESLint
 pnpm test         # Vitest unit tests (no database)
+pnpm test:coverage # Unit tests with coverage; fails below the thresholds (src/lib, stricter for src/lib/crypto)
 pnpm test:integration # Server-action tests against Postgres (see below)
 pnpm test:e2e     # Playwright end-to-end tests against a production build (see below)
 pnpm test:docker  # Smoke test against a running Docker container (see Self-hosting)
@@ -255,6 +256,9 @@ pnpm test:integration
 
 The suite applies migrations (`prisma migrate deploy`) once, then truncates every table
 before each test. It refuses to run unless the database name contains `test`.
+`pnpm test:integration --coverage` also measures `src/server` and the server-side helpers only
+these tests reach (`src/test/coverage-scope.ts`), and fails below the thresholds in
+`vitest.integration.config.ts`. CI runs both coverage runs.
 
 ### End-to-end tests
 

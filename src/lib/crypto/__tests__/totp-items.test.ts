@@ -141,6 +141,8 @@ describe("parseTotpInput", () => {
     ["otpauth://hotp/x?secret=JBSWY3DPEHPK3PXP&counter=1"],
     ["otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&digits=4"],
     ["otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&algorithm=MD5"],
+    ["otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&period=5"],
+    ["otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&period=3600"],
     ["otpauth://totp/x"],
     [""],
   ])("rejects %j", (input) => {

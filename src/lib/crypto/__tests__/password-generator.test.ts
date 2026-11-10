@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   generatePassword,
   getPasswordStrength,
@@ -129,5 +129,43 @@ describe("estimatePasswordStrength", () => {
     const generated = getPasswordStrength(DEFAULT_PASSWORD_OPTIONS);
     const estimated = estimatePasswordStrength(pw);
     expect(estimated.label).toBe(generated.label);
+  });
+});
+
+describe("generatePassword randomness", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("discards random bytes that would bias the result (rejection sampling)", () => {
+    // For the 26 lowercase letters the usable range is 0–233; 234–255 must be
+    // discarded, or a–v would come up more often than w–z.
+    const bytes = [255, 234, 3];
+    const spy = vi
+      .spyOn(globalThis.crypto, "getRandomValues")
+      .mockImplementation(<T extends ArrayBufferView | null>(array: T): T => {
+        (array as unknown as Uint8Array)[0] = bytes.shift() ?? 0;
+        return array;
+      });
+    expect(generatePassword({ ...LOWER_ONLY, length: 1 })).toBe("d");
+    expect(spy).toHaveBeenCalledTimes(3);
+  });
+
+  it("falls back to lowercase letters when no character set is selected", () => {
+    const none = { ...LOWER_ONLY, lowercase: false };
+    expect(generatePassword({ ...none, length: 24 })).toMatch(/^[a-z]{24}$/);
+    expect(getPasswordStrength(none)).toEqual(getPasswordStrength(LOWER_ONLY));
+  });
+});
+
+describe("strength labels", () => {
+  it("labels 40–59 bits Fair and 60–79 bits Good", () => {
+    // Lowercase only: log2(26) ≈ 4.70 bits per character.
+    expect(getPasswordStrength({ ...LOWER_ONLY, length: 10 })).toMatchObject({
+      label: "Fair",
+      level: 1,
+    });
+    expect(getPasswordStrength({ ...LOWER_ONLY, length: 14 })).toMatchObject({
+      label: "Good",
+      level: 2,
+    });
   });
 });

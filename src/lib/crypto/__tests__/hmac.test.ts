@@ -35,3 +35,10 @@ describe("hmacSign / hmacVerify", () => {
     }
   });
 });
+
+describe("hmacVerify with malformed signatures", () => {
+  it("returns false, without throwing, for a signature that isn't base64url", async () => {
+    await expect(hmacVerify("secret", "message", "not base64 at all!!")).resolves.toBe(false);
+    await expect(hmacVerify("secret", "message", "")).resolves.toBe(false);
+  });
+});

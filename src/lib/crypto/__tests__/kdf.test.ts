@@ -59,6 +59,30 @@ describe("parseKdfConfig", () => {
   });
 });
 
+describe("parseKdfConfig for legacy PBKDF2 vaults", () => {
+  it("accepts recorded parameters within bounds and defaults missing ones to 600,000", () => {
+    expect(parseKdfConfig("pbkdf2", { iterations: 600_000, hash: "SHA-256" })).toEqual({
+      kdf: "pbkdf2",
+      params: { iterations: 600_000, hash: "SHA-256" },
+    });
+    expect(parseKdfConfig("pbkdf2", null)).toEqual({
+      kdf: "pbkdf2",
+      params: { iterations: 600_000, hash: "SHA-256" },
+    });
+  });
+
+  it("rejects PBKDF2 parameters a hostile server could use to weaken or stall unlocking", () => {
+    for (const params of [
+      { iterations: 1_000, hash: "SHA-256" }, // too weak
+      { iterations: 100_000_000, hash: "SHA-256" }, // would stall the browser
+      { iterations: 600_000, hash: "SHA-1" },
+      { iterations: "600000", hash: "SHA-256" },
+    ]) {
+      expect(() => parseKdfConfig("pbkdf2", params)).toThrow(KdfConfigError);
+    }
+  });
+});
+
 describe("deriveKek with Argon2id", () => {
   it("matches an independent Argon2id implementation (@node-rs/argon2)", async () => {
     const password = "Master-Pass-1!";

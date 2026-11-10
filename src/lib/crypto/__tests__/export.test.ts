@@ -208,6 +208,8 @@ describe("export file validation", () => {
       { ...good, kdf: undefined },
       { ...good, salt: "AAAA" }, // wrong length
       { ...good, iv: "AAAA" },
+      { ...good, salt: "not base64!" },
+      { ...good, iv: "%%%%" },
     ];
     for (const file of bad) {
       await expect(decryptExport(file, PASSWORD)).rejects.toBeInstanceOf(ExportDecryptionError);
