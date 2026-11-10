@@ -76,7 +76,9 @@ and decryption happens in the browser.
   and `VaultItem.name` is null; names are decrypted, searched and sorted in the browser
   (vault list, command palette, health). Server-visible plain text: item `type`, `favorite`,
   `folderId`, `createdAt`/`updatedAt`. `AuditLog` stores actions with timestamps, IP and user agent (always
-  via `logAudit()` in `src/lib/audit.ts`, which prunes entries older than 180 days),
+  via `logAudit()` in `src/lib/audit.ts`; entries older than 180 days are deleted by the daily
+  cron `GET /api/cron/prune-audit` (`CRON_SECRET`, `vercel.json`) and, without a scheduler, by
+  `logAudit()` at most once a day per process),
   item type on create and export format; shown in Settings → Recent activity. Keep README's security table and
   the landing page's "What the server can see today" note in sync with any change here.
 

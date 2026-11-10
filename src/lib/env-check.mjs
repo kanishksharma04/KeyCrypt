@@ -19,6 +19,8 @@ export const RECOMMENDED_SETTINGS = [
   "SMTP_PASS",
   "EMAIL_FROM",
   "TOTP_ENCRYPTION_KEY",
+  // Authorises the daily audit-log cron (src/app/api/cron/prune-audit).
+  "CRON_SECRET",
 ];
 
 /** @param {string} value */
@@ -44,6 +46,7 @@ const RULES = {
   UPSTASH_REDIS_REST_URL: (v) => (isUrl(v) ? null : "must be a valid URL"),
   SMTP_PORT: (v) =>
     /^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 65535 ? null : "must be a port number",
+  CRON_SECRET: (v) => (v.length >= 16 ? null : "must be at least 16 characters"),
   TOTP_ENCRYPTION_KEY: (v) =>
     Buffer.from(v, "base64").byteLength === 32 ? null : "must be 32 random bytes, base64-encoded",
 };

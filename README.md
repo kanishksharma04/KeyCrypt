@@ -237,7 +237,7 @@ pnpm check:env --warn-only  # report, but always exit 0
 It lists, by name only, which settings are missing or malformed; it never prints a value.
 **Required:** `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, `AUTH_URL`.
 **Recommended:** `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `SMTP_HOST`, `SMTP_PORT`,
-`SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, `TOTP_ENCRYPTION_KEY`. Values are checked with the same
+`SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, `TOTP_ENCRYPTION_KEY`, `CRON_SECRET`. Values are checked with the same
 rules as `src/lib/env.ts` (valid URLs, a 32-character `AUTH_SECRET`, a 32-byte base64
 `TOTP_ENCRYPTION_KEY`, both Upstash settings or neither). It exits 1 when a required setting is
 missing or any setting is malformed. The same report is printed by Vercel production builds
@@ -303,15 +303,16 @@ runs `prisma migrate deploy`, then starts the server.
 
 3. Open `APP_URL` and create an account.
 
-| Variable                                                         | Required | Notes                                                                                                                                  |
-| ---------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                                                    | yes      | Signs sessions and re-auth cookies. `openssl rand -base64 32`                                                                          |
-| `POSTGRES_PASSWORD`                                              | yes      | Password of the bundled Postgres; `DATABASE_URL` is built from it                                                                      |
-| `APP_URL`                                                        | no       | Public URL. Used for `AUTH_URL` and baked into the build as `NEXT_PUBLIC_APP_URL`, so **rebuild** (`--build`) after changing it        |
-| `TOTP_ENCRYPTION_KEY`                                            | no       | 32 random bytes, base64. Without it two-factor sign-in is unavailable. Changing it breaks existing 2FA codes (backup codes still work) |
-| `OPERATOR_CONTACT`                                               | no       | Who runs this instance (email or `https://` URL), shown on `/privacy` and `/terms`. Without it they show a neutral placeholder         |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`             | no       | Shared rate-limit store. Not needed for a single container                                                                             |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | no       | Email verification and password reset. Without SMTP, new accounts are verified automatically                                           |
+| Variable                                                         | Required | Notes                                                                                                                                                                           |
+| ---------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                                                    | yes      | Signs sessions and re-auth cookies. `openssl rand -base64 32`                                                                                                                   |
+| `POSTGRES_PASSWORD`                                              | yes      | Password of the bundled Postgres; `DATABASE_URL` is built from it                                                                                                               |
+| `APP_URL`                                                        | no       | Public URL. Used for `AUTH_URL` and baked into the build as `NEXT_PUBLIC_APP_URL`, so **rebuild** (`--build`) after changing it                                                 |
+| `TOTP_ENCRYPTION_KEY`                                            | no       | 32 random bytes, base64. Without it two-factor sign-in is unavailable. Changing it breaks existing 2FA codes (backup codes still work)                                          |
+| `OPERATOR_CONTACT`                                               | no       | Who runs this instance (email or `https://` URL), shown on `/privacy` and `/terms`. Without it they show a neutral placeholder                                                  |
+| `CRON_SECRET`                                                    | no       | Only if you call `/api/cron/prune-audit` from your own scheduler (`Authorization: Bearer <CRON_SECRET>`). Without it the app prunes the activity log itself, at most once a day |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`             | no       | Shared rate-limit store. Not needed for a single container                                                                                                                      |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | no       | Email verification and password reset. Without SMTP, new accounts are verified automatically                                                                                    |
 
 Things to know:
 
@@ -321,6 +322,10 @@ Things to know:
 - **Rate limiting** falls back to an in-memory store when Upstash isn't configured. That's fine
   for **one** app container (limits reset when it restarts, and a warning is logged at start-up);
   run more than one instance only with Upstash.
+- **Activity-log retention**: without a scheduler, the server deletes entries older than 180 days
+  itself, at most once a day, when an event is logged. To prune on a fixed schedule instead, set
+  `CRON_SECRET` and call `curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/prune-audit`
+  from cron.
 - **Backups**: the database lives in the `pgdata` volume. Back it up (`pg_dump`) and keep
   encrypted exports (Settings → Export). The operator can't decrypt vaults, so neither can a
   backup.
@@ -382,6 +387,7 @@ Vercel's runtime logs and in `docker logs`:
 | `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST URL (optional, recommended)                         |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token (optional, recommended)                       |
 | `TOTP_ENCRYPTION_KEY`      | `openssl rand -base64 32` (enables 2FA)                                |
+| `CRON_SECRET`              | `openssl rand -base64 32` (authorises the daily audit-log cron)        |
 | `OPERATOR_CONTACT`         | Your contact email or URL, shown on `/privacy` and `/terms` (optional) |
 
 3. Deploy. Production builds run `pnpm vercel-build` (`scripts/vercel-build.mjs`), which
@@ -392,6 +398,11 @@ Vercel's runtime logs and in `docker logs`:
    failure); by hand it is
    `DATABASE_URL=<direct connection string> pnpm prisma migrate resolve --applied 0_init`.
    The build log also lists missing production settings by name (`pnpm check:env`).
+
+4. **Activity-log retention.** `vercel.json` schedules `GET /api/cron/prune-audit` daily at
+   03:17 UTC; it deletes activity-log entries older than 180 days for every user. Set
+   `CRON_SECRET` (Production) so Vercel Cron can call it; without it the route answers 401 and the
+   app falls back to pruning on its own at most once a day per instance.
 
 ### Migrating preview deployments
 

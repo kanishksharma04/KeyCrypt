@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
-import { AUDIT_RETENTION_DAYS, logAudit } from "@/lib/audit";
+import { AUDIT_RETENTION_DAYS, logAudit, OPPORTUNISTIC_PRUNE_INTERVAL_MS } from "@/lib/audit";
 import { getRecentActivityAction } from "@/server/activity-actions";
 import { createTestUser, setTestRequestHeaders, signInAs } from "@/test/integration/helpers";
 
@@ -38,27 +38,51 @@ describe("logAudit", () => {
     });
   });
 
-  it(`deletes this user's entries older than ${AUDIT_RETENTION_DAYS} days on write`, async () => {
-    const other = await createTestUser();
-    const old = new Date(Date.now() - (AUDIT_RETENTION_DAYS + 1) * DAY);
-    const recent = new Date(Date.now() - 10 * DAY);
-    await db.auditLog.createMany({
-      data: [
-        { userId: user.id, action: "auth.signin", createdAt: old },
-        { userId: user.id, action: "vault.export", createdAt: recent },
-        { userId: other.id, action: "auth.signin", createdAt: old },
-      ],
+  describe("retention fallback (installs without a scheduler)", () => {
+    afterEach(() => {
+      vi.useRealTimers();
     });
 
-    await logAudit(user.id, "vault.item.delete");
+    const old = () => new Date(Date.now() - (AUDIT_RETENTION_DAYS + 1) * DAY);
 
-    const mine = await db.auditLog.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "asc" },
+    it(`prunes every user's entries older than ${AUDIT_RETENTION_DAYS} days on the first write`, async () => {
+      const other = await createTestUser();
+      const recent = new Date(Date.now() - 10 * DAY);
+      await db.auditLog.createMany({
+        data: [
+          { userId: user.id, action: "auth.signin", createdAt: old() },
+          { userId: user.id, action: "vault.export", createdAt: recent },
+          // A user who never comes back still loses entries past retention.
+          { userId: other.id, action: "auth.signin", createdAt: old() },
+        ],
+      });
+
+      await logAudit(user.id, "vault.item.delete");
+
+      const mine = await db.auditLog.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(mine.map((e) => e.action)).toEqual(["vault.export", "vault.item.delete"]);
+      expect(await db.auditLog.count({ where: { userId: other.id } })).toBe(0);
     });
-    expect(mine.map((e) => e.action)).toEqual(["vault.export", "vault.item.delete"]);
-    // Other users' history is untouched by this user's write.
-    expect(await db.auditLog.count({ where: { userId: other.id } })).toBe(1);
+
+    it("doesn't delete on every write: at most once per day per server process", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      await logAudit(user.id, "auth.signin"); // first write of the day prunes
+      await db.auditLog.create({
+        data: { userId: user.id, action: "vault.export", createdAt: old() },
+      });
+
+      await logAudit(user.id, "auth.signin");
+      await logAudit(user.id, "auth.signin");
+      expect(await db.auditLog.count({ where: { action: "vault.export" } })).toBe(1);
+
+      // A day later the next write prunes again.
+      vi.setSystemTime(Date.now() + OPPORTUNISTIC_PRUNE_INTERVAL_MS + 1000);
+      await logAudit(user.id, "auth.signin");
+      expect(await db.auditLog.count({ where: { action: "vault.export" } })).toBe(0);
+    });
   });
 });
 

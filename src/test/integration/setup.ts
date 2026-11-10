@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, vi } from "vitest";
 import { db } from "@/lib/db";
+import { resetAuditPruneStateForTests } from "@/lib/audit";
 import { resetRateLimitStateForTests } from "@/lib/rate-limit";
 import { clearTestCookies, resetDatabase, setTestRequestHeaders, signOutTestUser } from "./helpers";
 
@@ -37,6 +38,7 @@ beforeEach(async () => {
   clearTestCookies();
   setTestRequestHeaders({});
   resetRateLimitStateForTests();
+  resetAuditPruneStateForTests();
   await resetDatabase();
 });
 

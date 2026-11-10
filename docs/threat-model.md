@@ -163,7 +163,9 @@ folder names.
   the verification blob;
 - the TOTP secret (encrypted with a server key the server holds) and backup-code hashes;
 - an **audit log** of account events with timestamp, **IP address and browser (user agent)**,
-  item type on create and export format, kept for **180 days**;
+  item type on create and export format, kept for **180 days** (older entries are deleted by a
+  daily job, `GET /api/cron/prune-audit`, and, where no scheduler runs, by the server itself at most
+  once a day);
 - session cookies, client IPs and emails (for rate limiting), and normal request logs;
 - **server error logs**: one JSON line per failed request on the server's stdout (route pattern,
   method, error name, digest, time and the error message, cut to 300 characters with emails, URLs

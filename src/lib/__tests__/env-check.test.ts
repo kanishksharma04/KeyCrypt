@@ -19,6 +19,7 @@ const SECRET_VALUES = {
   SMTP_PASS: "smtp-pass-value",
   EMAIL_FROM: "KeyCrypt <noreply@example.com>",
   TOTP_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
+  CRON_SECRET: "cron-secret-value-0123456789",
 };
 
 describe("checkEnv", () => {
