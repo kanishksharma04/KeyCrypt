@@ -7,15 +7,17 @@ where its limits are.
 
 ## Supported versions
 
-KeyCrypt is released continuously from the `main` branch. Only the latest commit on `main` (and a
-deployment built from it) receives security fixes.
+KeyCrypt publishes versioned releases ([GitHub Releases](https://github.com/kanishksharma04/KeyCrypt/releases),
+notes in [CHANGELOG.md](CHANGELOG.md)) from `main`. Security fixes land on `main` first and ship in
+the next release.
 
-| Version                 | Supported |
-| ----------------------- | --------- |
-| `main` (latest)         | ✅        |
-| Older commits and forks | ❌        |
+| Version                                 | Supported |
+| --------------------------------------- | --------- |
+| `main` (latest)                         | ✅        |
+| Latest release (currently 0.2.x)        | ✅        |
+| Older releases, older commits and forks | ❌        |
 
-Self-hosters should update to the latest `main` when a fix is announced.
+Self-hosters should update to the latest release, or the latest `main`, when a fix is announced.
 
 ## Reporting a vulnerability
 

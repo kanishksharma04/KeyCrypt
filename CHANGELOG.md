@@ -2,10 +2,14 @@
 
 All notable changes to KeyCrypt are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). KeyCrypt has
-no tagged releases yet, so earlier entries are grouped by the date they were written up.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
+follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from 0.2.0 on. Each version is
+published as a GitHub Release from its `v*.*.*` tag. Entries before 0.2.0 are grouped by the date
+they were written up.
 
 ## [Unreleased]
+
+## [0.2.0] - 2026-11-10
 
 ### Added
 
@@ -18,6 +22,15 @@ no tagged releases yet, so earlier entries are grouped by the date they were wri
 - Opt-in migrations for Vercel preview builds: with `PREVIEW_MIGRATIONS=1`, a preview build
   applies pending migrations to its own database first, and refuses when that database is the
   production one (`PRODUCTION_DATABASE_HOST`)
+- Server error reporting without a third party: one scrubbed JSON line per failed server request
+  on stdout (route pattern, method, error name, digest, time and a redacted, truncated message;
+  never request bodies, headers, cookies or action arguments), and error pages that show only the
+  error reference. Errors in the browser are never reported
+- CI: CodeQL code scanning (on push to `main` and weekly), dependency review on pull requests
+  (fails on high-severity vulnerabilities), the browser-extension and Docker-image end-to-end
+  tests, and coverage thresholds for `src/lib` (stricter for `src/lib/crypto`) and `src/server`
+- Versioned releases: pushing a `v*.*.*` tag runs the checks and publishes a GitHub Release with
+  that version's section of this changelog
 - This changelog
 
 ### Changed
@@ -28,8 +41,19 @@ no tagged releases yet, so earlier entries are grouped by the date they were wri
 - The landing page's "What the server can see" note now also says the server can tell how many
   items you have and roughly how large each one is, as README's security table does
 - README: tech stack names `hash-wasm` (Argon2id) and zxcvbn, the project structure covers
-  `extension/`, `src/app/api/ext`, `e2e/`, `docs/`, `scripts/` and `prisma/migrations`, and the UI
-  section describes the current design; the changelog moved here
+  `extension/`, `src/app/api/ext`, `e2e/`, `docs/`, `scripts/` and `prisma/migrations`, the UI
+  section describes the current design, and a Monitoring section describes error logging; the
+  changelog moved here
+- The threat model lists a malicious server rolling an item back to an older ciphertext,
+  withholding items and changing plain-text metadata as not covered, with the planned fix (a
+  per-item version in the AAD and a signed item list) as future work
+
+### Security
+
+- Encrypted exports are now `keycrypt-export` v2: the key is derived with Argon2id and the
+  vault's parameters (64 MiB, 3 iterations) instead of PBKDF2, with the parameters in the file
+  header and bounds-checked before deriving. v1 files still import
+- GitHub Actions are pinned to full commit SHAs
 
 ## 2026-11-07
 
@@ -111,3 +135,6 @@ no tagged releases yet, so earlier entries are grouped by the date they were wri
 - Vault page crash caused by `useSession` without `SessionProvider` — session data now passed as
   props from the server layout
 - Strength meter bars rendering on empty master password field
+
+[Unreleased]: https://github.com/kanishksharma04/KeyCrypt/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kanishksharma04/KeyCrypt/releases/tag/v0.2.0

@@ -414,7 +414,9 @@ logic is `planMigrations()` in `scripts/lib/migration-plan.mjs`.
 
 ## Changelog
 
-Release notes live in [CHANGELOG.md](CHANGELOG.md).
+Release notes live in [CHANGELOG.md](CHANGELOG.md). Pushing a `v*.*.*` tag that matches
+`package.json` runs the checks and publishes a GitHub Release with that version's section
+(`.github/workflows/release.yml`).
 
 ---
 
