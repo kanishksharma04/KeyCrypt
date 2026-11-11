@@ -4,6 +4,7 @@ import { Fraunces, IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { ServiceWorkerRegistration } from "@/components/shared/service-worker";
 
 // Validate required env vars at startup (throws if misconfigured)
 import "@/lib/env";
@@ -76,6 +77,7 @@ export default async function RootLayout({
         <ThemeProvider nonce={nonce}>
           {children}
           <Toaster richColors position="bottom-right" />
+          <ServiceWorkerRegistration />
         </ThemeProvider>
       </body>
     </html>

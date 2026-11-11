@@ -169,6 +169,23 @@ and item ciphertext from `/api/ext/*` with the session cookie and does all crypt
   `vault.item.create` (source `extension`), and refuses web-page origins and non-JSON bodies
   (CSRF).
 
+### Offline copy on the device (installable app)
+
+The app is installable (web app manifest) and a service worker (`public/sw.js`) caches the app
+shell and the `/offline` page; it never caches API responses or vault data. After each online load
+of the vault, the browser keeps the latest **encrypted** vault in IndexedDB
+(`src/features/vault/offline-cache.ts`): the salt, KDF parameters, wrapped vault key and verifier,
+and each item's ciphertext row, copied through a whitelist. Never the master password, the vault
+key, the recovery copy of the key, or anything decrypted. Offline, `/offline` unlocks that copy with
+the master password (same Argon2id derivation and bounds checks) and shows the items read-only. The
+copy is removed on sign-out, on account deletion, on "Sign out of all devices", and on the next
+online visit to the sign-in page (where a device whose session expired or was revoked ends up).
+
+This means **encrypted vault data now persists on the device**, like an encrypted export: someone
+with access to the device's browser profile can copy it and guess master passwords offline at the
+cost of one Argon2id (64 MiB) per guess, exactly as with a stolen server database. A copy can be
+up to one online visit old, and it stays until one of the events above.
+
 ## What the server sees
 
 **Never**: the master password, the vault key, the recovery key, decrypted secrets, item names or
@@ -236,6 +253,10 @@ browser.
   a wordlist. The setup and change forms show a strength meter (zxcvbn), but the user chooses.
 - **Metadata analysis.** Item types, counts, sizes, timestamps, favourites, folder membership and
   the activity log (IP addresses, browsers) are visible to the server, as listed above.
+- **The offline copy on a device someone else controls.** If a device is lost before the
+  user signs out there, its encrypted offline copy stays in that browser profile until the device
+  is next online on the sign-in page; it is protected by the master password (Argon2id) only. A
+  revoked session can't refresh or read it, but can't delete it remotely either.
 - **Plain CSV exports and imported files.** Once a plain export, or an export from another
   password manager, is on disk, it is protected only by the device.
 - **Rolling an item back to an older version.** A malicious or compromised server can serve an

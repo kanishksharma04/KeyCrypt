@@ -16,6 +16,7 @@ import {
 import { KeyCryptLogo } from "@/components/shared/keycrypt-logo";
 import { PadlockIcon } from "@/components/shared/design-icons";
 import { clearVaultKey } from "@/lib/crypto";
+import { clearOfflineVault } from "./offline-cache";
 import { useVaultLock } from "@/providers/vault-lock-provider";
 import { useCommandPalette } from "@/providers/command-palette-provider";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,8 @@ function AccountMenu({ initials, email }: VaultHeaderProps) {
     setSigningOut(true);
     // Drop the in-memory vault key before the sign-out redirect.
     clearVaultKey();
+    // …and the encrypted offline copy kept on this device.
+    await clearOfflineVault();
     await signOut({ callbackUrl: "/auth/signin" });
   }
 

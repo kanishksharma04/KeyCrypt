@@ -49,6 +49,11 @@ and decryption happens in the browser.
   the browser, the only external origin in the CSP `connect-src`.
 - The vault key is held only in memory (`src/lib/crypto/vault-key.ts`) and cleared on lock.
   It is never persisted or sent anywhere.
+- **Offline copy (PWA)**: after each online vault load, `OfflineSnapshot` stores the encrypted
+  vault (unlock metadata + item ciphertext, whitelisted; no keys, no recovery copy, no plaintext)
+  in IndexedDB (`src/features/vault/offline-cache.ts`); `/offline` unlocks it read-only. Cleared on
+  sign-out, account deletion, sign out of all devices and on the sign-in page. The service worker
+  (`public/sw.js`) caches only the app shell, `/offline` and `/_next/static`.
 - Every encryption uses a fresh random 96-bit IV; payloads are `{ ciphertext, iv }` in base64.
 - **Recovery kit (v2)**: a random 128-bit recovery key (grouped base32, shown once at setup
   and from Settings) derives a second KEK with HKDF-SHA-256 bound to the user id

@@ -29,6 +29,13 @@ reset it or confirm it (it stores only the Argon2id hash), the session cookie, a
 emails for rate limiting. From the ciphertext it can tell how many items you have and roughly how
 large each one is. Each audit entry records the IP address and browser (user agent) of the request; you can see them under Settings → Recent activity. Failed server requests are logged as one scrubbed line, without request bodies, headers or cookies (see [Monitoring](#monitoring)).
 
+**Offline copy (installable app).** After each online load of the vault, your browser keeps the
+latest **encrypted** vault (salt, KDF parameters, wrapped vault key, verifier and item ciphertext,
+never a key or plaintext) in IndexedDB, so the installed app can unlock it read-only at `/offline`
+without a connection. It's removed when you sign out, delete your account or sign out of all
+devices, and on the next online visit to the sign-in page. Like an encrypted export, it can be
+attacked offline only by guessing your master password (Argon2id).
+
 **Breached-password check (opt-in).** The "Check for breached passwords" button in vault health
 asks [Have I Been Pwned](https://haveibeenpwned.com/Passwords) directly from your browser. Each
 password is hashed with SHA-1 in the browser and only the first 5 hex characters of the hash are
@@ -84,6 +91,17 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Relative timestamps** — `2 hours ago`, `3 days ago` on every item row
 - **Smart empty states** — contextual messaging and CTAs for empty vault, no results, no favorites
 - **Auto-focus** — name field focused on every create dialog open
+
+### Installable app and offline vault
+
+- **Install it** from the browser (web app manifest, `src/app/manifest.ts`; icons in `public/icons`).
+  The service worker (`public/sw.js`, production builds only) caches the app shell and the `/offline`
+  page; it never caches API responses or vault data.
+- **Read-only offline vault:** after each online load of the vault, the encrypted vault is kept on
+  the device (IndexedDB). Offline, opening the app lands on `/offline`, which unlocks that copy with
+  your master password and shows your items with an "Offline, read-only" banner: reveal and copy
+  work, editing, Trash and favourites need a connection. The copy is cleared on sign-out, account
+  deletion, "Sign out of all devices" and the next online visit to the sign-in page.
 
 ### Authentication
 

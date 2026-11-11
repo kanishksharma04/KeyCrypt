@@ -6,6 +6,7 @@ import { Loader2, LogOut } from "lucide-react";
 import type { VariantProps } from "class-variance-authority";
 import { Button, type buttonVariants } from "@/components/ui/button";
 import { clearVaultKey } from "@/lib/crypto";
+import { clearOfflineVault } from "@/features/vault/offline-cache";
 
 type ButtonStyle = VariantProps<typeof buttonVariants>;
 
@@ -39,6 +40,8 @@ export function SignOutButton({
     // Drop the in-memory vault key immediately rather than waiting for the
     // page unload that follows the sign-out redirect.
     clearVaultKey();
+    // …and the encrypted offline copy kept on this device.
+    await clearOfflineVault();
     await signOut({ callbackUrl });
   }
 

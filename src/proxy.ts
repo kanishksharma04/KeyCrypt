@@ -38,6 +38,9 @@ function buildCsp(nonce: string): string {
     // Server Actions POST to the same origin. The only external call is the
     // opt-in breached-password check (5-char SHA-1 prefixes, src/lib/crypto/breach.ts).
     "connect-src 'self' https://api.pwnedpasswords.com",
+    // The service worker (public/sw.js) and the web app manifest, same origin only.
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     // Restricts form submission targets; defence against phishing via form hijack.

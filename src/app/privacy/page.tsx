@@ -106,12 +106,14 @@ export default function PrivacyPage() {
 
       <LegalSection n="04" title="No analytics, no ads">
         <p>
-          KeyCrypt has no analytics, no advertising and no third-party trackers, and it doesn&apos;t
-          sell or share your data. The only cookies are the ones needed to keep you signed in and to
-          confirm sensitive actions. Your theme choice is stored in your browser. Errors that happen
-          in your browser are never reported anywhere, since they could contain decrypted data.
-          Emails (address verification and password resets) are sent through the operator&apos;s
-          email provider, which sees your email address.
+          If you use KeyCrypt as an installed app, your browser keeps an <strong>encrypted</strong>{" "}
+          copy of your vault on your device so it can be read offline; it holds no keys or decrypted
+          data and is removed when you sign out. KeyCrypt has no analytics, no advertising and no
+          third-party trackers, and it doesn&apos;t sell or share your data. The only cookies are
+          the ones needed to keep you signed in and to confirm sensitive actions. Your theme choice
+          is stored in your browser. Errors that happen in your browser are never reported anywhere,
+          since they could contain decrypted data. Emails (address verification and password resets)
+          are sent through the operator&apos;s email provider, which sees your email address.
         </p>
       </LegalSection>
 

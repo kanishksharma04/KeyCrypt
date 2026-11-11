@@ -12,7 +12,7 @@ export const AUTH_ONLY_PREFIXES = ["/auth/signin", "/auth/signup"];
  * route outside the lists above is public); listed so tests can check they
  * stay public.
  */
-export const PUBLIC_PAGES = ["/", "/privacy", "/terms"];
+export const PUBLIC_PAGES = ["/", "/privacy", "/terms", "/offline"];
 
 export type RouteAccess = "protected" | "auth-only" | "public";
 

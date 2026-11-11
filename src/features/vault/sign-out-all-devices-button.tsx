@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dialog";
 import { clearVaultKey } from "@/lib/crypto";
 import { signOutEverywhereAction } from "@/server/settings-actions";
+import { clearOfflineVault } from "./offline-cache";
 
 export function SignOutAllDevicesButton() {
   const [open, setOpen] = useState(false);
@@ -15,6 +16,7 @@ export function SignOutAllDevicesButton() {
   async function signOutEverywhere() {
     // Drop the key now; the action signs this browser out and redirects.
     clearVaultKey();
+    await clearOfflineVault(); // the encrypted offline copy on this device
     const result = await signOutEverywhereAction();
     if (result?.error) {
       toast.error(result.error);

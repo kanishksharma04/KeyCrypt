@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmPasswordDialog } from "@/components/shared/confirm-password-dialog";
 import { clearVaultKey } from "@/lib/crypto";
 import { deleteAccountAction } from "@/server/account-actions";
+import { clearOfflineVault } from "./offline-cache";
 
 /** Settings → Danger zone. Typing the account email unlocks the button. */
 export function DeleteAccount({ email }: { email: string }) {
@@ -20,6 +21,7 @@ export function DeleteAccount({ email }: { email: string }) {
     // Drop the key first: on success the action signs out and redirects
     // without returning. Only errors come back here.
     clearVaultKey();
+    await clearOfflineVault(); // the encrypted offline copy on this device
     const result = await deleteAccountAction({ email: typed });
     if (result?.error) {
       toast.error(result.error);

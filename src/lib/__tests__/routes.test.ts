@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { PUBLIC_PAGES, routeAccess } from "../routes";
 
 describe("routeAccess (src/proxy.ts)", () => {
-  it("keeps the landing page, privacy policy and terms public", () => {
-    expect(PUBLIC_PAGES).toEqual(expect.arrayContaining(["/", "/privacy", "/terms"]));
+  it("keeps the landing page, privacy policy, terms and the offline vault public", () => {
+    expect(PUBLIC_PAGES).toEqual(expect.arrayContaining(["/", "/privacy", "/terms", "/offline"]));
     for (const page of PUBLIC_PAGES) expect(routeAccess(page)).toBe("public");
   });
 

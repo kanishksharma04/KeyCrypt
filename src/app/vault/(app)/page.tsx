@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { VaultList } from "@/features/vault/vault-list";
+import { OfflineSnapshot } from "@/features/vault/offline-snapshot";
 import type { VaultItemRow, VaultItemType } from "@/types/vault";
 
 const VALID_TYPES: VaultItemType[] = [
@@ -71,6 +72,8 @@ export default async function VaultPage({
         initialOpenId={initialOpenId}
         initialNewType={initialNewType}
       />
+      {/* Keeps the encrypted vault on this device for /offline (read-only). */}
+      <OfflineSnapshot items={items} />
     </div>
   );
 }
