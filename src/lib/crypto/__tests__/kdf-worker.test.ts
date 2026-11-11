@@ -15,6 +15,19 @@ const PASSWORD = "Worker-Master-Pass-1!";
 
 type Behaviour = "ok" | "reply-error" | "error-event" | "plain-error-event";
 
+// Browsers (and Node 23+) have ErrorEvent; Node 22, which CI runs, doesn't. kdf.ts
+// checks `instanceof ErrorEvent` in its worker error handler, so give older Node
+// runtimes the minimal stand-in a browser would provide.
+class FallbackErrorEvent extends Event {
+  readonly message: string;
+  readonly error: unknown;
+  constructor(type: string, init: { message?: string; error?: unknown } = {}) {
+    super(type);
+    this.message = init.message ?? "";
+    this.error = init.error ?? null;
+  }
+}
+
 /** Stands in for the Argon2id worker: answers postMessage like kdf.worker.ts. */
 class FakeKdfWorker extends EventTarget {
   static behaviour: Behaviour = "ok";
@@ -78,6 +91,7 @@ async function sameKeyAsMainThread(kek: CryptoKey, salt: Uint8Array<ArrayBuffer>
 }
 
 beforeEach(() => {
+  if (typeof globalThis.ErrorEvent === "undefined") vi.stubGlobal("ErrorEvent", FallbackErrorEvent);
   FakeKdfWorker.behaviour = "ok";
   FakeKdfWorker.instances = [];
   createKdfWorker.mockClear();
