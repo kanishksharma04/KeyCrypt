@@ -1,7 +1,8 @@
+import { ext } from "./browser";
 import type { DecryptedVault } from "./vault";
 
 // Messages between the popup / content script and the background service
-// worker (chrome.runtime messaging, inside the extension only).
+// worker (ext.runtime messaging, inside the extension only).
 
 export type Request =
   | { type: "status"; tabId?: number }
@@ -40,5 +41,5 @@ export type SaveResponse = { ok: true } | { ok: false; error: string };
 
 /** Send a request to the background worker and wait for its answer. */
 export function send<T>(request: Request): Promise<T> {
-  return chrome.runtime.sendMessage(request) as Promise<T>;
+  return ext.runtime.sendMessage(request) as Promise<T>;
 }

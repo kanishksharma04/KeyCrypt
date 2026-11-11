@@ -219,7 +219,8 @@ pnpm test:coverage # Unit tests with coverage; fails below the thresholds (src/l
 pnpm test:integration # Server-action tests against Postgres (see below)
 pnpm test:e2e     # Playwright end-to-end tests against a production build (see below)
 pnpm test:docker  # Smoke test against a running Docker container (see Self-hosting)
-pnpm ext:build    # Build the browser extension into extension/dist
+pnpm ext:build    # Build the browser extension into extension/dist/chrome and extension/dist/firefox
+pnpm ext:package  # Store zips for Chrome/Edge and Firefox (KEYCRYPT_APP_URL=https://… required)
 pnpm test:extension # Load the extension unpacked in Chromium and fill a test form
 pnpm db:deploy    # Apply pending migrations (prisma migrate deploy)
 pnpm db:migrate   # Create + apply a new migration in development (prisma migrate dev)

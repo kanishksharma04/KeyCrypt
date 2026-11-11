@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit && pnpm --filter @keycrypt/extension typecheck",
     "ext:build": "pnpm --filter @keycrypt/extension build",
+    "ext:package": "pnpm --filter @keycrypt/extension package",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

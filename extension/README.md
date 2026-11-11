@@ -1,6 +1,6 @@
 # KeyCrypt browser extension (MVP)
 
-A Manifest V3 extension for Chrome and other Chromium browsers. It unlocks your KeyCrypt vault
+A Manifest V3 extension for Chrome, other Chromium browsers (Edge, Brave) and Firefox (128+). It unlocks your KeyCrypt vault
 **locally** with your master password, stays unlocked for a while, fills saved logins and
 authenticator codes on the site you're on, and can offer to save new logins.
 
@@ -15,12 +15,42 @@ pnpm install
 KEYCRYPT_APP_URL=http://localhost:3000 pnpm ext:build   # your KeyCrypt URL; default http://localhost:3000
 ```
 
-1. Open `chrome://extensions` and turn on **Developer mode**.
-2. Click **Load unpacked** and choose `extension/dist`.
-3. Pin KeyCrypt to the toolbar.
+This builds `extension/dist/chrome` and `extension/dist/firefox`.
+
+- **Chrome / Edge / Brave:** open `chrome://extensions`, turn on **Developer mode**, click **Load
+  unpacked** and choose `extension/dist/chrome`. Pin KeyCrypt to the toolbar.
+- **Firefox:** open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and
+  choose `extension/dist/firefox/manifest.json`.
 
 `KEYCRYPT_APP_URL` is baked into the build: its host becomes the extension's only required host
 permission and the server the extension talks to. Rebuild (and reload the extension) if it changes.
+
+## Store packages
+
+```bash
+KEYCRYPT_APP_URL=https://vault.example.com pnpm ext:package
+```
+
+builds both targets and writes `extension/packages/keycrypt-<version>-chrome.zip` (Chrome Web
+Store, Edge Add-ons) and `keycrypt-<version>-firefox.zip` (addons.mozilla.org). It refuses a
+non-https URL (`--allow-local` packages a localhost build for testing). The listing text, permission
+justifications and privacy answers are in [STORE_LISTING.md](STORE_LISTING.md). Icons
+(`public/icons`, 16/32/48/128 px) are made from the brand mark in the web app's `public/logos`.
+
+## Firefox (Manifest V3) differences
+
+- **Background:** Firefox runs `background.js` as an event page (`background.scripts`) instead of a
+  service worker; Chromium uses `background.service_worker`. The code is the same: `src/browser.ts`
+  picks Firefox's `browser` or Chromium's `chrome` namespace (both promise-based in MV3). Firefox
+  may unload an idle event page too, which drops the key just like a stopped service worker.
+- **Add-on id:** `browser_specific_settings.gecko.id` (`keycrypt-extension@keycrypt.app`, or
+  `KEYCRYPT_GECKO_ID`), minimum version 128 (scripting, optional host permissions and module
+  workers).
+- **Host access is optional in Firefox:** users can withhold the app's host permission. The popup
+  then shows **Allow access to KeyCrypt**.
+- `data_collection_permissions` declares `authenticationInfo`: new logins are sent, encrypted, to
+  your KeyCrypt server.
+- The test-only manifest `key` (fixed extension id) is Chromium-only.
 
 ## Using it
 
@@ -67,7 +97,8 @@ on sign-out; only the app's host is readable), host access to the KeyCrypt app's
 
 ## Current limitations
 
-- **Chromium only.** Firefox isn't supported yet.
+- The Firefox build is tested by unit tests and its manifest, not by the end-to-end suite
+  (Playwright can't load extensions into Firefox).
 - The browser may stop the background worker before the unlock time is up; you then unlock again.
 - Saving notices real form submissions only (not sign-ins done entirely by JavaScript without a
   `submit` event), doesn't update a changed password on an existing login, and saves the site's
@@ -78,7 +109,6 @@ on sign-out; only the app's host is readable), host access to the KeyCrypt app's
   page.
 - Site matching uses hosts, not the public suffix list, and has no per-login match rules.
 - Vaults still on crypto v1 must be unlocked once in the web app (to upgrade) first.
-- No icon set or store packaging yet.
 
 ## Tests
 

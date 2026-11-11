@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     // Built browser extension
     "extension/dist/**",
     "extension/dist-e2e/**",
+    // Store packages (pnpm ext:package)
+    "extension/packages/**",
   ]),
 ]);
 

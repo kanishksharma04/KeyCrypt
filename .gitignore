@@ -6,6 +6,7 @@
 # browser extension builds
 /extension/dist
 /extension/dist-e2e
+/extension/packages
 /.pnp
 .pnp.*
 .yarn/*

@@ -1,3 +1,4 @@
+import { ext } from "./browser";
 import { loginMatchesTab, saveableUrl, savedHost } from "./match";
 import type { Request, SaveOffer, SaveResponse, Status, UnlockResponse } from "./messages";
 import { clampUnlockMinutes, DEFAULT_UNLOCK_MINUTES, PendingLogins, VaultSession } from "./session";
@@ -19,7 +20,7 @@ import {
 // a 30-second alarm), on Lock, when the KeyCrypt session cookie goes away, and
 // when the browser closes (the worker's memory goes with it). If the browser
 // stops the worker early, the key is gone too and the popup asks to unlock
-// again. Nothing is written to chrome.storage.
+// again. Nothing is written to ext.storage.
 
 const session = new VaultSession();
 const pending = new PendingLogins();
@@ -35,8 +36,8 @@ const APP_HOST = new URL(APP_URL).hostname;
 /** Keep a 30-second tick going while there is a key or a pending login to expire. */
 function tickWhileNeeded(now = Date.now()) {
   const active = session.get(now) !== null || hasPending(now);
-  if (active) void chrome.alarms.create(TICK, { periodInMinutes: 0.5 });
-  else void chrome.alarms.clear(TICK);
+  if (active) void ext.alarms.create(TICK, { periodInMinutes: 0.5 });
+  else void ext.alarms.clear(TICK);
 }
 
 const pendingTabs = new Set<number>();
@@ -47,17 +48,17 @@ function hasPending(now: number): boolean {
 
 function clearBadge(tabId: number) {
   pendingTabs.delete(tabId);
-  void chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
+  void ext.action.setBadgeText({ tabId, text: "" }).catch(() => {});
 }
 
 function lockAll() {
   session.lock();
   for (const tabId of [...pendingTabs]) clearBadge(tabId);
   pending.clear();
-  void chrome.alarms.clear(TICK);
+  void ext.alarms.clear(TICK);
 }
 
-chrome.alarms.onAlarm.addListener((alarm) => {
+ext.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== TICK) return;
   const now = Date.now();
   for (const tabId of pending.sweep(now)) clearBadge(tabId);
@@ -66,14 +67,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 // Signed out (or the session expired): the key must not outlive it. A refreshed
 // session cookie is an "overwrite" and doesn't count.
-chrome.cookies.onChanged.addListener(({ removed, cause, cookie }) => {
+ext.cookies.onChanged.addListener(({ removed, cause, cookie }) => {
   if (!removed || cause === "overwrite") return;
   if (!/authjs\.session-token/.test(cookie.name)) return;
   const domain = cookie.domain.replace(/^\./, "");
   if (APP_HOST === domain || APP_HOST.endsWith(`.${domain}`)) lockAll();
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+ext.tabs.onRemoved.addListener((tabId) => {
   pending.delete(tabId);
   pendingTabs.delete(tabId);
 });
@@ -81,23 +82,23 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 // ─── "Offer to save new logins" (optional https://*/* permission) ────────────
 
 async function syncSaveScript(): Promise<boolean> {
-  const granted = await chrome.permissions.contains({ origins: SAVE_ORIGINS });
-  const registered = (await chrome.scripting.getRegisteredContentScripts()).some(
+  const granted = await ext.permissions.contains({ origins: SAVE_ORIGINS });
+  const registered = (await ext.scripting.getRegisteredContentScripts()).some(
     (s) => s.id === SAVE_SCRIPT_ID
   );
   if (granted && !registered) {
-    await chrome.scripting.registerContentScripts([
+    await ext.scripting.registerContentScripts([
       { id: SAVE_SCRIPT_ID, matches: SAVE_ORIGINS, js: ["save.js"], runAt: "document_idle" },
     ]);
   } else if (!granted && registered) {
-    await chrome.scripting.unregisterContentScripts({ ids: [SAVE_SCRIPT_ID] });
+    await ext.scripting.unregisterContentScripts({ ids: [SAVE_SCRIPT_ID] });
   }
   return granted;
 }
 
-chrome.runtime.onInstalled.addListener(() => void syncSaveScript());
-chrome.runtime.onStartup.addListener(() => void syncSaveScript());
-chrome.permissions.onRemoved.addListener(() => void syncSaveScript());
+ext.runtime.onInstalled.addListener(() => void syncSaveScript());
+ext.runtime.onStartup.addListener(() => void syncSaveScript());
+ext.permissions.onRemoved.addListener(() => void syncSaveScript());
 
 // ─── Requests ────────────────────────────────────────────────────────────────
 
@@ -215,14 +216,14 @@ function handleSubmitted(
     at: Date.now(),
   });
   pendingTabs.add(tabId);
-  void chrome.action.setBadgeText({ tabId, text: "+" }).catch(() => {});
-  void chrome.action.setBadgeBackgroundColor({ tabId, color: "#8a5a2b" }).catch(() => {});
+  void ext.action.setBadgeText({ tabId, text: "+" }).catch(() => {});
+  void ext.action.setBadgeBackgroundColor({ tabId, color: "#8a5a2b" }).catch(() => {});
   tickWhileNeeded();
 }
 
 async function handle(message: Request, sender: chrome.runtime.MessageSender): Promise<unknown> {
   // Only this extension's own pages and content scripts can talk to the worker.
-  if (sender.id !== chrome.runtime.id) return { error: "forbidden" };
+  if (sender.id !== ext.runtime.id) return { error: "forbidden" };
   switch (message.type) {
     case "status":
       return status(message.tabId);
@@ -245,7 +246,7 @@ async function handle(message: Request, sender: chrome.runtime.MessageSender): P
   }
 }
 
-chrome.runtime.onMessage.addListener((message: Request, sender, sendResponse) => {
+ext.runtime.onMessage.addListener((message: Request, sender, sendResponse) => {
   handle(message, sender).then(sendResponse, () => sendResponse({ error: "failed" }));
   return true; // answer asynchronously
 });

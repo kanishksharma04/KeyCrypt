@@ -1,3 +1,4 @@
+import { ext } from "./browser";
 import { currentTotpCode, parseTotpInput, type TotpParams } from "keycrypt/crypto";
 import { authenticatorMatchesTab, fillableTabHost, loginMatchesTab } from "./match";
 import { fillCodeField, fillLoginForm, type FillCodeResult, type FillResult } from "./fill";
@@ -17,7 +18,7 @@ import { APP_URL, type AuthenticatorEntry, type LoginEntry } from "./vault";
 // save a login just submitted on the page. Decrypted entries live only in this
 // page's memory while it is open. The only thing kept between openings is the
 // chosen unlock time (localStorage of the extension's own pages); nothing goes
-// to chrome.storage.
+// to ext.storage.
 
 const app = document.getElementById("app") as HTMLElement;
 const lockButton = document.getElementById("lock") as HTMLButtonElement;
@@ -64,8 +65,8 @@ lockButton.addEventListener("click", () => {
 /** The tab to fill: the active tab, or ?tabId= when this page is opened in a tab (testing). */
 async function targetTab(): Promise<chrome.tabs.Tab | undefined> {
   const tabId = Number(new URLSearchParams(location.search).get("tabId"));
-  if (Number.isInteger(tabId) && tabId > 0) return chrome.tabs.get(tabId);
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (Number.isInteger(tabId) && tabId > 0) return ext.tabs.get(tabId);
+  const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
   return tab;
 }
 
@@ -73,7 +74,7 @@ async function targetTab(): Promise<chrome.tabs.Tab | undefined> {
 
 function signedOutView() {
   const open = h("button", { className: "primary", type: "button" }, "Sign in to KeyCrypt");
-  open.addEventListener("click", () => void chrome.tabs.create({ url: `${APP_URL}/auth/signin` }));
+  open.addEventListener("click", () => void ext.tabs.create({ url: `${APP_URL}/auth/signin` }));
   show(h("p", {}, "You're not signed in to KeyCrypt in this browser."), open);
 }
 
@@ -304,14 +305,14 @@ function codeButton(
 function settings(result: Extract<Status, { state: "unlocked" }>): HTMLElement {
   const left = Math.max(1, Math.ceil(result.remainingMs / 60_000));
   const saveToggle = h("input", { type: "checkbox", id: "offer-save" });
-  void chrome.permissions
+  void ext.permissions
     .contains({ origins: ["https://*/*"] })
     .then((granted) => (saveToggle.checked = granted));
   saveToggle.addEventListener("change", () => {
     const origins = ["https://*/*"];
     const change = saveToggle.checked
-      ? chrome.permissions.request({ origins })
-      : chrome.permissions.remove({ origins }).then((removed) => !removed);
+      ? ext.permissions.request({ origins })
+      : ext.permissions.remove({ origins }).then((removed) => !removed);
     void change
       .then((granted) => {
         saveToggle.checked = granted;
@@ -336,7 +337,7 @@ function settings(result: Extract<Status, { state: "unlocked" }>): HTMLElement {
 
 async function fill(tabId: number, host: string, login: LoginEntry, status: HTMLElement) {
   try {
-    const [injection] = await chrome.scripting.executeScript({
+    const [injection] = await ext.scripting.executeScript({
       target: { tabId },
       func: fillLoginForm,
       args: [host, login.username, login.password],
@@ -365,7 +366,7 @@ async function fillCode(
 ) {
   try {
     const { code } = currentTotpCode(params);
-    const [injection] = await chrome.scripting.executeScript({
+    const [injection] = await ext.scripting.executeScript({
       target: { tabId },
       func: fillCodeField,
       args: [host, code],
@@ -387,8 +388,29 @@ async function fillCode(
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 
+/** Host access to the KeyCrypt app (Firefox lets the user withhold it; Chromium grants it at install). */
+function appHostPattern(): string {
+  const url = new URL(APP_URL);
+  return `${url.protocol}//${url.hostname}/*`;
+}
+
+function grantAccessView() {
+  const origins = [appHostPattern()];
+  const allow = h("button", { className: "primary", type: "button" }, "Allow access to KeyCrypt");
+  allow.addEventListener("click", () => {
+    void ext.permissions.request({ origins }).then((granted) => {
+      if (granted) void start();
+    });
+  });
+  show(h("p", {}, `KeyCrypt needs access to ${new URL(APP_URL).host} to reach your vault.`), allow);
+}
+
 async function start() {
   const tab = await targetTab();
+  if (!(await ext.permissions.contains({ origins: [appHostPattern()] }))) {
+    lockButton.hidden = true;
+    return grantAccessView();
+  }
   try {
     render(await send<Status>({ type: "status", tabId: tab?.id }), tab);
   } catch {

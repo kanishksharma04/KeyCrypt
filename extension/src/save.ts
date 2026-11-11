@@ -5,6 +5,8 @@
 // Self-contained (no imports): content scripts can't load modules.
 
 (() => {
+  // Firefox exposes `browser`, Chromium `chrome` (the same call shape here).
+  const api: typeof chrome = (globalThis as { browser?: typeof chrome }).browser ?? chrome;
   const marker = "__keycryptSaveListener";
   const w = window as unknown as Record<string, boolean>;
   if (w[marker]) return;
@@ -43,7 +45,7 @@
         textual.find((el) => /user|email|login/i.test(`${el.name} ${el.id}`)) ??
         before[before.length - 1];
 
-      void chrome.runtime
+      void api.runtime
         .sendMessage({
           type: "login-submitted",
           url: location.href,

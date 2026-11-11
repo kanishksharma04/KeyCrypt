@@ -1,6 +1,12 @@
+import { readFileSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
+import { buildManifest, type BrowserTarget } from "./src/manifest";
 
-// Builds the Manifest V3 extension into dist/ (load it unpacked from there).
+// Builds the Manifest V3 extension into dist/chrome or dist/firefox (load it
+// unpacked from there); pnpm ext:package zips both for the stores.
+//
+//   KEYCRYPT_BROWSER   chrome (default) or firefox
+//   KEYCRYPT_GECKO_ID  Firefox add-on id (default keycrypt-extension@keycrypt.app)
 //
 //   KEYCRYPT_APP_URL   origin of the KeyCrypt web app (default http://localhost:3000);
 //                      becomes host_permissions so the popup can call its API
@@ -10,6 +16,12 @@ import { defineConfig, type Plugin } from "vite";
 //                      toolbar click).
 //   KEYCRYPT_MANIFEST_KEY  optional public key, for a fixed extension id (tests).
 
+const target: BrowserTarget = process.env.KEYCRYPT_BROWSER === "firefox" ? "firefox" : "chrome";
+const { version } = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf8")
+) as {
+  version: string;
+};
 const appUrl = new URL(process.env.KEYCRYPT_APP_URL ?? "http://localhost:3000");
 const appOrigin = appUrl.origin;
 // Host permission for the app: scheme + host, no port. A pattern without a port
@@ -25,33 +37,14 @@ function manifest(): Plugin {
   return {
     name: "keycrypt-manifest",
     generateBundle() {
-      const body = {
-        manifest_version: 3,
-        name: "KeyCrypt",
-        version: "0.1.0",
-        description: "Unlock your KeyCrypt vault locally, fill logins and codes, save new logins.",
-        action: { default_popup: "popup.html", default_title: "KeyCrypt" },
-        // Holds the unlocked vault key in memory for a while (src/background.ts).
-        background: { service_worker: "background.js", type: "module" },
-        // activeTab + scripting: fill only the tab the user is on, after a click.
-        // alarms: expire the unlocked key. cookies: drop it when the KeyCrypt
-        // session cookie goes away (only the app origin is in host_permissions).
-        permissions: ["activeTab", "scripting", "alarms", "cookies"],
-        host_permissions: [appHostPattern, ...extraHosts],
-        // Opt-in from the popup ("Offer to save new logins"): lets src/save.ts
-        // notice submitted login forms. Not requested at install.
-        optional_host_permissions: ["https://*/*"],
-        // Test builds only: the save script on the local test page, which
-        // Playwright can't grant through the permission prompt.
-        ...(extraHosts.length > 0 && {
-          content_scripts: [{ matches: extraHosts, js: ["save.js"], run_at: "document_idle" }],
-        }),
-        // Argon2id runs as WebAssembly (hash-wasm) in a worker.
-        content_security_policy: {
-          extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
-        },
-        ...(process.env.KEYCRYPT_MANIFEST_KEY && { key: process.env.KEYCRYPT_MANIFEST_KEY }),
-      };
+      const body = buildManifest({
+        target,
+        version,
+        appHostPattern,
+        extraHosts,
+        manifestKey: process.env.KEYCRYPT_MANIFEST_KEY,
+        geckoId: process.env.KEYCRYPT_GECKO_ID,
+      });
       this.emitFile({
         type: "asset",
         fileName: "manifest.json",
@@ -67,9 +60,9 @@ export default defineConfig({
   plugins: [manifest()],
   worker: { format: "es" },
   build: {
-    outDir: "dist",
+    outDir: `dist/${target}`,
     emptyOutDir: true,
-    target: "chrome120",
+    target: target === "firefox" ? "firefox128" : "chrome120",
     modulePreload: false,
     rollupOptions: {
       input: { popup: "popup.html", background: "src/background.ts", save: "src/save.ts" },

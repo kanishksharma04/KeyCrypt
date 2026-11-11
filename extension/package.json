@@ -6,8 +6,11 @@
   "description": "KeyCrypt browser extension (Manifest V3): unlock locally and fill logins.",
   "license": "MIT",
   "scripts": {
-    "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "build": "vite build && KEYCRYPT_BROWSER=firefox vite build",
+    "typecheck": "tsc --noEmit",
+    "build:chrome": "vite build",
+    "build:firefox": "KEYCRYPT_BROWSER=firefox vite build",
+    "package": "node scripts/package.mjs"
   },
   "dependencies": {
     "keycrypt": "workspace:*"
