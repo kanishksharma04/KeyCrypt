@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CopyButton } from "@/components/shared/copy-button";
-import type { DecryptedVaultItem } from "@/types/vault";
+import type { DecryptedVaultItem, PasswordHistoryEntry } from "@/types/vault";
 import { TYPE_META, copyToClipboard } from "./vault-item-meta";
 import { cn } from "@/lib/utils";
 import { loginTotpParams, TotpCode } from "./totp-code";
@@ -132,6 +132,31 @@ function LongTextField({
   );
 }
 
+const HISTORY_DATE = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** Earlier passwords of a login, newest first, each with its own reveal and copy. */
+function PasswordHistory({ entries }: { entries: PasswordHistoryEntry[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <section aria-label="Password history" className="space-y-3 border-t pt-4">
+      <p className="text-sm font-semibold">Password history</p>
+      {entries.map((entry, i) => (
+        <RevealField
+          key={`${entry.changedAt}-${i}`}
+          label={`Used until ${HISTORY_DATE.format(new Date(entry.changedAt))}`}
+          value={entry.password}
+        />
+      ))}
+    </section>
+  );
+}
+
 /** The item's notes, if it has any (secure notes show theirs as content instead). */
 function notesOf(item: DecryptedVaultItem): string {
   return item.type === "SECURE_NOTE" ? "" : item.secret.notes;
@@ -161,6 +186,7 @@ function ItemFields({ item }: { item: DecryptedVaultItem }) {
         ) : (
           item.secret.url && <TextField label="Website" value={item.secret.url} />
         )}
+        <PasswordHistory entries={item.secret.passwordHistory ?? []} />
       </>
     );
   }

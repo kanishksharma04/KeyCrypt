@@ -1,4 +1,5 @@
 import { decryptExport, EXPORT_FORMAT } from "@/lib/crypto";
+import { readPasswordHistory } from "../password-history";
 import type { VaultExportPayload } from "@/lib/vault-export";
 import { ImportCollector, asWifiSecurity, importedTotp, str } from "./normalize";
 import { ImportFormatError, type ImportResult } from "./types";
@@ -56,7 +57,9 @@ export async function parseKeyCryptExport(
     // Exports made before folders were included have no folder.
     const folder = str(item.folder);
     switch (item.type) {
-      case "LOGIN":
+      case "LOGIN": {
+        // Earlier passwords travel in KeyCrypt's encrypted export (never in CSV).
+        const passwordHistory = readPasswordHistory(s.passwordHistory);
         return out.add(
           row,
           {
@@ -69,10 +72,12 @@ export async function parseKeyCryptExport(
               url: str(s.url),
               notes: str(s.notes),
               ...(str(s.totp) && { totp: str(s.totp) }),
+              ...(passwordHistory.length > 0 && { passwordHistory }),
             },
           },
           folder
         );
+      }
       case "SECURE_NOTE":
         return out.add(
           row,

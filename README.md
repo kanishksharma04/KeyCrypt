@@ -51,7 +51,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 
 ### Vault item types
 
-- **Login credentials** — username, password, URL with one-click copy and site launch
+- **Login credentials** — username, password, URL with one-click copy and site launch, and a password history: changing a login's password keeps the old one (newest first, up to 10) inside the item's ciphertext, shown in the details panel with reveal and copy. It's included in the encrypted export, never in the plain CSV
 - **Secure notes** — encrypted free-form text for PINs, recovery codes, sensitive memos
 - **API keys** — key, description, notes with monospace display
 - **Wi-Fi passwords** — SSID, password, security type (WPA2 / WPA3 / WEP / Open)

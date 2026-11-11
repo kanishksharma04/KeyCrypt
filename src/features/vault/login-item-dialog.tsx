@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/features/auth/field-error";
 import { ItemDialog, ItemDialogShell } from "./item-dialog-shell";
-import type { LoginSecret } from "@/types/vault";
+import type { LoginSecret, PasswordHistoryEntry } from "@/types/vault";
+import { nextPasswordHistory } from "./password-history";
 
 // ─── Form (mounted fresh on each dialog open) ──────────────────────────────────
 
@@ -34,10 +35,18 @@ interface LoginItemFormProps {
   mode: "create" | "edit";
   itemId?: string;
   initialValues?: Partial<LoginItemInput>;
+  /** Edit mode: the item's current password history (newest first). */
+  passwordHistory?: PasswordHistoryEntry[];
   onClose: () => void;
 }
 
-function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormProps) {
+function LoginItemForm({
+  mode,
+  itemId,
+  initialValues,
+  passwordHistory,
+  onClose,
+}: LoginItemFormProps) {
   // State initializes fresh because LoginItemForm mounts on each dialog open
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string>();
@@ -74,6 +83,15 @@ function LoginItemForm({ mode, itemId, initialValues, onClose }: LoginItemFormPr
           url: data.url,
           notes: data.notes,
         };
+        // Editing keeps earlier passwords: a changed password pushes the old one.
+        if (mode === "edit") {
+          const history = nextPasswordHistory(
+            passwordHistory ?? [],
+            initialValues?.password ?? "",
+            data.password
+          );
+          if (history.length > 0) secret.passwordHistory = history;
+        }
         // Optional authenticator key, stored as a canonical otpauth:// link.
         if (data.totp) {
           secret.totp = totpParamsToUri(
@@ -246,6 +264,8 @@ interface LoginItemDialogProps {
   mode: "create" | "edit";
   itemId?: string;
   initialValues?: Partial<LoginItemInput>;
+  /** Edit mode: the item's current password history, kept and extended on save. */
+  passwordHistory?: PasswordHistoryEntry[];
 }
 
 export function LoginItemDialog({
@@ -254,11 +274,18 @@ export function LoginItemDialog({
   mode,
   itemId,
   initialValues,
+  passwordHistory,
 }: LoginItemDialogProps) {
   return (
     <ItemDialog open={open} onOpenChange={onOpenChange}>
       {(close) => (
-        <LoginItemForm mode={mode} itemId={itemId} initialValues={initialValues} onClose={close} />
+        <LoginItemForm
+          mode={mode}
+          itemId={itemId}
+          initialValues={initialValues}
+          passwordHistory={passwordHistory}
+          onClose={close}
+        />
       )}
     </ItemDialog>
   );

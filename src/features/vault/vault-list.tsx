@@ -307,8 +307,18 @@ export function VaultList({
         mode="edit"
         itemId={editItem?.id}
         initialValues={
-          editItem?.type === "LOGIN" ? { name: editItem.name, ...editItem.secret } : undefined
+          editItem?.type === "LOGIN"
+            ? {
+                name: editItem.name,
+                username: editItem.secret.username,
+                password: editItem.secret.password,
+                url: editItem.secret.url,
+                notes: editItem.secret.notes,
+                totp: editItem.secret.totp,
+              }
+            : undefined
         }
+        passwordHistory={editItem?.type === "LOGIN" ? editItem.secret.passwordHistory : undefined}
       />
       <SecureNoteDialog
         open={editItem?.type === "SECURE_NOTE"}

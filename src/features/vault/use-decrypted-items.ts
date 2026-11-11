@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getVaultKey } from "@/lib/crypto";
 import { openItem } from "./item-payload";
 import { useVaultUserId } from "@/providers/vault-user-provider";
+import { readPasswordHistory } from "./password-history";
 import type {
   DecryptedVaultItem,
   LoginSecret,
@@ -23,7 +24,7 @@ import type {
  * can't be decrypted gets an entirely empty secret instead of crashing them.
  */
 const EMPTY_SECRETS = {
-  LOGIN: { username: "", password: "", url: "", notes: "" },
+  LOGIN: { username: "", password: "", url: "", notes: "", passwordHistory: [] },
   SECURE_NOTE: { content: "" },
   API_KEY: { key: "", description: "", notes: "" },
   WIFI_PASSWORD: { ssid: "", password: "", securityType: "WPA2", notes: "" },
@@ -61,7 +62,12 @@ function toDecryptedItem(row: VaultItemRow, name: string, secret: unknown): Decr
       return {
         ...base,
         type: row.type,
-        secret: { ...EMPTY_SECRETS.LOGIN, ...(fields as Partial<LoginSecret>) },
+        secret: {
+          ...EMPTY_SECRETS.LOGIN,
+          ...(fields as Partial<LoginSecret>),
+          // Older items have none; a damaged list reads as empty.
+          passwordHistory: readPasswordHistory((fields as Partial<LoginSecret>).passwordHistory),
+        },
       };
     case "SECURE_NOTE":
       return {

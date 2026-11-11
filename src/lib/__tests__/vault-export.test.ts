@@ -225,3 +225,37 @@ describe("exportFilename", () => {
     expect(exportFilename("csv", d)).toBe("keycrypt-export-2026-10-31.csv");
   });
 });
+
+describe("password history in exports", () => {
+  const HISTORY = [
+    { password: "older-secret-1", changedAt: "2026-11-01T09:30:00.000Z" },
+    { password: "older-secret-2", changedAt: "2026-06-15T18:05:00.000Z" },
+  ];
+  const withHistory: DecryptedVaultItem[] = ITEMS.map((item) =>
+    item.type === "LOGIN" ? { ...item, secret: { ...item.secret, passwordHistory: HISTORY } } : item
+  );
+
+  it("round-trips through the encrypted export and a KeyCrypt import", async () => {
+    const { encryptExport } = await import("@/lib/crypto");
+    const { parseImportFile } = await import("@/features/vault/import");
+    const file = await encryptExport(buildExportPayload(withHistory, new Map()), "export-pw-123", {
+      memoryKiB: 8_192,
+      iterations: 1,
+      parallelism: 1,
+      hashLength: 32,
+    });
+    const { items } = await parseImportFile(
+      "keycrypt-export",
+      JSON.stringify(file),
+      "export-pw-123"
+    );
+    const login = items.find((i) => i.type === "LOGIN");
+    expect(login?.secret).toMatchObject({ password: 'pa"ss', passwordHistory: HISTORY });
+  });
+
+  it("leaves earlier passwords out of the plain CSV", () => {
+    const csv = toBitwardenCsv(withHistory);
+    expect(csv).toContain("pa");
+    for (const { password } of HISTORY) expect(csv).not.toContain(password);
+  });
+});

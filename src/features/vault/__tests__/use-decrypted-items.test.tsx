@@ -53,7 +53,13 @@ describe("useDecryptedItems", () => {
 
     expect(items.map((i) => i.name)).toEqual(TYPES.map(() => UNREADABLE_ITEM_NAME));
     const login = items.find((i) => i.type === "LOGIN");
-    expect(login?.secret).toEqual({ username: "", password: "", url: "", notes: "" });
+    expect(login?.secret).toEqual({
+      username: "",
+      password: "",
+      url: "",
+      notes: "",
+      passwordHistory: [],
+    });
 
     // Searching for something that doesn't match the name reads the secret fields.
     expect(filterVaultItems(items, "github", false)).toEqual([]);
@@ -79,7 +85,8 @@ describe("useDecryptedItems", () => {
 
     expect(item).toMatchObject({
       name: "Forum",
-      secret: { username: "", password: "pw", url: "", notes: "" },
+      // An older item without password history reads as an empty list.
+      secret: { username: "", password: "pw", url: "", notes: "", passwordHistory: [] },
     });
     expect(filterVaultItems(item ? [item] : [], "github", false)).toEqual([]);
   });

@@ -5,6 +5,13 @@ export type { VaultItemType, WifiSecurityType };
 
 // ─── Secret shapes (encrypted inside ciphertext) ─────────────────────────────
 
+/** A password a login used before, and when it was replaced. */
+export interface PasswordHistoryEntry {
+  password: string;
+  /** ISO time the password was replaced. */
+  changedAt: string;
+}
+
 export interface LoginSecret {
   username: string;
   password: string;
@@ -12,6 +19,11 @@ export interface LoginSecret {
   notes: string;
   /** Optional authenticator key, as an otpauth://totp/ link. Absent or "" = none. */
   totp?: string;
+  /**
+   * Earlier passwords, newest first, at most 10 (src/features/vault/password-history.ts).
+   * Encrypted with the rest of the secret. Absent in older items = no history.
+   */
+  passwordHistory?: PasswordHistoryEntry[];
 }
 
 export interface SecureNoteSecret {
