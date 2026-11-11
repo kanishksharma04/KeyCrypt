@@ -1,5 +1,7 @@
 // Display helpers for Settings → Recent activity (pure; no I/O).
 
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+
 const LABELS: Record<string, string> = {
   "auth.signin": "Signed in",
   "auth.signup": "Account created",
@@ -15,6 +17,9 @@ const LABELS: Record<string, string> = {
   "vault.master_password.changed": "Master password changed",
   "vault.item.create": "Item created",
   "vault.item.delete": "Item deleted",
+  "vault.item.trash": "Item moved to Trash",
+  "vault.item.restore": "Item restored from Trash",
+  "vault.item.purge": "Item deleted forever",
   "vault.items.imported": "Items imported",
   "vault.export": "Vault exported",
   "vault.recovery.created": "Recovery key created",
@@ -40,6 +45,9 @@ export function activityLabel(action: string, metadata?: unknown): string {
   const m = (metadata ?? {}) as Record<string, unknown>;
   if (action === "vault.item.create" && typeof m.type === "string" && ITEM_TYPES[m.type]) {
     return `${base} (${ITEM_TYPES[m.type]})`;
+  }
+  if (action === "vault.item.purge" && m.expired === true && typeof m.count === "number") {
+    return `${m.count === 1 ? "1 item" : `${m.count} items`} deleted from Trash after ${TRASH_RETENTION_DAYS} days`;
   }
   if (action === "vault.items.imported" && typeof m.count === "number") {
     return `${base} (${m.count})`;

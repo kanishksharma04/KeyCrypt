@@ -12,13 +12,13 @@ import { INVALID_INPUT, recordVaultExportInput } from "@/schemas/server";
 // the vault key, then encrypt under an export password, or write a CSV); the
 // server only hands over ciphertext and records that an export happened.
 
-/** Every item of the signed-in user, as ciphertext, for a full export. */
+/** Every item of the signed-in user outside Trash, as ciphertext, for a full export. */
 export async function getVaultItemsForExportAction(): Promise<VaultItemRow[] | { error: string }> {
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
   const rows = await db.vaultItem.findMany({
-    where: { userId: session.user.id },
+    where: { userId: session.user.id, deletedAt: null },
     select: {
       id: true,
       type: true,

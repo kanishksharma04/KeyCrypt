@@ -15,9 +15,12 @@ import {
   updateVaultItemInput,
 } from "@/schemas/server";
 
+/** Items not in Trash. Trashed items show only in the Trash view. */
+const NOT_TRASHED = { deletedAt: null };
+
 /**
  * Item list for the command palette: ciphertext only. The browser decrypts the
- * names (crypto v2) and searches and sorts them there.
+ * names (crypto v2) and searches and sorts them there. Excludes Trash.
  */
 export async function getVaultItemSummariesAction(): Promise<
   | {
@@ -35,7 +38,7 @@ export async function getVaultItemSummariesAction(): Promise<
   if (!session) return { error: "Not authenticated" };
 
   return db.vaultItem.findMany({
-    where: { userId: session.user.id },
+    where: { userId: session.user.id, ...NOT_TRASHED },
     select: {
       id: true,
       type: true,
@@ -50,7 +53,10 @@ export async function getVaultItemSummariesAction(): Promise<
 
 const ITEM_CAP_ERROR = `A vault can hold up to ${MAX_VAULT_ITEMS.toLocaleString("en")} items.`;
 
-/** Whether adding `adding` items would take the user's vault past MAX_VAULT_ITEMS. */
+/**
+ * Whether adding `adding` items would take the user's vault past MAX_VAULT_ITEMS.
+ * Items in Trash count: they still take space until they are purged.
+ */
 async function wouldExceedItemCap(userId: string, adding: number): Promise<boolean> {
   const existing = await db.vaultItem.count({ where: { userId } });
   return existing + adding > MAX_VAULT_ITEMS;
@@ -178,9 +184,10 @@ export async function updateVaultItemAction(input: {
   const session = await auth();
   if (!session) return { error: "Not authenticated" };
 
-  // userId in WHERE prevents IDOR — only the owner can update their items
+  // userId in WHERE prevents IDOR — only the owner can update their items.
+  // Items in Trash can't be edited; restore them first.
   const result = await db.vaultItem.updateMany({
-    where: { id: data.id, userId: session.user.id },
+    where: { id: data.id, userId: session.user.id, ...NOT_TRASHED },
     // The name is re-encrypted with the secret; clear any older plain-text name.
     data: { name: null, ciphertext: data.ciphertext, iv: data.iv },
   });
@@ -191,7 +198,8 @@ export async function updateVaultItemAction(input: {
   return {};
 }
 
-export async function deleteVaultItemAction(rawId: string): Promise<{ error?: string }> {
+/** Moves an item to Trash. It can be restored for TRASH_RETENTION_DAYS. */
+export async function trashVaultItemAction(rawId: string): Promise<{ error?: string }> {
   const parsed = itemIdInput.safeParse({ id: rawId });
   if (!parsed.success) return { error: INVALID_INPUT };
   const { id } = parsed.data;
@@ -200,16 +208,106 @@ export async function deleteVaultItemAction(rawId: string): Promise<{ error?: st
   if (!session) return { error: "Not authenticated" };
 
   // userId in WHERE prevents IDOR
-  const result = await db.vaultItem.deleteMany({
-    where: { id, userId: session.user.id },
+  const result = await db.vaultItem.updateMany({
+    where: { id, userId: session.user.id, ...NOT_TRASHED },
+    data: { deletedAt: new Date() },
   });
 
   if (result.count === 0) return { error: "Item not found" };
 
-  await logAudit(session.user.id, "vault.item.delete");
+  await logAudit(session.user.id, "vault.item.trash");
 
   revalidatePath("/vault");
   return {};
+}
+
+/** Moves an item out of Trash, back into the vault. */
+export async function restoreVaultItemAction(rawId: string): Promise<{ error?: string }> {
+  const parsed = itemIdInput.safeParse({ id: rawId });
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const { id } = parsed.data;
+
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+
+  // userId in WHERE prevents IDOR
+  const result = await db.vaultItem.updateMany({
+    where: { id, userId: session.user.id, deletedAt: { not: null } },
+    data: { deletedAt: null },
+  });
+
+  if (result.count === 0) return { error: "Item not found" };
+
+  await logAudit(session.user.id, "vault.item.restore");
+
+  revalidatePath("/vault");
+  return {};
+}
+
+/** "Delete forever": permanently deletes an item that is in Trash. */
+export async function purgeVaultItemAction(rawId: string): Promise<{ error?: string }> {
+  const parsed = itemIdInput.safeParse({ id: rawId });
+  if (!parsed.success) return { error: INVALID_INPUT };
+  const { id } = parsed.data;
+
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+
+  // userId in WHERE prevents IDOR. Only items already in Trash.
+  const result = await db.vaultItem.deleteMany({
+    where: { id, userId: session.user.id, deletedAt: { not: null } },
+  });
+
+  if (result.count === 0) return { error: "Item not found" };
+
+  await logAudit(session.user.id, "vault.item.purge", { count: 1 });
+
+  revalidatePath("/vault");
+  return {};
+}
+
+/** Items in Trash, newest first: ciphertext only (names decrypt in the browser). */
+export async function getTrashedItemsAction(): Promise<
+  | {
+      id: string;
+      type: VaultItemType;
+      name: string | null;
+      ciphertext: string;
+      iv: string;
+      favorite: boolean;
+      folderId: string | null;
+      createdAt: string;
+      updatedAt: string;
+      deletedAt: string;
+    }[]
+  | { error: string }
+> {
+  const session = await auth();
+  if (!session) return { error: "Not authenticated" };
+
+  const rows = await db.vaultItem.findMany({
+    where: { userId: session.user.id, deletedAt: { not: null } },
+    select: {
+      id: true,
+      type: true,
+      name: true,
+      ciphertext: true,
+      iv: true,
+      favorite: true,
+      folderId: true,
+      createdAt: true,
+      updatedAt: true,
+      deletedAt: true,
+    },
+    orderBy: { deletedAt: "desc" },
+  });
+
+  return rows.map((row) => ({
+    ...row,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    deletedAt: (row.deletedAt ?? row.updatedAt).toISOString(),
+  }));
 }
 
 export async function toggleFavoriteAction(
@@ -229,7 +327,7 @@ export async function toggleFavoriteAction(
   // userId in WHERE prevents IDOR.
   const count = await db.$executeRaw`
     UPDATE "VaultItem" SET "favorite" = ${favorite}
-    WHERE "id" = ${id} AND "userId" = ${session.user.id}`;
+    WHERE "id" = ${id} AND "userId" = ${session.user.id} AND "deletedAt" IS NULL`;
 
   if (count === 0) return { error: "Item not found" };
 

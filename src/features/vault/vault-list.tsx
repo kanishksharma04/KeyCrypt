@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { KeyRound, Loader2, Plus, Star } from "lucide-react";
 import { toast } from "sonner";
-import { deleteVaultItemAction } from "@/server/vault-item-actions";
+import { trashVaultItemAction } from "@/server/vault-item-actions";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -111,9 +112,9 @@ export function VaultList({
     if (!deleteTarget) return;
     const { id } = deleteTarget;
     startDeleteTransition(async () => {
-      const result = await deleteVaultItemAction(id);
+      const result = await trashVaultItemAction(id);
       if (result.error) toast.error(result.error);
-      else toast.success("Item deleted");
+      else toast.success("Moved to Trash");
       setDeleteTarget(null);
     });
   }
@@ -374,11 +375,11 @@ export function VaultList({
       >
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
-            <DialogTitle>Delete item?</DialogTitle>
+            <DialogTitle>Move to Trash?</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-sm">
-            <strong>{deleteTarget?.name}</strong> will be permanently deleted. This cannot be
-            undone.
+            <strong>{deleteTarget?.name}</strong> moves to Trash. You can restore it from there for{" "}
+            {TRASH_RETENTION_DAYS} days; after that it&apos;s deleted for good.
           </p>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" size="sm" />}>Cancel</DialogClose>
@@ -389,7 +390,7 @@ export function VaultList({
               disabled={isPendingDelete}
             >
               {isPendingDelete && <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />}
-              Delete
+              Move to Trash
             </Button>
           </DialogFooter>
         </DialogContent>

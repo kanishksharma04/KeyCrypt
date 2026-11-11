@@ -27,7 +27,8 @@ export default async function VaultPage({
     : undefined;
 
   const rawItems = await db.vaultItem.findMany({
-    where: { userId: session.user.id },
+    // Items in Trash are listed only on /vault/trash.
+    where: { userId: session.user.id, deletedAt: null },
     select: {
       id: true,
       type: true,

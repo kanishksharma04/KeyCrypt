@@ -240,7 +240,7 @@ export function VaultItemRow({
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onDelete}>
               <Trash2 className="size-3.5" aria-hidden="true" />
-              Delete
+              Move to Trash
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

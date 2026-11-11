@@ -40,6 +40,12 @@ describe("activityLabel", () => {
     expect(activityLabel("auth.signin")).toBe("Signed in");
     expect(activityLabel("vault.master_password.changed")).toBe("Master password changed");
     expect(activityLabel("vault.item.delete")).toBe("Item deleted");
+    expect(activityLabel("vault.item.trash")).toBe("Item moved to Trash");
+    expect(activityLabel("vault.item.restore")).toBe("Item restored from Trash");
+    expect(activityLabel("vault.item.purge", { count: 1 })).toBe("Item deleted forever");
+    expect(activityLabel("vault.item.purge", { count: 3, expired: true })).toBe(
+      "3 items deleted from Trash after 30 days"
+    );
     expect(activityLabel("vault.item.create", { type: "API_KEY" })).toBe("Item created (API key)");
     expect(activityLabel("vault.export", { format: "csv" })).toBe(
       "Vault exported (unencrypted CSV)"

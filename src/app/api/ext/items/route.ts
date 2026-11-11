@@ -18,7 +18,11 @@ export async function GET(request: Request): Promise<Response> {
   if (!session) return unauthorized();
 
   const items = await db.vaultItem.findMany({
-    where: { userId: session.user.id, ...(parsed.data.type && { type: parsed.data.type }) },
+    where: {
+      userId: session.user.id,
+      deletedAt: null, // never offer items in Trash
+      ...(parsed.data.type && { type: parsed.data.type }),
+    },
     select: { id: true, type: true, name: true, ciphertext: true, iv: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
   });

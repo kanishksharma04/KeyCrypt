@@ -170,6 +170,7 @@ export async function upgradeVaultAction(input: {
           throw new VaultChangedError();
         }
 
+        // Every item, Trash included (getAllItemsForReEncryptionAction lists them too).
         const existing = await tx.vaultItem.findMany({ where: { userId }, select: { id: true } });
         const submitted = new Set(data.items.map((i) => i.id));
         const exactMatch =

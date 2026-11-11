@@ -24,6 +24,7 @@ const NAV_LINKS = [
   { href: "/vault", label: "Vault" },
   { href: "/vault/dashboard", label: "Dashboard" },
   { href: "/vault/settings", label: "Settings" },
+  { href: "/vault/trash", label: "Trash" },
 ] as const;
 
 interface VaultHeaderProps {

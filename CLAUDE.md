@@ -75,7 +75,8 @@ and decryption happens in the browser.
   are encrypted** with the secret (`sealItem`/`openItem` in `src/features/vault/item-payload.ts`)
   and `VaultItem.name` is null; names are decrypted, searched and sorted in the browser
   (vault list, command palette, health). Server-visible plain text: item `type`, `favorite`,
-  `folderId`, `createdAt`/`updatedAt`. `AuditLog` stores actions with timestamps, IP and user agent (always
+  `folderId`, `createdAt`/`updatedAt`, `deletedAt` (Trash: set when an item is trashed; trashed items are
+  hidden everywhere but `/vault/trash` and purged after 30 days by the daily cron). `AuditLog` stores actions with timestamps, IP and user agent (always
   via `logAudit()` in `src/lib/audit.ts`; entries older than 180 days are deleted by the daily
   cron `GET /api/cron/prune-audit` (`CRON_SECRET`, `vercel.json`) and, without a scheduler, by
   `logAudit()` at most once a day per process),

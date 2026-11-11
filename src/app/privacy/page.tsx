@@ -58,8 +58,9 @@ export default function PrivacyPage() {
           <li>
             <strong>Plain-text metadata:</strong> each item&apos;s type (for example &ldquo;a
             login&rdquo;), whether it is a favourite, which folder it is in (not the folder&apos;s
-            name), and when it was created and last updated. From the ciphertext the server can also
-            tell how many items you have and roughly how large each one is.
+            name), when it was created and last updated, and when it was moved to Trash. From the
+            ciphertext the server can also tell how many items you have and roughly how large each
+            one is.
           </li>
           <li>
             <strong>Two-factor sign-in</strong> (if you turn it on): your authenticator secret,

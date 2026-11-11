@@ -10,7 +10,8 @@ import { getClientIp } from "@/lib/client-ip";
 // user-agent, never secret content.
 //
 // Retention: entries older than AUDIT_RETENTION_DAYS are deleted by
-// pruneAuditLog(), for every user at once:
+// pruneAuditLog(), and items in Trash longer than TRASH_RETENTION_DAYS by
+// purgeExpiredTrash() (src/lib/trash.ts), for every user at once:
 //   - daily by GET /api/cron/prune-audit (Vercel Cron, vercel.json), and
 //   - as a fallback for installs without a scheduler (self-hosting), at most once
 //     per 24 hours per server process, from logAudit().
@@ -43,6 +44,9 @@ async function pruneOpportunistically(now: number): Promise<void> {
   lastOpportunisticPrune = now;
   try {
     await pruneAuditLog(new Date(now));
+    // Imported lazily: trash.ts logs its purges through logAudit().
+    const { purgeExpiredTrash } = await import("@/lib/trash");
+    await purgeExpiredTrash(new Date(now));
   } catch (err) {
     lastOpportunisticPrune = 0; // try again on the next event
     console.error("[audit] pruning old entries failed", err);

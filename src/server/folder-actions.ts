@@ -114,8 +114,9 @@ export async function moveItemToFolderAction(input: {
   if (!session) return { error: "Not authenticated" };
   const userId = session.user.id;
 
+  // Items in Trash can't be filed; restore them first.
   const item = await db.vaultItem.findFirst({
-    where: { id: itemId, userId },
+    where: { id: itemId, userId, deletedAt: null },
     select: { updatedAt: true },
   });
   if (!item) return { error: "Item not found" };
@@ -130,7 +131,7 @@ export async function moveItemToFolderAction(input: {
 
   try {
     await db.vaultItem.updateMany({
-      where: { id: itemId, userId },
+      where: { id: itemId, userId, deletedAt: null },
       // Filing an item isn't an edit: keep updatedAt (vault health uses it).
       data: { folderId, updatedAt: item.updatedAt },
     });

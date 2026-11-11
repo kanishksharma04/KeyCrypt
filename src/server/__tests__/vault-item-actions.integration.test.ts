@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import {
-  deleteVaultItemAction,
+  restoreVaultItemAction,
+  purgeVaultItemAction,
   toggleFavoriteAction,
+  trashVaultItemAction,
   updateVaultItemAction,
 } from "@/server/vault-item-actions";
 import { createTestUser, signInAs } from "@/test/integration/helpers";
@@ -41,13 +43,17 @@ describe("vault item actions: cross-user access (IDOR)", () => {
     expect(await aliceItem()).toMatchObject({ userId: alice.id, ...ORIGINAL });
   });
 
-  it("user B cannot delete user A's item", async () => {
+  it("user B cannot trash, restore or purge user A's item", async () => {
     signInAs(bob);
-    const result = await deleteVaultItemAction(aliceItemId);
+    expect(await trashVaultItemAction(aliceItemId)).toEqual({ error: "Item not found" });
+    expect(await aliceItem()).toMatchObject({ deletedAt: null });
 
-    expect(result).toEqual({ error: "Item not found" });
+    await db.vaultItem.update({ where: { id: aliceItemId }, data: { deletedAt: new Date() } });
+    expect(await restoreVaultItemAction(aliceItemId)).toEqual({ error: "Item not found" });
+    expect(await purgeVaultItemAction(aliceItemId)).toEqual({ error: "Item not found" });
     expect(await aliceItem()).not.toBeNull();
-    expect(await db.auditLog.count({ where: { action: "vault.item.delete" } })).toBe(0);
+    expect(await aliceItem()).not.toMatchObject({ deletedAt: null });
+    expect(await db.auditLog.count()).toBe(0);
   });
 
   it("user B cannot favourite user A's item", async () => {
@@ -60,7 +66,7 @@ describe("vault item actions: cross-user access (IDOR)", () => {
 
   // Control cases: prove the actions do work for the owner, so the denials
   // above are caused by ownership scoping and not by a broken action.
-  it("the owner can update, favourite and delete their own item", async () => {
+  it("the owner can update, favourite and trash their own item", async () => {
     signInAs(alice);
 
     expect(await updateVaultItemAction({ id: aliceItemId, ...TAMPERED })).toEqual({});
@@ -70,8 +76,8 @@ describe("vault item actions: cross-user access (IDOR)", () => {
     expect(await toggleFavoriteAction(aliceItemId, true)).toEqual({});
     expect(await aliceItem()).toMatchObject({ favorite: true });
 
-    expect(await deleteVaultItemAction(aliceItemId)).toEqual({});
-    expect(await aliceItem()).toBeNull();
+    expect(await trashVaultItemAction(aliceItemId)).toEqual({});
+    expect((await aliceItem())?.deletedAt).toBeInstanceOf(Date);
   });
 
   // Vault health flags logins not updated in a year from updatedAt, so starring
@@ -92,7 +98,9 @@ describe("vault item actions: cross-user access (IDOR)", () => {
     expect(await updateVaultItemAction({ id: aliceItemId, ...TAMPERED })).toEqual({
       error: "Not authenticated",
     });
-    expect(await deleteVaultItemAction(aliceItemId)).toEqual({ error: "Not authenticated" });
+    expect(await trashVaultItemAction(aliceItemId)).toEqual({ error: "Not authenticated" });
+    expect(await restoreVaultItemAction(aliceItemId)).toEqual({ error: "Not authenticated" });
+    expect(await purgeVaultItemAction(aliceItemId)).toEqual({ error: "Not authenticated" });
     expect(await toggleFavoriteAction(aliceItemId, true)).toEqual({ error: "Not authenticated" });
     expect(await aliceItem()).toMatchObject(ORIGINAL);
   });

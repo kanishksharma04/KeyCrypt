@@ -266,7 +266,7 @@ function ViewItemContent({
                 onClick={onDelete}
                 className="text-destructive hover:bg-destructive/10 flex-1 rounded-[10px] border p-[11px] text-[13.5px] font-semibold transition-colors"
               >
-                Delete
+                Move to Trash
               </button>
             )}
           </div>
@@ -286,7 +286,7 @@ export function ViewItemDialog({
   onOpenChange: (open: boolean) => void;
   /** Shows an "Edit" button at the bottom of the panel. */
   onEdit?: (item: DecryptedVaultItem) => void;
-  /** Shows a "Delete" button at the bottom of the panel. */
+  /** Shows a "Move to Trash" button at the bottom of the panel. */
   onDelete?: (item: DecryptedVaultItem) => void;
 }) {
   return (

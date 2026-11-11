@@ -15,14 +15,14 @@ KeyCrypt encrypts the contents of every vault item in your browser before it rea
 
 The full [threat model](docs/threat-model.md) covers assets, attackers, trust boundaries, crypto v2 and what is (and isn't) defended. To report a vulnerability, see [SECURITY.md](SECURITY.md) (GitHub private vulnerability reporting; also in [`/.well-known/security.txt`](public/.well-known/security.txt)).
 
-| What the server stores                                                                                                                 | What the server never sees                                        |
-| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Ciphertext of each item's name and contents (AES-256-GCM)                                                                              | Master password                                                   |
-| Random IV per item                                                                                                                     | Vault key                                                         |
-| Salt, wrapped vault key (master password + recovery key), verifier                                                                     | Item names and contents (usernames, passwords, URLs, notes, keys) |
-| Argon2id hash of the account password; two-factor secret (encrypted with a server key) and backup-code hashes                          | Recovery key                                                      |
-| **Plain-text metadata:** item types, favourite flags, created/updated times, which folder each item is in (folder names are encrypted) |                                                                   |
-| **Audit log:** account events with timestamps, IP address and browser, item type on create, export format; kept 180 days               |                                                                   |
+| What the server stores                                                                                                                                                                | What the server never sees                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Ciphertext of each item's name and contents (AES-256-GCM)                                                                                                                             | Master password                                                   |
+| Random IV per item                                                                                                                                                                    | Vault key                                                         |
+| Salt, wrapped vault key (master password + recovery key), verifier                                                                                                                    | Item names and contents (usernames, passwords, URLs, notes, keys) |
+| Argon2id hash of the account password; two-factor secret (encrypted with a server key) and backup-code hashes                                                                         | Recovery key                                                      |
+| **Plain-text metadata:** item types, favourite flags, created/updated times, when an item was moved to Trash (`deletedAt`), which folder each item is in (folder names are encrypted) |                                                                   |
+| **Audit log:** account events with timestamps, IP address and browser, item type on create, export format; kept 180 days                                                              |                                                                   |
 
 The server also handles your email and name, your account password while you sign in, sign up,
 reset it or confirm it (it stores only the Argon2id hash), the session cookie, and client IPs and
@@ -77,6 +77,7 @@ The vault key exists only in this page's memory. It is never written to disk or 
 - **Folders** — group items into folders (create, rename, delete, move, filter; the command palette finds items by folder and jumps to a folder). Folder names are encrypted in the browser with the vault key, bound to the user and folder id
 - **Browser extension (MVP)** — `extension/`: a Manifest V3 extension that unlocks the vault locally (same crypto module, key kept only in popup memory) and fills logins matching the current site. See [extension/README.md](extension/README.md)
 - **Import** — Settings → Import from Bitwarden (unencrypted JSON or CSV), 1Password, LastPass and Chrome/Edge CSV, or a KeyCrypt encrypted export. The file is parsed in the browser and never uploaded; a preview shows counts per type and skipped rows, then each item is encrypted in the browser and saved in batches of 50
+- **Trash** — deleting an item moves it to Trash (`/vault/trash`) for 30 days: restore it, or delete it forever. Trashed items are left out of the list, search, the command palette, vault health, exports and the extension, but still count toward the 5,000-item cap; the daily cron purges them after 30 days
 - **Favorites filter** — star items and filter to pinned items only
 - **Search** — live filter across name, username, URL, SSID; press `/` to focus, `Escape` to clear
 - **Item count** — shows `3 items` or `2 of 5 items` when filtered

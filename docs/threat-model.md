@@ -157,7 +157,8 @@ folder names.
 - the account email and name, and the account password while signing in, signing up, resetting it
   or confirming it (only its Argon2id hash is stored);
 - for each item: its **type**, **favourite** flag, **folder** (which items share a folder, not the
-  folder's name), and **created/updated times**; the ciphertext reveals roughly how large each item
+  folder's name), **created/updated times**, and **when it was moved to Trash** (`deletedAt`;
+  trashed items are purged 30 days later); the ciphertext reveals roughly how large each item
   is, and the row count reveals how many items there are;
 - vault metadata: salt, KDF parameters, the wrapped vault key (two copies with a recovery key) and
   the verification blob;
@@ -222,7 +223,8 @@ browser.
 - **Withholding or deleting items.** The server can leave items, or folders, out of the list it
   returns, or delete them, and the browser can't tell: there is no authenticated list of which
   items a vault should contain.
-- **Changing plain-text metadata.** Favourite flags, folder membership and the created/updated
+- **Changing plain-text metadata.** Favourite flags, folder membership, the Trash flag
+  (`deletedAt`, so the server can hide an item in Trash or bring one back) and the created/updated
   timestamps are stored in plain text and are not authenticated, so the server can change them
   without the browser noticing. Item types are bound by the AAD; a changed type makes decryption
   fail.

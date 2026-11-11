@@ -27,11 +27,12 @@ export async function getVaultStatsAction(): Promise<VaultStats | null> {
   const userId = session.user.id;
 
   const [groups, favoriteCount, folderCount, lastItem] = await Promise.all([
-    db.vaultItem.groupBy({ by: ["type"], where: { userId }, _count: true }),
-    db.vaultItem.count({ where: { userId, favorite: true } }),
+    // Items in Trash don't count in the stats.
+    db.vaultItem.groupBy({ by: ["type"], where: { userId, deletedAt: null }, _count: true }),
+    db.vaultItem.count({ where: { userId, favorite: true, deletedAt: null } }),
     db.folder.count({ where: { userId } }),
     db.vaultItem.findFirst({
-      where: { userId },
+      where: { userId, deletedAt: null },
       orderBy: { updatedAt: "desc" },
       select: { updatedAt: true },
     }),
@@ -70,7 +71,7 @@ export async function getLoginItemsForHealthAction(): Promise<
   if (!session) return { error: "Not authenticated" };
 
   const items = await db.vaultItem.findMany({
-    where: { userId: session.user.id, type: "LOGIN" },
+    where: { userId: session.user.id, type: "LOGIN", deletedAt: null },
     select: { id: true, name: true, ciphertext: true, iv: true, updatedAt: true },
   });
 
@@ -87,7 +88,8 @@ export async function getAllItemsForReEncryptionAction(): Promise<
   if (!session) return { error: "Not authenticated" };
 
   // id + type bind each re-encrypted item to its row (AAD); the plain-text
-  // name (v1 rows) moves into the new ciphertext.
+  // name (v1 rows) moves into the new ciphertext. Includes items in Trash, so
+  // they still decrypt if restored.
   const items = await db.vaultItem.findMany({
     where: { userId: session.user.id },
     select: { id: true, type: true, name: true, ciphertext: true, iv: true },
