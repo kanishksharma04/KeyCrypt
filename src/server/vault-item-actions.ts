@@ -5,11 +5,11 @@ import { Prisma, type VaultItemType } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { ITEM_CAP_ERROR, wouldExceedItemCap } from "@/lib/item-cap";
 import {
   INVALID_INPUT,
   createVaultItemInput,
   createVaultItemsBatchInput,
-  MAX_VAULT_ITEMS,
   itemIdInput,
   toggleFavoriteInput,
   updateVaultItemInput,
@@ -49,17 +49,6 @@ export async function getVaultItemSummariesAction(): Promise<
       folderId: true,
     },
   });
-}
-
-const ITEM_CAP_ERROR = `A vault can hold up to ${MAX_VAULT_ITEMS.toLocaleString("en")} items.`;
-
-/**
- * Whether adding `adding` items would take the user's vault past MAX_VAULT_ITEMS.
- * Items in Trash count: they still take space until they are purged.
- */
-async function wouldExceedItemCap(userId: string, adding: number): Promise<boolean> {
-  const existing = await db.vaultItem.count({ where: { userId } });
-  return existing + adding > MAX_VAULT_ITEMS;
 }
 
 export async function createVaultItemAction(input: {

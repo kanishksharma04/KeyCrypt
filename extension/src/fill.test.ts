@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fillLoginForm } from "./fill";
+import { fillCodeField, fillLoginForm } from "./fill";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -74,5 +74,36 @@ describe("fillLoginForm", () => {
     fillLoginForm(host, "", "pw");
     expect(spy).toHaveBeenCalledWith("pw");
     expect(value("#u")).toBe(""); // no username given: left alone
+  });
+});
+
+describe("fillCodeField", () => {
+  const host = location.hostname.toLowerCase();
+
+  it("prefers autocomplete=one-time-code and fires input/change", () => {
+    form(`<input id="search" type="text" name="q"><input id="otp" autocomplete="one-time-code">`);
+    const events: string[] = [];
+    document.getElementById("otp")?.addEventListener("input", () => events.push("input"));
+    expect(fillCodeField(host, "123456")).toEqual({ ok: true });
+    expect(value("#otp")).toBe("123456");
+    expect(value("#search")).toBe("");
+    expect(events).toEqual(["input"]);
+  });
+
+  it("falls back to a field named like a code, then to a short numeric field", () => {
+    form(`<input id="a" name="email"><input id="b" name="totp_code">`);
+    expect(fillCodeField(host, "654321")).toEqual({ ok: true });
+    expect(value("#b")).toBe("654321");
+
+    form(`<input id="c" inputmode="numeric" maxlength="6">`);
+    expect(fillCodeField(host, "111222")).toEqual({ ok: true });
+    expect(value("#c")).toBe("111222");
+  });
+
+  it("refuses another host, and pages without a code field", () => {
+    form(`<input autocomplete="one-time-code">`);
+    expect(fillCodeField("evil.example", "123456")).toEqual({ ok: false, reason: "host-changed" });
+    form(`<input name="email"><input type="password">`);
+    expect(fillCodeField(host, "123456")).toEqual({ ok: false, reason: "no-code-field" });
   });
 });

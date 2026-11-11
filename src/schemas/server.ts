@@ -108,6 +108,19 @@ export const moveItemInput = z.object({
 /** GET /api/ext/items query (browser extension). */
 export const extItemsQuery = z.object({ type: itemTypeSchema.optional() });
 
+/**
+ * POST /api/ext/items body: a login the extension encrypted (crypto v2, id
+ * generated in the extension and bound into the AAD). Logins only.
+ */
+export const extCreateItemInput = z
+  .object({
+    id: idSchema,
+    type: z.literal("LOGIN"),
+    ciphertext: ciphertextSchema,
+    iv: ivSchema,
+  })
+  .strict();
+
 export const updateVaultItemInput = z.object({
   id: idSchema,
   ciphertext: ciphertextSchema,

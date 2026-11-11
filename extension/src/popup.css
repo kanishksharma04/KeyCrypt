@@ -98,3 +98,54 @@ li .user {
   color: var(--muted);
   font-size: 12px;
 }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.row label {
+  margin: 0;
+  font-weight: 500;
+}
+select {
+  font: inherit;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+}
+.card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+.card p {
+  margin: 0 0 4px;
+}
+.card button.primary {
+  width: auto;
+  margin-top: 0;
+}
+li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+li .entry {
+  flex: 1;
+}
+button.code {
+  white-space: nowrap;
+  font-size: 12px;
+}
+footer {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 8px;
+}
+footer input[type="checkbox"] {
+  width: auto;
+}

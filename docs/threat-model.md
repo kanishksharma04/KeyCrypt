@@ -142,10 +142,32 @@ vault key (random AES-256-GCM) ──► items, folder names, verification blob
 ### Browser extension
 
 The extension (`extension/`, Manifest V3) uses the same crypto module. It fetches the vault metadata
-and item ciphertext from `/api/ext/*` with the session cookie, unlocks with the master password
-in the popup, and keeps the vault key only in the popup's memory (no `storage` permission). It
-fills only the active tab after a click (`activeTab`), on `https://` pages whose host matches the
-saved login, and the injected script refuses to fill if the page's host changed.
+and item ciphertext from `/api/ext/*` with the session cookie and does all crypto locally.
+
+- **Where the key lives.** The master password goes from the popup to the extension's background
+  service worker (extension-internal messaging), which derives the KEK and keeps the vault key as a
+  non-extractable `CryptoKey` **in memory only**, for a limited time (10 minutes by default; 1 to
+  60 in the popup). It is dropped on timeout, on Lock, as soon as the KeyCrypt session cookie is
+  removed (sign-out, `chrome.cookies.onChanged`), if a different account is signed in, when the
+  browser closes, and whenever the browser stops the worker. It is never written to
+  `chrome.storage` (the extension has no `storage` permission) or to disk. While unlocked, anyone
+  with access to the browser profile can open the popup and fill logins without the master
+  password, as with the web app's unlocked tab.
+- **Filling.** Only the active tab after a click (`activeTab`), on `https://` pages whose host
+  matches the saved login; the injected script refuses to fill if the page's host changed. TOTP
+  codes are filled the same way, for logins with a key (matched by the login's URL) and for
+  authenticator items whose issuer equals the site's name or whose account is at the site's
+  domain. Authenticator items have no URL, so a look-alike domain with the same name under
+  another top-level domain would be offered the code too.
+- **Saving new logins (opt-in).** Turning on "Offer to save new logins" grants the optional
+  `https://*/*` host permission and registers a content script on https pages. When a form with
+  one password field is submitted, the script sends the username and password to the background
+  worker, which keeps them **in memory for at most 5 minutes** (badge on the toolbar icon) until
+  the user saves or dismisses them in the popup. Saving encrypts the login in the extension (item
+  id generated there and bound into the AAD) and sends only ciphertext to `POST /api/ext/items`,
+  which requires the session, accepts logins only, enforces the item cap, logs
+  `vault.item.create` (source `extension`), and refuses web-page origins and non-JSON bodies
+  (CSRF).
 
 ## What the server sees
 

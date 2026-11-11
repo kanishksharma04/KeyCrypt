@@ -45,3 +45,36 @@ export function loginMatchesTab(savedUrl: string, tabUrl: string | undefined): b
   const tab = normalizeHost(tabHost);
   return tab === host || tab.endsWith(`.${host}`);
 }
+
+/**
+ * Whether an authenticator item (issuer, account) belongs to the tab. These
+ * items have no URL, so: its issuer equals the site's name (the label just
+ * before the top-level domain: "GitHub" on github.com or accounts.github.com,
+ * never on github.com.evil.example), or its account is an address at the
+ * site's domain. Only decides which codes the popup offers; filling still
+ * needs a click. A look-alike with the same name under another top-level
+ * domain (github.net) would match an issuer too (see the README).
+ */
+export function authenticatorMatchesTab(
+  issuer: string,
+  account: string,
+  tabUrl: string | undefined
+): boolean {
+  const tabHost = fillableTabHost(tabUrl);
+  if (!tabHost) return false;
+  const tab = normalizeHost(tabHost);
+  const siteName = (tab.split(".").at(-2) ?? "").replace(/[^a-z0-9]/g, "");
+  const issuerName = issuer.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (issuerName.length >= 2 && issuerName === siteName) return true;
+  const at = account.lastIndexOf("@");
+  if (at > 0) {
+    const domain = normalizeHost(account.slice(at + 1));
+    if (domain.includes(".") && (tab === domain || tab.endsWith(`.${domain}`))) return true;
+  }
+  return false;
+}
+
+/** Whether a submitted login on this page may be offered for saving (https, or local http). */
+export function saveableUrl(pageUrl: string | undefined): boolean {
+  return fillableTabHost(pageUrl) !== null;
+}

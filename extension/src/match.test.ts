@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { fillableTabHost, loginMatchesTab, savedHost } from "./match";
+import {
+  authenticatorMatchesTab,
+  fillableTabHost,
+  loginMatchesTab,
+  saveableUrl,
+  savedHost,
+} from "./match";
 
 describe("savedHost", () => {
   it.each([
@@ -40,5 +46,31 @@ describe("loginMatchesTab", () => {
     ["", "https://example.com/", false],
   ])("saved %j on tab %j → %s", (saved, tab, expected) => {
     expect(loginMatchesTab(saved, tab)).toBe(expected);
+  });
+});
+
+describe("authenticatorMatchesTab", () => {
+  it.each([
+    ["GitHub", "", "https://github.com/sessions/two-factor", true],
+    ["GitHub", "", "https://accounts.github.com/x", true],
+    ["Git Hub", "", "https://github.com/", true],
+    ["", "me@example.com", "https://login.example.com/", true],
+    ["GitHub", "", "https://notgithub.com/", false],
+    ["GitHub", "", "https://github.com.evil.example/", false],
+    ["", "me@example.com", "https://example.com.evil.test/", false],
+    ["GitHub", "", "http://github.com/", false], // not https
+    ["", "", "https://github.com/", false],
+  ])("%j / %j on %s → %s", (issuer, account, url, expected) => {
+    expect(authenticatorMatchesTab(issuer, account, url)).toBe(expected);
+  });
+});
+
+describe("saveableUrl", () => {
+  it("offers to save on https pages and local http only", () => {
+    expect(saveableUrl("https://example.com/login")).toBe(true);
+    expect(saveableUrl("http://127.0.0.1:4599/login")).toBe(true);
+    expect(saveableUrl("http://example.com/login")).toBe(false);
+    expect(saveableUrl("chrome://settings")).toBe(false);
+    expect(saveableUrl(undefined)).toBe(false);
   });
 });
