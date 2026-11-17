@@ -32,11 +32,15 @@ function capture(command, env) {
 }
 
 function needsBaseline(output) {
-  return (
+  // First attempt: applying 0_init hits objects that db push already created.
+  const initClashes =
     output.includes("P3018") &&
     /Migration name: 0_init\b/.test(output) &&
-    /already exists/.test(output)
-  );
+    /already exists/.test(output);
+  // Later attempts: that failed 0_init is now recorded and blocks deploy (P3009).
+  const failedInitRecorded =
+    output.includes("P3009") && /The `0_init` migration started at .* failed/.test(output);
+  return initClashes || failedInitRecorded;
 }
 
 run("prisma generate");
