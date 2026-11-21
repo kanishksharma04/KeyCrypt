@@ -185,7 +185,8 @@ test("sign up, store four items, change master password, and read them all back"
   // Every item decrypts to exactly what was entered.
   let d = await openItem(page, LOGIN.name);
   await expect(d.getByText(LOGIN.username)).toBeVisible();
-  await expect(d.getByText(LOGIN.url)).toBeVisible();
+  // The details panel shows a web URL as an "Open website" link, not as text.
+  await expect(d.getByRole("link", { name: "Open website" })).toHaveAttribute("href", LOGIN.url);
   await d.getByRole("button", { name: "Reveal" }).click();
   await expect(d.getByText(LOGIN.password, { exact: true })).toBeVisible();
   await closeDialog(page);
